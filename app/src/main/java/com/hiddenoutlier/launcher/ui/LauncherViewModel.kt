@@ -79,6 +79,30 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** The home grid as stored, and as shown (apps that were uninstalled or hidden are left out). */
+    val homeGridStored: StateFlow<com.hiddenoutlier.launcher.core.HomeGrid> =
+        la.settings.homeGrid.stateIn(viewModelScope, SharingStarted.Eagerly, com.hiddenoutlier.launcher.core.HomeGrid())
+    val homeGrid: StateFlow<com.hiddenoutlier.launcher.core.HomeGrid> = combine(homeGridStored, visibleApps) { g, v ->
+        if (v.isEmpty()) g else g.keepOnly(v.mapTo(HashSet()) { it.key })
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, com.hiddenoutlier.launcher.core.HomeGrid())
+
+    private fun updateGrid(f: (com.hiddenoutlier.launcher.core.HomeGrid) -> com.hiddenoutlier.launcher.core.HomeGrid) {
+        viewModelScope.launch { la.settings.setHomeGrid(f(homeGridStored.value)) }
+    }
+    fun placeOnHome(app: AppEntry, target: Int, from: Int?) = updateGrid { it.place(app.key, target, from) }
+    fun addToHome(app: AppEntry): Boolean {
+        val g = homeGridStored.value
+        if (g.cellOf(app.key) == null && g.firstEmpty() == null) return false
+        updateGrid { it.add(app.key) }; return true
+    }
+    fun removeFromHome(app: AppEntry) = updateGrid { it.remove(app.key) }
+    fun isOnHome(app: AppEntry) = homeGridStored.value.cellOf(app.key) != null
+
+    /** A drag that started in the app list: show the home screen underneath, keep the list (and the
+     *  gesture) alive until the drop. */
+    fun startDragFromList() { _screen.value = Screen.HOME }
+    fun endDrag() { query.value = "" }
+
     data class Results(val apps: List<AppEntry>, val revealed: List<Pair<AppEntry, HideLevel>>)
 
     val results: StateFlow<Results> = combine(query, apps, privacy, settings) { q, a, p, s ->
@@ -136,6 +160,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun hide(app: AppEntry, level: HideLevel) {
         updatePrivacy { it.copy(hidden = it.hidden + (app.key to level)) }
+        updateGrid { it.remove(app.key) } // never keep a hidden app's key in the (unencrypted) layout
         viewModelScope.launch(Dispatchers.IO) { la.usage.forget(app.key) } // and forget its history
         refreshSuggestions()
     }

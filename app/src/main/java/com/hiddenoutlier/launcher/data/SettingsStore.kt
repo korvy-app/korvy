@@ -42,6 +42,7 @@ class SettingsStore(private val context: Context) {
         val slideshow = booleanPreferencesKey("slideshow")
         val slideshowMinutes = intPreferencesKey("slideshow_minutes")
         val homePromptDismissed = booleanPreferencesKey("home_prompt_dismissed")
+        val homeGrid = stringPreferencesKey("home_grid")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -56,6 +57,10 @@ class SettingsStore(private val context: Context) {
             homePromptDismissed = p[K.homePromptDismissed] ?: false,
         )
     }
+
+    /** Apps placed on the home screen. Hidden apps are removed from it, so no hidden app key is stored here. */
+    val homeGrid: Flow<com.hiddenoutlier.launcher.core.HomeGrid> = context.dataStore.data.map { com.hiddenoutlier.launcher.core.HomeGrid.parse(it[K.homeGrid]) }
+    suspend fun setHomeGrid(g: com.hiddenoutlier.launcher.core.HomeGrid) = set { it[K.homeGrid] = g.serialize() }
 
     private suspend fun set(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
         context.dataStore.edit { block(it) }

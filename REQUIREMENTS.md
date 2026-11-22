@@ -16,6 +16,24 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   Implemented as the app's own live wallpaper so the transition is smooth and also covers the lock screen
   where the phone allows. Pauses when the screen is off or in battery saver. Off by default on low-tier phones.
 
+## Home-screen grid
+- A grid of app icons between the clock and the suggestion row (4 × 5 for now; size setting later). Stored as
+  `core/HomeGrid` in DataStore; hidden apps are removed from it (the layout is not encrypted, so no hidden app's
+  key may stay there) and uninstalled apps drop out.
+- One gesture per touch on any app icon (`ui/Drag.kt` → `appGestures`): **tap** opens; **hold** shows the menu;
+  **hold and move** drags (the menu closes). Icons claim their touch, so holding an icon never also opens
+  Settings; holding empty home space does. Swiping up opens the app list even when the swipe starts on an icon.
+- Drag from the app list, search results or suggestions onto the grid (the list fades but keeps the gesture);
+  drag within the grid to move (an occupied target swaps; from the list, the occupant moves to the nearest
+  free cell); drag to "Remove from home" at the top. Menu: Add to home / Remove from home.
+
+## Online features (decided 2026-11-22)
+- One app (owner's choice). Android can't make INTERNET a runtime permission, so: **online features are off by
+  default**; all network access goes through one gate class that refuses while they're off; each source
+  (model downloads, weather, news, stocks, web search) has its own switch in Settings showing where it
+  connects. GrapheneOS users can also block network for the app at the OS level. Settings and the tour say so.
+- The assistant runs on **llama.cpp** (owner's choice), so it works in the F-Droid build too.
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
@@ -133,6 +151,11 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.2.0** – Home-screen grid with drag and drop (see "Home-screen grid"). Fixed: slideshow
+  never advanced for people who leave the home screen often (the countdown restarted on every return); the
+  picture now follows the clock (`core/slideshowIndex`). Checked on the Pixel 4a: drag from list to grid, move,
+  swap, remove, hold = menu only, tap, swipe up from an icon, list scroll; slideshow with 4 pictures at 1 min
+  advanced on home and across leaving and returning. 33 unit tests.
 - 2026-11-22 (later): **0.1.2** – Fixed: the keyboard flashed for a moment when returning home after opening
   an app from search (now hidden and unfocused before leaving; `stateAlwaysHidden`). Fixed: the clock lagged up
   to a minute after the phone's time or time zone changed (e.g. airplane mode off after travel); it now follows

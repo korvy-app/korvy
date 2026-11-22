@@ -10,10 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.hiddenoutlier.launcher.core.slideshowIndex
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -37,18 +38,23 @@ import java.io.File
 fun LauncherBackground(files: List<File>, slideshow: Boolean, minutes: Int) {
     val animations = LocalAnimations.current
     if (files.isNotEmpty()) {
-        var index by remember(files) { mutableIntStateOf(0) }
         val context = LocalContext.current
         val lifecycle = LocalLifecycleOwner.current.lifecycle
-        if (slideshow && files.size > 1) LaunchedEffect(files, minutes) {
+        // The picture follows the clock (which slot of the interval we're in), not a countdown: a countdown
+        // restarts every time the home screen is left, so with frequent app switching it never advanced.
+        var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+        if (slideshow && files.size > 1) LaunchedEffect(files.size, minutes) {
             val power = context.getSystemService(PowerManager::class.java)
+            val period = minutes * 60_000L
             lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (true) {
-                    delay(minutes * 60_000L)
-                    if (!power.isPowerSaveMode) index = (index + 1) % files.size
+                    // Battery saver: keep the current picture until battery saver is off.
+                    if (!power.isPowerSaveMode) now = System.currentTimeMillis()
+                    delay(period - System.currentTimeMillis() % period + 50) // wake just after the next switch
                 }
             }
         }
+        val index = if (slideshow && files.size > 1) slideshowIndex(now, minutes, files.size) else 0
         val file = files[index.coerceIn(0, files.lastIndex)]
         Crossfade(targetState = file, animationSpec = Motion.fade(animations, 1500), label = "background") { f ->
             val bmp by produceState<Bitmap?>(null, f) { value = withContext(Dispatchers.IO) { Backgrounds.load(f) } }

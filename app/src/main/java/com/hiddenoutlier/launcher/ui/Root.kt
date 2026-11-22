@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
@@ -41,6 +42,15 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val bgFiles by vm.backgrounds.files.collectAsStateWithLifecycle()
     val lockedOpen by vm.lockedListOpen.collectAsStateWithLifecycle()
     val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
+    val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
+    val drag = remember(vm) {
+        DragController(
+            grid = { vm.homeGrid.value },
+            onDrop = { app, target, from -> vm.placeOnHome(app, target, from); vm.endDrag() },
+            onRemove = { app -> vm.removeFromHome(app); vm.endDrag() },
+            onStart = { d -> if (d.fromCell == null) vm.startDragFromList() },
+        )
+    }
     val animations = vm.animationsOn(settings)
 
     fun lockApp(app: AppEntry) {
@@ -60,6 +70,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
             onToggleSuggest = { vm.setNeverSuggest(app.key, app.key !in privacy.neverSuggest) },
             onInfo = { vm.appInfo(app) },
             onUninstall = { vm.uninstall(app) },
+            onHome = app.key in homeGrid.cells.values,
+            onAddHome = { if (!vm.addToHome(app)) host.toast("The home screen is full. Remove an app first.") },
+            onRemoveHome = { vm.removeFromHome(app) },
         )
     }
 
@@ -79,9 +92,13 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 showHomePrompt = !isDefaultHome && !settings.homePromptDismissed && settings.tutorialDone,
                 onSetDefaultHome = host.setDefaultHome,
                 onDismissHomePrompt = vm::dismissHomePrompt,
+                drag = drag,
+                grid = { m -> HomeGridView(homeGrid, visible.associateBy { it.key }, vm.repo, drag, vm::launch, menu, m) },
             ) }
+            // During a drag that started in the list, the list stays composed (it owns the gesture) but invisible.
+            val listDrag = drag.drag?.let { it.fromCell == null } == true
             AnimatedVisibility(
-                visible = screen == Screen.DRAWER,
+                visible = screen == Screen.DRAWER || listDrag,
                 enter = slideInVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeIn(Motion.fade(animations)),
                 exit = slideOutVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeOut(Motion.fade(animations)),
             ) {
@@ -92,6 +109,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     onLaunchHidden = ::launchHidden,
                     onWebSearch = vm::webSearch,
                     menu = menu,
+                    drag = drag,
+                    modifier = Modifier.graphicsLayer { alpha = if (listDrag) 0f else 1f },
                 )
             }
             AnimatedVisibility(screen == Screen.SETTINGS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
@@ -115,6 +134,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.STATS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 StatsScreen(host.stats, onBack = { vm.open(Screen.SETTINGS) })
             }
+            DragOverlay(drag, vm.repo)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
             }

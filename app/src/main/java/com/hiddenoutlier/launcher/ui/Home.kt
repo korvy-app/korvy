@@ -4,7 +4,11 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,6 +83,8 @@ fun HomeScreen(
     showHomePrompt: Boolean = false,
     onSetDefaultHome: () -> Unit = {},
     onDismissHomePrompt: () -> Unit = {},
+    drag: DragController? = null,
+    grid: @Composable (Modifier) -> Unit = { Spacer(it) },
 ) {
     val threshold = with(LocalDensity.current) { 60.dp.toPx() }
     Box(
@@ -86,31 +92,42 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag("home")
             .pointerInput(Unit) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
-                    onVerticalDrag = { _, dy -> total += dy },
-                    onDragEnd = { if (total < -threshold) onOpenDrawer() },
-                )
+                // Swipe up anywhere (also starting on an icon) opens the app list. Runs after the icons see
+                // the touch, so an icon that is already being dragged (its moves consumed) wins.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    var total = 0f
+                    while (true) {
+                        val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                        if (!c.pressed || c.isConsumed) break
+                        total += c.positionChange().y
+                        if (total < -threshold) { c.consume(); onOpenDrawer(); break }
+                    }
+                }
             }
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() }, indication = null,
-                onClick = {}, onLongClick = onOpenSettings,
-            )
+            .pointerInput(Unit) {
+                // Hold an empty part of the home screen for Settings. Touches that an icon claimed are skipped.
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = true)
+                    val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
+                    if (up == null && currentEvent.changes.any { it.id == down.id && it.pressed && !it.isConsumed }) onOpenSettings()
+                }
+            }
     ) {
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             Spacer(Modifier.height(32.dp))
             Clock()
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(12.dp))
+            grid(Modifier.weight(1f).fillMaxWidth())
             if (showHomePrompt) HomePrompt(onSetDefaultHome, onDismissHomePrompt)
             if (suggestions.isNotEmpty()) {
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 16.dp).testTag("suggestions"),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    suggestions.take(5).forEach { app -> SuggestedApp(app, repo, onLaunch, menu) }
+                    suggestions.take(5).forEach { app -> SuggestedApp(app, repo, onLaunch, menu, drag) }
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -139,14 +156,17 @@ fun HomeScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SuggestedApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit) {
+private fun SuggestedApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit, drag: DragController?) {
     var showMenu by remember { mutableStateOf(false) }
     Box {
         Column(
             Modifier
                 .width(68.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .combinedClickable(onClick = { onLaunch(app) }, onLongClick = { showMenu = true })
+                .then(
+                    if (drag != null) Modifier.appGestures(app, null, drag, onTap = { onLaunch(app) }, onMenu = { showMenu = it })
+                    else Modifier.combinedClickable(onClick = { onLaunch(app) }, onLongClick = { showMenu = true })
+                )
                 .padding(vertical = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {

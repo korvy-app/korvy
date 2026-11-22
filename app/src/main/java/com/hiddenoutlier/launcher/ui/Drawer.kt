@@ -78,6 +78,8 @@ fun AppDrawer(
     onLaunchHidden: (AppEntry, HideLevel) -> Unit,
     onWebSearch: (String) -> Unit,
     menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
+    drag: DragController,
+    modifier: Modifier = Modifier,
 ) {
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -87,10 +89,11 @@ fun AppDrawer(
     val launch: (AppEntry) -> Unit = { app -> leaving { onLaunch(app) } }
     val launchHidden: (AppEntry, HideLevel) -> Unit = { app, level -> leaving { onLaunchHidden(app, level) } }
     val webSearch: (String) -> Unit = { q -> leaving { onWebSearch(q) } }
+    val dragStarted: () -> Unit = { keyboard?.hide(); focusManager.clearFocus(force = true) }
     LaunchedEffect(focusSignal) { if (focusSignal > 0) { focus.requestFocus(); keyboard?.show() } }
 
     Column(
-        Modifier
+        modifier
             .fillMaxSize()
             .background(Color(0xE6101418)) // solid enough to read, light enough to feel layered
             .statusBarsPadding()
@@ -127,13 +130,13 @@ fun AppDrawer(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxSize().testTag("app_grid"),
             ) {
-                items(apps, key = { it.key }) { app -> GridApp(app, repo, launch, menu) }
+                items(apps, key = { it.key }) { app -> GridApp(app, repo, launch, menu, drag, dragStarted) }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().testTag("results")) {
-                items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { launch(app) }, menu) }
+                items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { launch(app) }, menu, drag, dragStarted) }
                 items(results.revealed, key = { "hidden-" + it.first.key }) { (app, level) ->
-                    ResultRow(app, repo, level, { launchHidden(app, level) }, menu)
+                    ResultRow(app, repo, level, { launchHidden(app, level) }, menu, null, dragStarted)
                 }
                 item(key = "web") {
                     Row(
@@ -156,14 +159,14 @@ fun AppDrawer(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun GridApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit) {
+private fun GridApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit, drag: DragController, dragStarted: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     Box {
         Column(
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .combinedClickable(onClick = { onLaunch(app) }, onLongClick = { showMenu = true })
+                .appGestures(app, null, drag, onTap = { onLaunch(app) }, onMenu = { showMenu = it }, onDragStarted = dragStarted)
                 .padding(vertical = 10.dp, horizontal = 4.dp)
                 .testTag("app_${app.label}"),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -180,13 +183,17 @@ private fun GridApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ResultRow(app: AppEntry, repo: AppRepository, hidden: HideLevel?, onClick: () -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit) {
+private fun ResultRow(app: AppEntry, repo: AppRepository, hidden: HideLevel?, onClick: () -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit, drag: DragController?, dragStarted: () -> Unit) {
     var showMenu by remember { mutableStateOf(false) }
     Box {
         Row(
             Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = onClick, onLongClick = { if (hidden == null) showMenu = true })
+                .then(
+                    // Hidden apps revealed by name can be opened but not menu'd or dragged onto the home screen.
+                    if (hidden == null && drag != null) Modifier.appGestures(app, null, drag, onTap = onClick, onMenu = { showMenu = it }, onDragStarted = dragStarted)
+                    else Modifier.combinedClickable(onClick = onClick)
+                )
                 .padding(horizontal = 20.dp, vertical = 8.dp)
                 .testTag("result_${app.label}"),
             verticalAlignment = Alignment.CenterVertically,
@@ -217,9 +224,14 @@ fun AppMenu(
     onToggleSuggest: () -> Unit,
     onInfo: () -> Unit,
     onUninstall: () -> Unit,
+    onHome: Boolean = false,
+    onAddHome: () -> Unit = {},
+    onRemoveHome: () -> Unit = {},
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         Text(app.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        if (onHome) DropdownMenuItem(text = { Text("Remove from home") }, onClick = { onDismiss(); onRemoveHome() }, modifier = Modifier.testTag("menu_remove_home"))
+        else DropdownMenuItem(text = { Text("Add to home") }, onClick = { onDismiss(); onAddHome() }, modifier = Modifier.testTag("menu_add_home"))
         DropdownMenuItem(text = { Text("Hide") }, onClick = { onDismiss(); onHide() }, modifier = Modifier.testTag("menu_hide"))
         DropdownMenuItem(text = { Text("Hide and lock") }, onClick = { onDismiss(); onLock() }, modifier = Modifier.testTag("menu_lock"))
         DropdownMenuItem(
