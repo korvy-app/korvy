@@ -1,0 +1,15 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.jks
+*.keystore
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+.firebase/
+
+# Personal notes for Claude sessions (home network, devices). Never commit.
+CLAUDE.local.md

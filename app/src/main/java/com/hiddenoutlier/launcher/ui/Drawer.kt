@@ -1,0 +1,225 @@
+package com.hiddenoutlier.launcher.ui
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.hiddenoutlier.launcher.data.AppEntry
+import com.hiddenoutlier.launcher.data.AppRepository
+import com.hiddenoutlier.launcher.data.HideLevel
+import com.hiddenoutlier.launcher.data.SearchEngine
+
+/** All apps plus search. Typing filters apps; the last row searches the web with the chosen engine. */
+@Composable
+fun AppDrawer(
+    apps: List<AppEntry>,
+    results: LauncherViewModel.Results,
+    query: String,
+    engine: SearchEngine,
+    focusSignal: Int,
+    repo: AppRepository,
+    onQuery: (String) -> Unit,
+    onLaunch: (AppEntry) -> Unit,
+    onLaunchHidden: (AppEntry, HideLevel) -> Unit,
+    onWebSearch: (String) -> Unit,
+    menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(focusSignal) { if (focusSignal > 0) { focus.requestFocus(); keyboard?.show() } }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xE6101418)) // solid enough to read, light enough to feel layered
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding()
+            .testTag("drawer")
+    ) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            singleLine = true,
+            placeholder = { Text("Search apps and the web") },
+            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, "Clear") } },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = {
+                val first = results.apps.firstOrNull()
+                when {
+                    first != null -> onLaunch(first)
+                    query.isNotBlank() -> onWebSearch(query)
+                }
+            }),
+            shape = RoundedCornerShape(26.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth().padding(16.dp).focusRequester(focus).testTag("search_field"),
+        )
+
+        if (query.isBlank()) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(84.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxSize().testTag("app_grid"),
+            ) {
+                items(apps, key = { it.key }) { app -> GridApp(app, repo, onLaunch, menu) }
+            }
+        } else {
+            LazyColumn(Modifier.fillMaxSize().testTag("results")) {
+                items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { onLaunch(app) }, menu) }
+                items(results.revealed, key = { "hidden-" + it.first.key }) { (app, level) ->
+                    ResultRow(app, repo, level, { onLaunchHidden(app, level) }, menu)
+                }
+                item(key = "web") {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .combinedClickable(onClick = { onWebSearch(query) })
+                            .padding(horizontal = 20.dp, vertical = 14.dp)
+                            .testTag("web_search"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Language, null, tint = Color.White, modifier = Modifier.size(40.dp).padding(6.dp))
+                        Spacer(Modifier.width(14.dp))
+                        Text("Search ${engine.title} for “$query”", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun GridApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
+    Box {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .combinedClickable(onClick = { onLaunch(app) }, onLongClick = { showMenu = true })
+                .padding(vertical = 10.dp, horizontal = 4.dp)
+                .testTag("app_${app.label}"),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            AppIcon(app, repo, 52.dp)
+            Text(
+                app.label, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+        menu(app, showMenu) { showMenu = false }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ResultRow(app: AppEntry, repo: AppRepository, hidden: HideLevel?, onClick: () -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = { if (hidden == null) showMenu = true })
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .testTag("result_${app.label}"),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
+        ) {
+            AppIcon(app, repo, 40.dp)
+            Spacer(Modifier.width(14.dp))
+            Text(app.label, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            when (hidden) {
+                HideLevel.HIDDEN -> Icon(Icons.Outlined.VisibilityOff, "Hidden app", tint = Color.White.copy(alpha = 0.6f))
+                HideLevel.LOCKED -> Icon(Icons.Outlined.Lock, "Locked app", tint = Color.White.copy(alpha = 0.6f))
+                null -> {}
+            }
+        }
+        menu(app, showMenu) { showMenu = false }
+    }
+}
+
+/** Long-press menu for an app. */
+@Composable
+fun AppMenu(
+    app: AppEntry,
+    expanded: Boolean,
+    neverSuggest: Boolean,
+    onDismiss: () -> Unit,
+    onHide: () -> Unit,
+    onLock: () -> Unit,
+    onToggleSuggest: () -> Unit,
+    onInfo: () -> Unit,
+    onUninstall: () -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        Text(app.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        DropdownMenuItem(text = { Text("Hide") }, onClick = { onDismiss(); onHide() }, modifier = Modifier.testTag("menu_hide"))
+        DropdownMenuItem(text = { Text("Hide and lock") }, onClick = { onDismiss(); onLock() }, modifier = Modifier.testTag("menu_lock"))
+        DropdownMenuItem(
+            text = { Text(if (neverSuggest) "Allow in suggestions" else "Never suggest") },
+            onClick = { onDismiss(); onToggleSuggest() },
+        )
+        DropdownMenuItem(text = { Text("App info") }, onClick = { onDismiss(); onInfo() })
+        if (!app.isWorkProfile) DropdownMenuItem(text = { Text("Uninstall") }, onClick = { onDismiss(); onUninstall() })
+    }
+}
