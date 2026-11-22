@@ -52,5 +52,6 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refreshSuggestions() // the time of day has probably changed
+        vm.refreshDefaultHome()
     }
 }

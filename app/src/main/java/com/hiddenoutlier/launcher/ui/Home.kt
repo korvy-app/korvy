@@ -22,7 +22,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -65,6 +67,9 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onLaunch: (AppEntry) -> Unit,
     menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
+    showHomePrompt: Boolean = false,
+    onSetDefaultHome: () -> Unit = {},
+    onDismissHomePrompt: () -> Unit = {},
 ) {
     val threshold = with(LocalDensity.current) { 60.dp.toPx() }
     Box(
@@ -90,6 +95,7 @@ fun HomeScreen(
             Spacer(Modifier.height(32.dp))
             Clock()
             Spacer(Modifier.weight(1f))
+            if (showHomePrompt) HomePrompt(onSetDefaultHome, onDismissHomePrompt)
             if (suggestions.isNotEmpty()) {
                 Row(
                     Modifier.fillMaxWidth().padding(bottom = 16.dp).testTag("suggestions"),
@@ -142,6 +148,31 @@ private fun SuggestedApp(app: AppEntry, repo: AppRepository, onLaunch: (AppEntry
             )
         }
         menu(app, showMenu) { showMenu = false }
+    }
+}
+
+/** Shown until this is the default home app or the user taps "Not now" (Settings keeps the same button). */
+@Composable
+private fun HomePrompt(onSet: () -> Unit, onDismiss: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Black.copy(alpha = 0.45f))
+            .padding(16.dp)
+            .testTag("home_prompt"),
+    ) {
+        Text("Make this your home screen?", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Then the Home button opens it. You can switch back any time in Android settings.",
+            color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("home_prompt_dismiss")) { Text("Not now", color = Color.White) }
+            Button(onClick = onSet, modifier = Modifier.testTag("home_prompt_set")) { Text("Set as home") }
+        }
     }
 }
 

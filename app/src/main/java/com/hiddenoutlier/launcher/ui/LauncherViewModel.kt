@@ -45,6 +45,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     /** Bumped when the drawer should take keyboard focus (opened from the search bar). */
     val focusSearch = MutableStateFlow(0)
     private val _suggested = MutableStateFlow<List<String>>(emptyList())
+    /** Whether this is the phone's default home app; refreshed every time the launcher comes into view. */
+    val isDefaultHome = MutableStateFlow(Device.isDefaultHome(app))
+    fun refreshDefaultHome() { isDefaultHome.value = Device.isDefaultHome(getApplication()) }
+
     /** Unlocked for this visit to Settings → Hidden apps; locks again when the user leaves. */
     val lockedListOpen = MutableStateFlow(false)
 
@@ -163,5 +167,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setSlideshow(v: Boolean) = save { la.settings.setSlideshow(v) }
     fun setSlideshowMinutes(v: Int) = save { la.settings.setSlideshowMinutes(v) }
     fun finishTutorial() { save { la.settings.setTutorialDone(true) }; goHome() }
+
+    /** Asking to become the home app from the tour counts as finishing it: Android restarts the launcher
+     *  once it's the default, and the tour must not start over. */
+    fun tourSetDefaultHome(request: () -> Unit) {
+        viewModelScope.launch { la.settings.setTutorialDone(true); request() }
+    }
+
+    fun dismissHomePrompt() = save { la.settings.setHomePromptDismissed(true) }
     fun importBackgrounds(uris: List<Uri>) = save { backgrounds.import(uris) }
 }

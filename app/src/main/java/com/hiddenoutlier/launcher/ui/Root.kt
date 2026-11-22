@@ -40,6 +40,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val focus by vm.focusSearch.collectAsStateWithLifecycle()
     val bgFiles by vm.backgrounds.files.collectAsStateWithLifecycle()
     val lockedOpen by vm.lockedListOpen.collectAsStateWithLifecycle()
+    val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
     val animations = vm.animationsOn(settings)
 
     fun lockApp(app: AppEntry) {
@@ -75,6 +76,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 onOpenSettings = { vm.open(Screen.SETTINGS) },
                 onLaunch = vm::launch,
                 menu = menu,
+                showHomePrompt = !isDefaultHome && !settings.homePromptDismissed && settings.tutorialDone,
+                onSetDefaultHome = host.setDefaultHome,
+                onDismissHomePrompt = vm::dismissHomePrompt,
             ) }
             AnimatedVisibility(
                 visible = screen == Screen.DRAWER,
@@ -92,7 +96,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             }
             AnimatedVisibility(screen == Screen.SETTINGS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 SettingsScreen(
-                    settings, animations, vm.tier, bgFiles, privacy.hidden.size, host.isDefaultHome(), vm,
+                    settings, animations, vm.tier, bgFiles, privacy.hidden.size, isDefaultHome, vm,
                     onSetDefaultHome = host.setDefaultHome, onBack = { vm.goHome() },
                 )
             }
@@ -112,7 +116,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 StatsScreen(host.stats, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                Tutorial(host.isDefaultHome(), host.setDefaultHome, onDone = { vm.finishTutorial() })
+                Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
             }
         }
         BackHandler(enabled = screen != Screen.HOME) {

@@ -28,6 +28,8 @@ data class Settings(
     val revealHiddenByName: Boolean = true,
     val slideshow: Boolean = false,
     val slideshowMinutes: Int = 15,
+    /** The user tapped "Not now" on the home-screen card that offers to become the default home app. */
+    val homePromptDismissed: Boolean = false,
 )
 
 class SettingsStore(private val context: Context) {
@@ -39,6 +41,7 @@ class SettingsStore(private val context: Context) {
         val reveal = booleanPreferencesKey("reveal_hidden_by_name")
         val slideshow = booleanPreferencesKey("slideshow")
         val slideshowMinutes = intPreferencesKey("slideshow_minutes")
+        val homePromptDismissed = booleanPreferencesKey("home_prompt_dismissed")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -50,6 +53,7 @@ class SettingsStore(private val context: Context) {
             revealHiddenByName = p[K.reveal] ?: true,
             slideshow = p[K.slideshow] ?: false,
             slideshowMinutes = p[K.slideshowMinutes] ?: 15,
+            homePromptDismissed = p[K.homePromptDismissed] ?: false,
         )
     }
 
@@ -64,4 +68,5 @@ class SettingsStore(private val context: Context) {
     suspend fun setRevealHiddenByName(v: Boolean) = set { it[K.reveal] = v }
     suspend fun setSlideshow(v: Boolean) = set { it[K.slideshow] = v }
     suspend fun setSlideshowMinutes(v: Int) = set { it[K.slideshowMinutes] = v }
+    suspend fun setHomePromptDismissed(v: Boolean) = set { it[K.homePromptDismissed] = v }
 }

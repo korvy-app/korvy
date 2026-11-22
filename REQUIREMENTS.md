@@ -133,6 +133,11 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.1.1** – Fixed: choosing "Make this my home screen" on the tour's last page restarted
+  the tour (Android relaunches the new default home app before the tour was marked done). Asking for the home
+  role from the tour now counts as finishing it. New: if the tour is skipped and this isn't the default home
+  app, a dismissible "Make this your home screen?" card sits above the search bar (Not now remembers the
+  choice; Settings keeps the same button). Checked all three paths on the Pixel 4a release build.
 - 2026-11-22: **Prototype 0.1.0.** Requirements gathered from the owner, then built:
   - Home screen (clock, time-of-day suggestions, search bar, swipe up for all apps, long-press for Settings),
     app drawer with ranked and typo-tolerant search and web search (DuckDuckGo, Brave, Startpage, Mojeek).
