@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -80,6 +81,12 @@ fun AppDrawer(
 ) {
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    // Close the keyboard before leaving for another app, or Android shows it again for a moment on return.
+    fun leaving(action: () -> Unit) { keyboard?.hide(); focusManager.clearFocus(force = true); action() }
+    val launch: (AppEntry) -> Unit = { app -> leaving { onLaunch(app) } }
+    val launchHidden: (AppEntry, HideLevel) -> Unit = { app, level -> leaving { onLaunchHidden(app, level) } }
+    val webSearch: (String) -> Unit = { q -> leaving { onWebSearch(q) } }
     LaunchedEffect(focusSignal) { if (focusSignal > 0) { focus.requestFocus(); keyboard?.show() } }
 
     Column(
@@ -102,8 +109,8 @@ fun AppDrawer(
             keyboardActions = KeyboardActions(onGo = {
                 val first = results.apps.firstOrNull()
                 when {
-                    first != null -> onLaunch(first)
-                    query.isNotBlank() -> onWebSearch(query)
+                    first != null -> launch(first)
+                    query.isNotBlank() -> webSearch(query)
                 }
             }),
             shape = RoundedCornerShape(26.dp),
@@ -120,19 +127,19 @@ fun AppDrawer(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxSize().testTag("app_grid"),
             ) {
-                items(apps, key = { it.key }) { app -> GridApp(app, repo, onLaunch, menu) }
+                items(apps, key = { it.key }) { app -> GridApp(app, repo, launch, menu) }
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().testTag("results")) {
-                items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { onLaunch(app) }, menu) }
+                items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { launch(app) }, menu) }
                 items(results.revealed, key = { "hidden-" + it.first.key }) { (app, level) ->
-                    ResultRow(app, repo, level, { onLaunchHidden(app, level) }, menu)
+                    ResultRow(app, repo, level, { launchHidden(app, level) }, menu)
                 }
                 item(key = "web") {
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .combinedClickable(onClick = { onWebSearch(query) })
+                            .combinedClickable(onClick = { webSearch(query) })
                             .padding(horizontal = 20.dp, vertical = 14.dp)
                             .testTag("web_search"),
                         verticalAlignment = Alignment.CenterVertically,

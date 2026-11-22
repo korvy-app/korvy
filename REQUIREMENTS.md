@@ -133,6 +133,11 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.1.2** – Fixed: the keyboard flashed for a moment when returning home after opening
+  an app from search (now hidden and unfocused before leaving; `stateAlwaysHidden`). Fixed: the clock lagged up
+  to a minute after the phone's time or time zone changed (e.g. airplane mode off after travel); it now follows
+  Android's TIME_TICK / TIME_CHANGED / TIMEZONE_CHANGED / DATE_CHANGED broadcasts and refreshes on resume.
+  Checked on the Pixel 4a: time-zone switch updated the clock within ~1.5 s; keyboard stayed hidden after Home.
 - 2026-11-22 (later): **0.1.1** – Fixed: choosing "Make this my home screen" on the tour's last page restarted
   the tour (Android relaunches the new default home app before the tour was marked done). Asking for the home
   role from the tour now counts as finishing it. New: if the tour is skipped and this isn't the default home

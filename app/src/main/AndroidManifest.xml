@@ -32,7 +32,7 @@
             android:clearTaskOnLaunch="true"
             android:resumeWhilePausing="true"
             android:screenOrientation="unspecified"
-            android:windowSoftInputMode="adjustResize"
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
             android:configChanges="keyboard|keyboardHidden|navigation|uiMode|screenSize|smallestScreenSize|screenLayout|orientation|density">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

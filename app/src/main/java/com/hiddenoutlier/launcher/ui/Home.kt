@@ -29,7 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +40,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import java.util.TimeZone
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hiddenoutlier.launcher.data.AppEntry
 import com.hiddenoutlier.launcher.data.AppRepository
-import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -179,11 +188,28 @@ private fun HomePrompt(onSet: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 private fun Clock() {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = LocalDateTime.now()
-            delay(60_000L - (System.currentTimeMillis() % 60_000L)) // wake exactly on the minute
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    // Android announces every minute (TIME_TICK) and every jump: the clock or time zone set by the network
+    // (e.g. turning off airplane mode after travelling), manually, or the date rolling over. Refresh on all
+    // of them, and whenever the home screen comes back into view.
+    DisposableEffect(context, lifecycle) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_TIMEZONE_CHANGED) TimeZone.setDefault(null) // re-read the zone
+                now = LocalDateTime.now()
+            }
         }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_TIME_TICK)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            addAction(Intent.ACTION_DATE_CHANGED)
+        }
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        val observer = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) now = LocalDateTime.now() }
+        lifecycle.addObserver(observer)
+        onDispose { context.unregisterReceiver(receiver); lifecycle.removeObserver(observer) }
     }
     val time = now.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)).replace(Regex("\\s?[AaPp]\\.?[Mm]\\.?$"), "")
     Text(time, color = Color.White, style = TextStyle(fontSize = 72.sp, fontWeight = FontWeight.Light, shadow = shadow))
