@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -115,6 +116,39 @@ fun AppsForTasksScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Settings → Assistant → Notebook: what the assistant has learned (notes and phrases), editable as Markdown. */
+@Composable
+fun NotebookScreen(vm: LauncherViewModel, onBack: () -> Unit) {
+    val store = vm.assistant.notebook
+    val book by store.book.collectAsStateWithLifecycle()
+    var text by remember { mutableStateOf(book.toMarkdown()) }
+    val size = text.length
+    val max = com.hiddenoutlier.launcher.core.Notebook.MAX_CHARS
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("notebook")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
+            Text("Notebook", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = { text = store.saveMarkdown(text).tidy().also { store.save(it) }.toMarkdown() }) { Text("Tidy") }
+            androidx.compose.material3.TextButton(onClick = { store.saveMarkdown(text); onBack() }, enabled = size <= max,
+                modifier = Modifier.testTag("notebook_save")) { Text("Save") }
+        }
+        LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+            item {
+                Text("What the assistant has learned. Teach it by saying “remember …”, “when I say goodnight, set a timer for 8 hours " +
+                    "and play rain sounds”, or “forget …”. Phrases run instantly without a model. The model only sees the few notes " +
+                    "that matter for each question. Kept encrypted on this phone, never backed up. People nicknames live in People shortcuts.",
+                    style = MaterialTheme.typography.bodySmall)
+                androidx.compose.material3.LinearProgressIndicator(progress = { (size.toFloat() / max).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    color = if (size > max * 0.9) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                Text("$size of $max characters · ${book.notes.size} notes · ${book.phrases.size} phrases", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(text, { text = it }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 320.dp).testTag("notebook_text"),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
             }
         }
     }

@@ -190,6 +190,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.APPS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 AppsForTasksScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
             }
+            AnimatedVisibility(screen == Screen.NOTEBOOK, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                NotebookScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
+            }
             AnimatedVisibility(screen == Screen.WIDGETS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 WidgetPickerScreen(vm, onBack = { vm.open(Screen.HOME) })
             }
@@ -200,7 +203,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
         }
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
-                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE, Screen.PEOPLE, Screen.APPS -> vm.open(Screen.SETTINGS)
+                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE, Screen.PEOPLE, Screen.APPS, Screen.NOTEBOOK -> vm.open(Screen.SETTINGS)
                 Screen.WIDGETS -> vm.open(Screen.HOME)
                 Screen.CROP -> vm.skipCrop()
                 Screen.TUTORIAL -> vm.finishTutorial()

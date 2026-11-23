@@ -14,7 +14,8 @@ enum class ActionType(val id: String, val help: String) {
     RIDE("ride", "order a ride; arg = \"uber: destination\" or \"lyft: destination\""),
     NAVIGATE("navigate", "directions in the maps app; arg = destination"),
     PLAY("play", "play music in the user's music app; arg = song, artist, album, playlist or genre"),
-    HELP("help", "list what you can do; arg empty");
+    HELP("help", "list what you can do; arg empty"),
+    REMEMBER("remember", "only when the user asks you to remember something about them: save a short note; arg = the note");
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }

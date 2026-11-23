@@ -188,6 +188,12 @@ fun SettingsScreen(
                             Text("Choose digital assistant app")
                         }
                     }
+                    Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.NOTEBOOK) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_notebook")) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Notebook")
+                            Text("What it has learned: your preferences and phrases. Teach it by talking to it.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.PEOPLE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_people")) {
                         Column(Modifier.weight(1f)) {
                             Text("People shortcuts")

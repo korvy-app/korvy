@@ -66,6 +66,7 @@ class Tools(
     private val opened: () -> Unit = {},
     private val useLocation: () -> Boolean = { true },
     private val shortcuts: PeopleShortcuts? = null,
+    private val notebook: NotebookStore? = null,
     /** The app the user picked for a task, or null for Android's choice. */
     private val appFor: (com.hiddenoutlier.launcher.platform.AppTask) -> String? = { null },
 ) {
@@ -85,6 +86,7 @@ class Tools(
             ActionType.NAVIGATE -> navigate(a.arg)
             ActionType.PLAY -> play(a.arg)
             ActionType.HELP -> help()
+            ActionType.REMEMBER -> remember(a.arg)
         }
     } catch (e: OfflineException) {
         ToolResult("${e.source.title} is turned off. You can turn it on in Settings → Online features.")
@@ -324,6 +326,17 @@ class Tools(
         return if (start(i)) ToolResult("Playing $what.") else ToolResult("No music app can play “$what”. Pick one in Settings → Assistant → Apps.")
     }
 
+    /** The model wants to save a note: always ask first, and let the user edit it. */
+    private fun remember(note: String): ToolResult {
+        val nb = notebook ?: return ToolResult("I can't keep notes here.")
+        if (note.isBlank()) return ToolResult("What should I remember?")
+        if (!nb.book.value.hasRoomFor(note.length + 4))
+            return ToolResult("My notebook is full. Tidy it in Settings → Assistant → Notebook, then ask again.")
+        return ToolResult("Save this to my notebook?", card = Card(Card.Kind.CONFIRM, "Remember this?",
+            "Kept on this phone only. You can edit it in Settings → Assistant → Notebook.", "Save", note,
+            run = { m -> if (nb.save(nb.book.value.addNote(m ?: note))) "Saved. I'll keep that in mind." else "My notebook is full." }))
+    }
+
     private fun help(): ToolResult {
         fun app(t: com.hiddenoutlier.launcher.platform.AppTask) = appFor(t)?.let { " (${com.hiddenoutlier.launcher.platform.AppChoices.label(context, it)})" }.orEmpty()
         return ToolResult("Here's what I can do:", listOf(
@@ -335,6 +348,7 @@ class Tools(
             "• Timers and maths: “timer 10 minutes”, “18% of 64”",
             "• Weather, news, stocks, quick answers (when allowed online)",
             "• Anything else: I'll answer with the model you picked",
+            "• Teach me: “remember I'm vegetarian”, “when I say goodnight, set a timer for 8 hours and play rain sounds”, “when I say Jen I mean Jennifer Lopez”, “what do you remember?”",
             "I always ask before sending, calling or booking.",
         ), spoken = "I can open apps, text and call people, get rides and directions, play music, set timers, do maths, and get the weather, news and stock prices. I always ask before sending, calling or booking.")
     }

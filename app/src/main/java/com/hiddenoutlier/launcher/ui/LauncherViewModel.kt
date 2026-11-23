@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS, WIDGETS }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS, WIDGETS, NOTEBOOK }
 
 /** One line of the assistant conversation. */
 data class ChatItem(

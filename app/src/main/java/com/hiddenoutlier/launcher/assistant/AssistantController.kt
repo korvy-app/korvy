@@ -108,6 +108,7 @@ class AssistantController(
     private var appsCache: List<AppEntry> = emptyList()
     val contacts = Contacts(context)
     val shortcuts = PeopleShortcuts(context)
+    val notebook = NotebookStore(context)
     private val tools = Tools(
         context,
         apps = { appsCache },
@@ -128,6 +129,7 @@ class AssistantController(
         opened = { leftForApp.value++ },
         useLocation = { settings.value.useLocation },
         shortcuts = shortcuts,
+        notebook = notebook,
         appFor = { t -> com.hiddenoutlier.launcher.platform.AppChoices.chosen(context, settings.value.appChoices, t) },
     )
 
@@ -150,12 +152,36 @@ class AssistantController(
         chat.value = chat.value + ChatItem(replyId, false, "", pending = true)
         busy.value = true
         job = scope.launch {
+            try {
+                // 1. Teaching ("remember …", "when I say …", "forget …"): plain code, no model.
+                com.hiddenoutlier.launcher.core.Lesson.parse(q)?.let { lesson ->
+                    val r = learn(lesson)
+                    update(replyId) { it.copy(text = r.text, lines = r.lines, pending = false) }
+                    if (speak) speaker.sayAll(r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines))
+                    return@launch
+                }
+                // 2. A phrase the user taught: run its steps in order, each with its own reply.
+                val phrase = notebook.book.value.phraseFor(q)
+                if (phrase != null) {
+                    phrase.steps.forEachIndexed { i, step ->
+                        val id = if (i == 0) replyId else nextId++.also { chat.value = chat.value + ChatItem(it, false, "", pending = true) }
+                        runOne(step, id, speak)
+                    }
+                } else runOne(q, replyId, speak)
+            } finally {
+                busy.value = false
+            }
+        }
+    }
+
+    /** One request: maths, a quick command, or the model; then the tool it picked. */
+    private suspend fun runOne(q: String, replyId: Long, speak: Boolean) {
             var streamed = false
             try {
                 val action = Calc.answer(q)?.let { Action(ActionType.ANSWER, it) }
                     ?: AgentCore.quickParse(q)
                     ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
-                if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return@launch }
+                if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return }
                 update(replyId) { it.copy(actionJson = AgentCore.toJson(action)) }
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
                 if (action.type != ActionType.ANSWER) update(replyId) { it.copy(text = "…") }
@@ -171,10 +197,54 @@ class AssistantController(
                 throw e
             } catch (e: Exception) {
                 update(replyId) { it.copy(text = "Sorry: ${e.message}", pending = false) }
-            } finally {
-                busy.value = false
+            }
+    }
+
+    /** Applies something the user taught. People go to the encrypted shortcuts; the rest to the notebook. */
+    private suspend fun learn(lesson: com.hiddenoutlier.launcher.core.Lesson): ToolResult {
+        val nb = notebook.book.value
+        val full = "My notebook is full. Tidy it in Settings → Assistant → Notebook first."
+        return when (lesson) {
+            is com.hiddenoutlier.launcher.core.Lesson.Note ->
+                if (notebook.save(nb.addNote(lesson.text))) ToolResult("Got it. I'll keep in mind: ${lesson.text}.") else ToolResult(full)
+            is com.hiddenoutlier.launcher.core.Lesson.NewPhrase -> {
+                val unknown = lesson.steps.filter { Calc.answer(it) == null && AgentCore.quickParse(it) == null && notebook.book.value.phraseFor(it) == null }
+                if (!notebook.save(nb.addPhrase(lesson.trigger, lesson.steps))) ToolResult(full)
+                else ToolResult("Okay. When you say “${lesson.trigger}”, I'll:", lesson.steps.map { "• $it" } +
+                    (if (unknown.isEmpty()) emptyList() else listOf("(I'll ask the model for: ${unknown.joinToString(", ")})")),
+                    spoken = "Okay. When you say ${lesson.trigger}, I'll ${lesson.steps.joinToString(", then ")}.")
+            }
+            is com.hiddenoutlier.launcher.core.Lesson.Alias -> alias(lesson.word, lesson.target, full)
+            is com.hiddenoutlier.launcher.core.Lesson.Forget -> {
+                val (after, n) = nb.forget(lesson.what)
+                val person = shortcuts.find(lesson.what)?.let { shortcuts.remove(shortcuts.all.value.first { s -> com.hiddenoutlier.launcher.core.AppSearch.normalize(s.alias) == com.hiddenoutlier.launcher.core.AppSearch.normalize(lesson.what) }.alias); 1 } ?: 0
+                notebook.save(after)
+                ToolResult(if (n + person == 0) "I don't have anything about “${lesson.what}”." else "Forgotten.")
+            }
+            com.hiddenoutlier.launcher.core.Lesson.Show -> {
+                val lines = nb.notes.map { "• $it" } + nb.phrases.map { "• “${it.trigger}” → ${it.steps.joinToString("; ")}" } +
+                    shortcuts.all.value.map { "• “${it.alias}” → ${it.person.name}" }
+                if (lines.isEmpty()) ToolResult("Nothing yet. Try “remember I'm vegetarian” or “when I say goodnight, set a timer for 8 hours”.")
+                else ToolResult("Here's what I remember (edit it in Settings → Assistant → Notebook):", lines, spoken = "I remember ${lines.size} things. They're listed on screen.")
             }
         }
+    }
+
+    /** "When I say Jen I mean Jennifer Lopez": a contact → people shortcut; an app → a phrase that opens it; else a note. */
+    private suspend fun alias(word: String, target: String, full: String): ToolResult {
+        if (contacts.granted()) {
+            val people = contacts.candidates(target)
+            val exact = people.filter { com.hiddenoutlier.launcher.core.AppSearch.normalize(it.name) == com.hiddenoutlier.launcher.core.AppSearch.normalize(target) }
+            val p = exact.singleOrNull() ?: people.singleOrNull()
+            if (p != null) { shortcuts.set(word, p); return ToolResult("Got it: “$word” means ${p.name}.") }
+        }
+        val apps = visibleApps()
+        val app = apps.maxByOrNull { com.hiddenoutlier.launcher.core.AppSearch.score(target, it.label) }
+            ?.takeIf { com.hiddenoutlier.launcher.core.AppSearch.score(target, it.label) >= 800 }
+        if (app != null) return if (notebook.save(notebook.book.value.addPhrase(word, listOf("open ${app.label}"))))
+            ToolResult("Got it: “$word” opens ${app.label}.") else ToolResult(full)
+        return if (notebook.save(notebook.book.value.addNote("When I say “$word”, I mean $target")))
+            ToolResult("Got it. When you say “$word”, I'll know you mean $target.") else ToolResult(full)
     }
 
     private suspend fun modelAction(q: String, replyId: Long, speak: Boolean): Action? {
@@ -195,7 +265,11 @@ class AssistantController(
         }.joinToString("; ")
         roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null }, apps)
         AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
-        AgentCore.historyMessages(history(excludeFrom = replyId - 1), "(It's $time.) $q").forEach { (r, c) -> roles += r; contents += c }
+        // Only the notes that matter for this question, sent with it (not in the system prompt, so the model can
+        // keep reusing its cached work for the unchanged start of the prompt).
+        val notes = notebook.book.value.notesFor(q)
+        val prefix = if (notes.isEmpty()) "(It's $time.)" else "(It's $time. Keep in mind: ${notes.joinToString(" ")})"
+        AgentCore.historyMessages(history(excludeFrom = replyId - 1), "$prefix $q").forEach { (r, c) -> roles += r; contents += c }
         val sb = StringBuilder()
         if (speak) speaker.beginStream()
         // Watchdog: if nothing at all happens for a while (no status, no text), stop instead of "thinking" forever.

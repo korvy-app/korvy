@@ -100,6 +100,17 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   place name ("New York, New York" → "New York") and speaks only the city, optional approximate location for weather
   (ACCESS_COARSE_LOCATION, asked from a card, rounded to ~1 km, LocationManager, no Play services).
 
+## Notebook: teaching the assistant (0.10.0)
+- One encrypted `notebook.md` (`core/Notebook`, `assistant/NotebookStore`), editable in Settings → Assistant → Notebook,
+  capped at 4,000 characters with a size meter and Tidy (dedupe). Never backed up.
+- Taught by talking (`core/Lesson`, plain code): "remember …" (note), "when I say X, do A and B / then C" (phrase:
+  steps are ordinary requests run in order, each with its own reply, confirmation cards still apply), "when I say X
+  I mean Y" (Y a contact → encrypted people shortcut; an app → phrase "open Y"; else a note), "forget …",
+  "what do you remember?". The model can propose a note (`remember` action) but it always shows a Save card.
+- Phrases never reach the model. Notes do, but only those relevant to the question (shared words, then newest),
+  at most ~600 characters, and they're sent with the question, not in the system prompt, so the cached prompt
+  prefix stays the same and answers don't slow down as the notebook grows.
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
@@ -234,6 +245,9 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.10.0** – Notebook (see its section). Verified on the 4a: taught "when I say morning, weather and
+  then 15% of 80" → "morning" ran both steps; "remember I like temperatures in Celsius"; "when I say snapper I mean
+  Camera" → "snapper" opened the camera; "what do you remember?" listed all three; "forget …" removed them.
 - 2026-11-23: **0.9.0** – Whisper speech recognition (whisper.cpp v1.9.5 submodule, built on llama.cpp's ggml;
   models tiny/base/small, English or 99 languages; energy endpointing in `core/Endpointer`; audio only in memory and a
   temp file deleted after). Pro unlock (`platform/ProStore`: Play Billing 8.3 in `play` only, product `pro_unlock`;
