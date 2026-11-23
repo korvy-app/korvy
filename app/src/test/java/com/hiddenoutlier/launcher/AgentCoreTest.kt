@@ -123,4 +123,27 @@ class AgentCoreTest {
         val p = AgentCore.systemPrompt("", "Monday", null, "Music: Spotify; Maps: Organic Maps")
         assertTrue(p.contains("Music: Spotify"))
     }
+
+    @Test fun weatherIgnoresWhen() {
+        assertEquals(Action(ActionType.WEATHER, "Seattle"), q("What's the weather in Seattle tomorrow?"))
+        assertEquals(Action(ActionType.WEATHER, "Paris"), q("weather in Paris this weekend"))
+        assertEquals(Action(ActionType.WEATHER, ""), q("what's the weather tonight"))
+    }
+
+    @Test fun moreWaysToAskForTheWeather() {
+        assertEquals(Action(ActionType.WEATHER, ""), q("what was the weather like"))
+        assertEquals(Action(ActionType.WEATHER, ""), q("What is the weather like?"))
+        assertEquals(Action(ActionType.WEATHER, ""), q("how will the weather be tomorrow"))
+        assertEquals(Action(ActionType.WEATHER, "Boston"), q("what will the weather be like in Boston tomorrow"))
+        assertEquals(Action(ActionType.WEATHER, "Denver"), q("how is the weather in Denver"))
+    }
+
+    @Test fun timesAreNotPlaces() {
+        assertEquals("", AgentCore.weatherPlace("4:26 PM"))
+        assertEquals("", AgentCore.weatherPlace("tomorrow"))
+        assertEquals("", AgentCore.weatherPlace("Monday"))
+        assertEquals("", AgentCore.weatherPlace("my area"))
+        assertEquals("Seattle", AgentCore.weatherPlace("Seattle"))
+        assertEquals("Paris, France", AgentCore.weatherPlace("Paris, France"))
+    }
 }

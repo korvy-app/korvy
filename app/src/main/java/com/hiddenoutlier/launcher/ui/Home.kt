@@ -87,6 +87,7 @@ fun HomeScreen(
     drag: DragController? = null,
     grid: @Composable (Modifier) -> Unit = { Spacer(it) },
     onOpenAssistant: (() -> Unit)? = null,
+    widgets: @Composable () -> Unit = {},
 ) {
     val threshold = with(LocalDensity.current) { 60.dp.toPx() }
     Box(
@@ -122,6 +123,7 @@ fun HomeScreen(
             Spacer(Modifier.height(32.dp))
             Clock()
             Spacer(Modifier.height(12.dp))
+            widgets()
             grid(Modifier.weight(1f).fillMaxWidth())
             if (showHomePrompt) HomePrompt(onSetDefaultHome, onDismissHomePrompt)
             if (suggestions.isNotEmpty()) {

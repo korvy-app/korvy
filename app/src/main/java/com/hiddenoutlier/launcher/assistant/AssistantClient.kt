@@ -74,6 +74,29 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
         try { result.await() } finally { scheduleIdle() }
     }
 
+    /** Speech to text with whisper.cpp: [audio] holds 16 kHz mono little-endian floats (deleted afterwards). */
+    suspend fun transcribe(modelPath: String, audio: java.io.File, lang: String, prompt: String): String = mutex.withLock {
+        idleJob?.cancel()
+        val svc = bind()
+        val result = CompletableDeferred<String>()
+        val replyTo = Messenger(Handler(Looper.getMainLooper()) { m ->
+            val text = m.data.getString(AssistantService.K_TEXT).orEmpty()
+            when (m.what) {
+                AssistantService.MSG_DONE -> result.complete(text)
+                AssistantService.MSG_ERROR -> result.completeExceptionally(IllegalStateException(text))
+            }
+            true
+        })
+        svc.send(Message.obtain(null, AssistantService.MSG_TRANSCRIBE).apply {
+            this.replyTo = replyTo
+            data = Bundle().apply {
+                putString(AssistantService.K_PATH, modelPath); putString(AssistantService.K_AUDIO, audio.path)
+                putString(AssistantService.K_LANG, lang); putString(AssistantService.K_PROMPT, prompt)
+            }
+        })
+        try { result.await() } finally { scheduleIdle() }
+    }
+
     /** Loads the model in the background (e.g. when the assistant opens) so the first answer starts sooner. */
     fun preload(modelPath: String) {
         scope.launch {

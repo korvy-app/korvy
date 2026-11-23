@@ -80,14 +80,27 @@ fun SettingsScreen(
         }
         LazyColumn(Modifier.fillMaxSize().testTag("settings"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
             item {
+                Section("Pro")
+                ProSection(vm)
                 Section("Home screen")
                 if (isDefaultHome) Note("This is your home screen app.")
                 else Row(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                     Button(onClick = onSetDefaultHome, modifier = Modifier.testTag("set_default_home")) { Text("Make this my home screen") }
                 }
+                Row(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                    OutlinedButton(onClick = { vm.open(Screen.WIDGETS) }, modifier = Modifier.testTag("add_widget")) { Text("Add a widget") }
+                }
+                Note("Hold a widget on the home screen to resize, move or remove it.")
             }
             item {
                 Section("Look and feel")
+                Text("Screen rotation", modifier = Modifier.padding(start = 20.dp, top = 8.dp))
+                Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Follow phone", "Portrait", "Landscape").forEachIndexed { i, label ->
+                        FilterChip(selected = s.orientation == i, onClick = { vm.setOrientation(i) }, label = { Text(label) },
+                            modifier = Modifier.testTag("orientation_$i"))
+                    }
+                }
                 Toggle(
                     "Animations",
                     "Default for this phone: ${if (tier == Tier.LOW) "off (keeps it fast)" else "on"}.",
@@ -109,11 +122,17 @@ fun SettingsScreen(
                     ) { Text("Add pictures") }
                     if (backgrounds.isNotEmpty()) TextButton(onClick = { vm.backgrounds.clear() }) { Text("Use phone wallpaper") }
                 }
+                val pro = proUnlocked(vm)
                 Toggle(
                     "Slideshow",
-                    if (backgrounds.size < 2) "Add two or more pictures to rotate them." else "Crossfades between your pictures. Pauses in battery saver.",
-                    s.slideshow, "toggle_slideshow", enabled = backgrounds.size >= 2,
+                    when {
+                        !pro -> "Rotate your pictures (Pro)."
+                        backgrounds.size < 2 -> "Add two or more pictures to rotate them."
+                        else -> "Crossfades between your pictures. Pauses in battery saver."
+                    },
+                    s.slideshow && pro, "toggle_slideshow", enabled = backgrounds.size >= 2 && pro,
                 ) { vm.setSlideshow(it) }
+                if (!pro) ProUnlock(vm, "Slideshows", Modifier.padding(horizontal = 20.dp))
                 if (s.slideshow) Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(1, 5, 15, 60).forEach { m ->
                         FilterChip(selected = s.slideshowMinutes == m, onClick = { vm.setSlideshowMinutes(m) },
@@ -147,7 +166,7 @@ fun SettingsScreen(
                             Text("Model")
                             Text("Choose and download the on-device model.", style = MaterialTheme.typography.bodySmall)
                         }
-                        Text(com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(s.modelId)?.name ?: "None")
+                        Text(com.hiddenoutlier.launcher.assistant.ModelCatalog.chatById(s.modelId)?.name ?: "None")
                     }
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.open(Screen.VOICE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_voice"),

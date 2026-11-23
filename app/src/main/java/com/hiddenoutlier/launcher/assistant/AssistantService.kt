@@ -38,7 +38,7 @@ class AssistantService : Service() {
     private fun handle(msg: Message) {
         val reply = msg.replyTo
         when (msg.what) {
-            MSG_STOP -> Native.stop()
+            MSG_STOP -> { Native.stop(); Native.whisperStop() }
             MSG_STOP_SPEAK -> { speechGeneration++; neural.stop() }
             MSG_SPEAK -> {
                 val d = msg.data
@@ -52,6 +52,21 @@ class AssistantService : Service() {
                             onStart = { send(reply, MSG_SPEAK_START, "") })
                     }.onFailure { Log.e("AssistantService", "speech failed", it); send(reply, MSG_ERROR, "Voice failed: ${it.message}") }
                     send(reply, MSG_SPEAK_DONE, "")
+                }
+            }
+            MSG_TRANSCRIBE -> worker.execute {
+                val d = msg.data
+                try {
+                    val audio = java.io.File(d.getString(K_AUDIO)!!)
+                    val pcm = java.nio.ByteBuffer.wrap(audio.readBytes()).order(java.nio.ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+                        .let { b -> FloatArray(b.remaining()).also { b.get(it) } }
+                    audio.delete()
+                    if (Native.whisperLoad(d.getString(K_PATH)!!) != 0) { send(reply, MSG_ERROR, "Couldn't load the speech model"); return@execute }
+                    val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
+                    val text = Native.whisperTranscribe(pcm, d.getString(K_LANG) ?: "en", threads, d.getString(K_PROMPT).orEmpty())
+                    if (text == null) send(reply, MSG_ERROR, "Speech recognition failed") else send(reply, MSG_DONE, text.trim())
+                } catch (t: Throwable) {
+                    Log.e("AssistantService", "transcribe failed", t); send(reply, MSG_ERROR, t.message ?: "Speech recognition failed")
                 }
             }
             MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
@@ -98,7 +113,7 @@ class AssistantService : Service() {
 
     override fun onDestroy() {
         Native.stop()
-        speechGeneration++; runCatching { neural.release() }
+        speechGeneration++; runCatching { neural.release() }; runCatching { Native.whisperUnload() }
         worker.shutdown(); voice.shutdown()
         super.onDestroy()
         // Give the memory back right away instead of leaving a cached process holding a model.
@@ -106,7 +121,8 @@ class AssistantService : Service() {
     }
 
     companion object {
-        const val MSG_COMPLETE = 1; const val MSG_STOP = 2; const val MSG_PRELOAD = 3; const val MSG_SPEAK = 4; const val MSG_STOP_SPEAK = 5
+        const val MSG_COMPLETE = 1; const val MSG_STOP = 2; const val MSG_PRELOAD = 3; const val MSG_SPEAK = 4; const val MSG_STOP_SPEAK = 5; const val MSG_TRANSCRIBE = 6
+        const val K_AUDIO = "audio"; const val K_LANG = "lang"; const val K_PROMPT = "prompt"
         const val K_KIND = "kind"; const val K_MODEL = "model"; const val K_SPEAKER = "speaker"; const val K_SPEED = "speed"
         /** Context window: room for the system prompt, examples, a few earlier turns and the reply. */
         const val CTX = 4096

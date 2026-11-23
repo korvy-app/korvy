@@ -47,6 +47,15 @@ data class Settings(
     // Voice
     val speak: SpeakMode = SpeakMode.AFTER_VOICE,
     val ttsEngine: String? = null,
+    /** Whisper model id for speech input, or null for the phone's own on-device recognizer. */
+    val sttModel: String? = null,
+    /** Screen rotation: 0 follow the phone, 1 portrait only, 2 landscape only. */
+    val orientation: Int = 0,
+    /** Wake word (Pro, opt-in): on/off, the phrase, sensitivity 0 low … 2 high, and only while the screen is on. */
+    val wakeWord: Boolean = false,
+    val wakePhrase: String = "Hey Launcher",
+    val wakeSensitivity: Int = 1,
+    val wakeScreenOnly: Boolean = true,
     val ttsVoice: String? = null,
     val ttsRate: Float = 1f,
     val ttsPitch: Float = 1f,
@@ -85,6 +94,12 @@ class SettingsStore(private val context: Context) {
         val modelsOnMobileData = booleanPreferencesKey("models_on_mobile_data")
         val speak = stringPreferencesKey("speak")
         val ttsEngine = stringPreferencesKey("tts_engine")
+        val sttModel = stringPreferencesKey("stt_model")
+        val orientation = androidx.datastore.preferences.core.intPreferencesKey("orientation")
+        val wakeWord = booleanPreferencesKey("wake_word")
+        val wakePhrase = stringPreferencesKey("wake_phrase")
+        val wakeSensitivity = androidx.datastore.preferences.core.intPreferencesKey("wake_sensitivity")
+        val wakeScreenOnly = booleanPreferencesKey("wake_screen_only")
         val ttsVoice = stringPreferencesKey("tts_voice")
         val ttsRate = androidx.datastore.preferences.core.floatPreferencesKey("tts_rate")
         val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
@@ -114,6 +129,12 @@ class SettingsStore(private val context: Context) {
             modelsOnMobileData = p[K.modelsOnMobileData] ?: false,
             speak = p[K.speak]?.let { runCatching { SpeakMode.valueOf(it) }.getOrNull() } ?: SpeakMode.AFTER_VOICE,
             ttsEngine = p[K.ttsEngine],
+            sttModel = p[K.sttModel],
+            orientation = p[K.orientation] ?: 0,
+            wakeWord = p[K.wakeWord] ?: false,
+            wakePhrase = p[K.wakePhrase] ?: "Hey Launcher",
+            wakeSensitivity = p[K.wakeSensitivity] ?: 1,
+            wakeScreenOnly = p[K.wakeScreenOnly] ?: true,
             ttsVoice = p[K.ttsVoice],
             ttsRate = p[K.ttsRate] ?: 1f,
             ttsPitch = p[K.ttsPitch] ?: 1f,
@@ -151,6 +172,12 @@ class SettingsStore(private val context: Context) {
     suspend fun setFahrenheit(v: Boolean) = set { it[K.fahrenheit] = v }
     suspend fun setModelsOnMobileData(v: Boolean) = set { it[K.modelsOnMobileData] = v }
     suspend fun setSpeak(v: SpeakMode) = set { it[K.speak] = v.name }
+    suspend fun setWake(on: Boolean? = null, phrase: String? = null, sensitivity: Int? = null, screenOnly: Boolean? = null) = set {
+        on?.let { v -> it[K.wakeWord] = v }; phrase?.let { v -> it[K.wakePhrase] = v }
+        sensitivity?.let { v -> it[K.wakeSensitivity] = v }; screenOnly?.let { v -> it[K.wakeScreenOnly] = v }
+    }
+    suspend fun setOrientation(v: Int) = set { it[K.orientation] = v }
+    suspend fun setSttModel(v: String?) = set { if (v == null) it.remove(K.sttModel) else it[K.sttModel] = v }
     suspend fun setTtsEngine(v: String?) = set { if (v == null) it.remove(K.ttsEngine) else it[K.ttsEngine] = v; it.remove(K.ttsVoice) }
     suspend fun setTtsVoice(v: String?) = set { if (v == null) it.remove(K.ttsVoice) else it[K.ttsVoice] = v }
     suspend fun setTtsRate(v: Float) = set { it[K.ttsRate] = v }

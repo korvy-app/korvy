@@ -1,5 +1,6 @@
 # Same toolchain as Piano Notes. No Google Play services, Firebase or analytics libraries, ever (see REQUIREMENTS.md).
 [versions]
+billing = "8.3.0"
 agp = "9.5.0"
 kotlin = "2.4.21"
 coreKtx = "1.19.1"
@@ -19,6 +20,7 @@ androidxJunit = "1.3.0"
 testRunner = "1.7.0"
 
 [libraries]
+billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }

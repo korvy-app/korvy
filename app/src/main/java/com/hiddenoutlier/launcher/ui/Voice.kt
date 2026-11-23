@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -55,7 +56,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.hiddenoutlier.launcher.assistant.Speaker
-import com.hiddenoutlier.launcher.assistant.VoiceInput
 import com.hiddenoutlier.launcher.data.Settings
 import com.hiddenoutlier.launcher.data.SpeakMode
 import kotlinx.coroutines.delay
@@ -78,8 +78,8 @@ class MicState {
 @Composable
 fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = Modifier, tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary) {
     val context = LocalContext.current
-    val voice = remember { VoiceInput(context) }
-    DisposableEffect(Unit) { onDispose { voice.stop() } }
+    val voice = remember { (context.applicationContext as com.hiddenoutlier.launcher.LauncherApp).assistant.speechInput }
+    DisposableEffect(Unit) { onDispose { voice.cancel() } }
     fun begin() {
         state.error = null; state.partial = ""; state.listening = true
         voice.start(
@@ -95,7 +95,7 @@ fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = 
     fun toggle() {
         when {
             state.listening -> { voice.stop(); state.listening = false }
-            !voice.available() -> state.error = "This phone has no on-device speech recognition, so voice input is off (nothing is sent online)."
+            !voice.available() -> state.error = "No offline speech recognition on this phone yet. Download a Whisper model in Settings → Voice (nothing is ever sent online)."
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> begin()
             else -> permission.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -141,10 +141,12 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("Listen when opened with the power button")
-                        Text("Starts the microphone right away. Uses the phone's on-device speech recognition only.", style = MaterialTheme.typography.bodySmall)
+                        Text("Starts the microphone right away.", style = MaterialTheme.typography.bodySmall)
                     }
                     Switch(s.listenOnAssist, { vm.setListenOnAssist(it) })
                 }
+                SpeechRecognitionSection(s, vm)
+                WakeWordSection(s, vm)
                 Text("Speed %.1f×".format(s.ttsRate))
                 Slider(s.ttsRate, { vm.setTtsRate((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
                 Text("Pitch %.1f".format(s.ttsPitch))
@@ -219,6 +221,7 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
     Text("Natural voices", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
     Text("Human-sounding voices that run entirely on this phone (open source, via sherpa-onnx). Nothing you hear is sent anywhere.",
         style = MaterialTheme.typography.bodySmall)
+    if (!proUnlocked(vm)) { ProUnlock(vm, "Natural voices"); return }
     if (!allowed) Text("Downloading needs Settings → Online features → Voice downloads.", color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
     com.hiddenoutlier.launcher.assistant.NeuralVoiceCatalog.all.forEach { p ->
@@ -266,5 +269,113 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
                 }
             }
         }
+    }
+}
+
+/** Settings → Voice → Speech recognition: the phone's own recognizer or a downloaded Whisper model. */
+@Composable
+internal fun SpeechRecognitionSection(s: Settings, vm: LauncherViewModel) {
+    val installed by vm.models.installed.collectAsStateWithLifecycle()
+    val download by vm.models.download.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val phoneHasOne = remember { com.hiddenoutlier.launcher.assistant.VoiceInput(context).available() }
+    Text("Speech recognition", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text("Turns what you say into text, entirely on this phone. Whisper (open source, whisper.cpp) works on any phone " +
+        "and is often more accurate; the phone's recognizer starts a little faster.", style = MaterialTheme.typography.bodySmall)
+    Row(Modifier.fillMaxWidth().clickable(enabled = phoneHasOne) { vm.setSttModel(null) }, verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = s.sttModel == null && phoneHasOne, enabled = phoneHasOne, onClick = { vm.setSttModel(null) })
+        Column {
+            Text("Phone's on-device recognizer")
+            if (!phoneHasOne) Text("Not available on this phone", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+    if (!proUnlocked(vm)) { ProUnlock(vm, "Whisper models"); return }
+    com.hiddenoutlier.launcher.assistant.ModelCatalog.speech.forEach { m ->
+        val have = m.id in installed
+        val state = download
+        Row(Modifier.fillMaxWidth().clickable(enabled = have) { vm.setSttModel(m.id) }.padding(vertical = 2.dp).testTag("stt_${m.id}"),
+            verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = have && (s.sttModel == m.id || (s.sttModel == null && !phoneHasOne && installed.firstOrNull { it.startsWith("whisper") } == m.id)),
+                enabled = have, onClick = { vm.setSttModel(m.id) })
+            Column(Modifier.weight(1f)) {
+                Text(m.name)
+                Text("${m.sizeText} · ${m.note}", style = MaterialTheme.typography.bodySmall)
+                when {
+                    state is com.hiddenoutlier.launcher.assistant.DownloadState.Running && state.id == m.id ->
+                        androidx.compose.material3.LinearProgressIndicator(progress = { state.done.toFloat() / state.total }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+                    state is com.hiddenoutlier.launcher.assistant.DownloadState.Verifying && state.id == m.id -> Text("Checking…", style = MaterialTheme.typography.bodySmall)
+                    state is com.hiddenoutlier.launcher.assistant.DownloadState.Retrying && state.id == m.id -> Text("Connection dropped, retrying in ${state.inSeconds} s…", style = MaterialTheme.typography.bodySmall)
+                    state is com.hiddenoutlier.launcher.assistant.DownloadState.Failed && state.id == m.id -> Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+            when {
+                have -> TextButton(onClick = { vm.deleteModel(m) }) { Text("Delete") }
+                (state as? com.hiddenoutlier.launcher.assistant.DownloadState.Running)?.id == m.id -> TextButton(onClick = { vm.cancelDownload() }) { Text("Cancel") }
+                else -> TextButton(onClick = { vm.downloadModel(m) }, enabled = state is com.hiddenoutlier.launcher.assistant.DownloadState.Idle ||
+                    state is com.hiddenoutlier.launcher.assistant.DownloadState.Failed, modifier = Modifier.testTag("stt_get_${m.id}")) { Text("Download") }
+            }
+        }
+    }
+}
+
+/** Settings → Voice → Wake word (Pro, opt-in). */
+@Composable
+internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
+    val installed by vm.voices.installed.collectAsStateWithLifecycle()
+    val download by vm.voices.download.collectAsStateWithLifecycle()
+    val model = com.hiddenoutlier.launcher.assistant.NeuralVoiceCatalog.wakeWord
+    val have = model.id in installed
+    val context = LocalContext.current
+    Text("Wake word", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text("Say your wake word to open the assistant, hands-free. A tiny open-source model listens for that phrase only; " +
+        "nothing else is recognised, kept or sent. Android shows a notification and the green mic dot while it listens. Uses some battery.",
+        style = MaterialTheme.typography.bodySmall)
+    if (!proUnlocked(vm)) { ProUnlock(vm, "Wake words"); return }
+    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) vm.setWake(on = true) }
+    if (!have) {
+        val d = download
+        when {
+            d is com.hiddenoutlier.launcher.assistant.DownloadState.Running && d.id == model.id ->
+                androidx.compose.material3.LinearProgressIndicator(progress = { d.done.toFloat() / d.total }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            d is com.hiddenoutlier.launcher.assistant.DownloadState.Verifying && d.id == model.id -> Text("Checking and unpacking…", style = MaterialTheme.typography.bodySmall)
+            else -> OutlinedButton(onClick = { vm.downloadWakeModel() }, modifier = Modifier.padding(top = 6.dp).testTag("wake_download")) { Text("Download wake-word model (${model.sizeText})") }
+        }
+        return
+    }
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Listen for the wake word", modifier = Modifier.weight(1f))
+        Switch(s.wakeWord, { on ->
+            if (on && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+                micPermission.launch(Manifest.permission.RECORD_AUDIO)
+            else vm.setWake(on = on)
+        }, modifier = Modifier.testTag("wake_toggle"))
+    }
+    var phrase by remember(s.wakePhrase) { mutableStateOf(s.wakePhrase) }
+    val syllables = com.hiddenoutlier.launcher.core.WordPieces.syllables(phrase)
+    val usable = phrase.any { it.isLetter() } && phrase.all { it.isLetter() || it == ' ' || it == '\'' || it == ',' }
+    androidx.compose.material3.OutlinedTextField(
+        value = phrase, onValueChange = { phrase = it.take(30) }, singleLine = true, label = { Text("Wake word") },
+        supportingText = {
+            Text(when {
+                !usable -> "Letters only (English)."
+                syllables < 3 -> "Short or everyday words wake it by mistake more often. Try 3+ syllables, like “Hey Launcher”."
+                else -> "Good: distinctive phrases work best."
+            })
+        },
+        modifier = Modifier.fillMaxWidth().testTag("wake_phrase"),
+    )
+    if (phrase != s.wakePhrase) TextButton(onClick = { vm.setWake(phrase = phrase.trim()) }, enabled = usable) { Text("Use “${phrase.trim()}”") }
+    Text("Sensitivity", modifier = Modifier.padding(top = 6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Fewer false wakes", "Balanced", "Hears me better").forEachIndexed { i, label ->
+            FilterChip(selected = s.wakeSensitivity == i, onClick = { vm.setWake(sensitivity = i) }, label = { Text(label) })
+        }
+    }
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Only while the screen is on")
+            Text("Saves battery. Always pauses in battery saver.", style = MaterialTheme.typography.bodySmall)
+        }
+        Switch(s.wakeScreenOnly, { vm.setWake(screenOnly = it) })
     }
 }

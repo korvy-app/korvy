@@ -34,7 +34,10 @@ class MainActivity : FragmentActivity() {
             isDefaultHome = { Device.isDefaultHome(this) },
             stats = StatsSampler(this),
         )
+        com.hiddenoutlier.launcher.platform.Orientation.follow(this)
         setContent { Root(vm, host) }
+        // Free widget ids left behind (e.g. a widget whose app was uninstalled); after the first frame.
+        window.decorView.post { runCatching { (application as LauncherApp).widgets.cleanUp() } }
         if (intent?.action == ACTION_OPEN_ASSISTANT) vm.openAssistant()
         if (intent?.action == ACTION_OPEN_MODELS) vm.open(com.hiddenoutlier.launcher.ui.Screen.MODELS)
         // Privacy: keep autofill services (e.g. Google's) out of everything typed here: searches, questions.
@@ -56,6 +59,24 @@ class MainActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         vm.onStopped()
+        runCatching { (application as LauncherApp).widgets.host.stopListening() }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Widgets update only while the home screen can be seen.
+        runCatching { (application as LauncherApp).widgets.host.startListening() }
+    }
+
+    /** A widget's own setup screen finished (started by the widget picker). */
+    @Deprecated("Widget setup still reports through onActivityResult")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != com.hiddenoutlier.launcher.data.Widgets.REQ_CONFIGURE) return
+        val w = (application as LauncherApp).widgets
+        val id = w.pendingConfigure ?: return
+        w.pendingConfigure = null
+        if (resultCode == RESULT_OK) w.add(id) else w.host.deleteAppWidgetId(id)
     }
 
     companion object {
@@ -68,5 +89,6 @@ class MainActivity : FragmentActivity() {
         vm.refreshSuggestions() // the time of day has probably changed
         vm.refreshDefaultHome()
         vm.refreshContactsGranted()
+        window.decorView.post { (application as LauncherApp).syncWakeWord() } // after the first frame
     }
 }

@@ -59,7 +59,10 @@ class ModelDownloadService : Service() {
             }
             app.models.download(model) { app.settingsState.value.allows(it) }
             progress.cancel()
-            if (model.id in app.models.installed.value && app.settingsState.value.modelId == null) app.settings.setModelId(model.id)
+            if (model.id in app.models.installed.value) when (model.kind) {
+                ModelInfo.Kind.CHAT -> if (app.settingsState.value.modelId == null) app.settings.setModelId(model.id)
+                ModelInfo.Kind.SPEECH -> if (app.settingsState.value.sttModel == null) app.settings.setSttModel(model.id)
+            }
             done(model, app.models.download.value)
             stop()
         }

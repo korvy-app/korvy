@@ -13,12 +13,12 @@ import android.speech.SpeechRecognizer
  * to an online recognizer: if the phone has no on-device one, voice input is unavailable and the app says so.
  * The microphone is on only between [start] and the end of the utterance (or [stop]).
  */
-class VoiceInput(private val context: Context) {
+class VoiceInput(private val context: Context) : SpeechInput {
     private var recognizer: SpeechRecognizer? = null
 
-    fun available(): Boolean = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+    override fun available(): Boolean = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
 
-    fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit = {}) {
+    override fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit) {
         if (!available()) { onError("This phone has no on-device speech recognition."); return }
         stop()
         val r = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
@@ -54,7 +54,7 @@ class VoiceInput(private val context: Context) {
             .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true))
     }
 
-    fun stop() {
+    override fun stop() {
         recognizer?.let { runCatching { it.stopListening(); it.destroy() } }
         recognizer = null
     }

@@ -89,7 +89,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
 
     LauncherTheme(animations) {
         Box(Modifier.fillMaxSize()) {
-            LauncherBackground(bgFiles, settings.slideshow, settings.slideshowMinutes)
+            LauncherBackground(bgFiles, settings.slideshow && proUnlocked(vm), settings.slideshowMinutes)
             // The home screen fades out under the app list so its clock doesn't show through.
             val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
                 if (screen == Screen.HOME) 1f else 0f, Motion.fade(animations), label = "home")
@@ -106,6 +106,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 drag = drag,
                 grid = { m -> HomeGridView(homeGrid, visible.associateBy { it.key }, vm.repo, drag, vm::launch, menu, m) },
                 onOpenAssistant = if (settings.assistant) ({ vm.openAssistant() }) else null,
+                widgets = { WidgetStack(vm) },
             ) }
             // During a drag that started in the list, the list stays composed (it owns the gesture) but invisible.
             val listDrag = drag.drag?.let { it.fromCell == null } == true
@@ -152,11 +153,11 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 )
             }
             AnimatedVisibility(screen == Screen.STATS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                StatsScreen(host.stats, onBack = { vm.open(Screen.SETTINGS) })
+                StatsScreen(host.stats, onBack = { vm.open(Screen.SETTINGS) }, extra = { StatsOverlayToggle(vm) })
             }
             AnimatedVisibility(screen == Screen.ASSISTANT, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 AssistantScreen(
-                    chat, busy, com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(settings.modelId)?.takeIf { it.id in installedModels }?.name,
+                    chat, busy, com.hiddenoutlier.launcher.assistant.ModelCatalog.chatById(settings.modelId)?.takeIf { it.id in installedModels }?.name,
                     onSend = { vm.ask(it) }, onVoice = { vm.ask(it, byVoice = true) }, onStop = vm::stopAssistant, onClear = vm::clearChat,
                     onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
                     speak = settings.speak, onSpeak = vm::setSpeak, onSpeakOn = { vm.assistant.sayHello() },
@@ -189,6 +190,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.APPS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 AppsForTasksScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
             }
+            AnimatedVisibility(screen == Screen.WIDGETS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                WidgetPickerScreen(vm, onBack = { vm.open(Screen.HOME) })
+            }
             DragOverlay(drag, vm.repo)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
@@ -197,6 +201,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
                 Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE, Screen.PEOPLE, Screen.APPS -> vm.open(Screen.SETTINGS)
+                Screen.WIDGETS -> vm.open(Screen.HOME)
                 Screen.CROP -> vm.skipCrop()
                 Screen.TUTORIAL -> vm.finishTutorial()
                 else -> vm.goHome()

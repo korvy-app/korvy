@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS, WIDGETS }
 
 /** One line of the assistant conversation. */
 data class ChatItem(
@@ -247,6 +247,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Assistant (shared with the power-button panel: see AssistantController) -----------------------------
     val assistant = la.assistant
     val models = la.models
+    val pro get() = la.pro
+    val widgets get() = la.widgets
+    /** Packages of hidden apps (their widgets aren't offered). */
+    fun hiddenPackages(): Set<String> = la.privacy.load().hidden.keys.map { it.substringBefore('/') }.toSet()
     val personality = la.personality
     val chat = assistant.chat
     val assistantBusy = assistant.busy
@@ -268,6 +272,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelDownload() { com.hiddenoutlier.launcher.assistant.ModelDownloadService.cancel(getApplication()) }
     fun deleteModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
         models.delete(m)
+        if (settings.value.sttModel == m.id) setSttModel(null)
         if (settings.value.modelId == m.id) save { la.settings.setModelId(null) }
     }
     fun useModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) = save { la.settings.setModelId(m.id) }
@@ -286,6 +291,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun setSpeak(v: com.hiddenoutlier.launcher.data.SpeakMode) = save { la.settings.setSpeak(v) }
     fun setTtsEngine(v: String?) = save { la.settings.setTtsEngine(v) }
+    fun setSttModel(v: String?) = save { la.settings.setSttModel(v) }
+    fun setOrientation(v: Int) = save { la.settings.setOrientation(v) }
+    fun setWake(on: Boolean? = null, phrase: String? = null, sensitivity: Int? = null, screenOnly: Boolean? = null) =
+        save { la.settings.setWake(on, phrase, sensitivity, screenOnly); la.syncWakeWord() }
+    fun downloadWakeModel() = com.hiddenoutlier.launcher.assistant.ModelDownloadService.startVoice(getApplication(), com.hiddenoutlier.launcher.assistant.NeuralVoiceCatalog.wakeWord)
     fun setTtsVoice(v: String?) = save { la.settings.setTtsVoice(v) }
     fun setTtsRate(v: Float) = save { la.settings.setTtsRate(v) }
     fun setTtsPitch(v: Float) = save { la.settings.setTtsPitch(v) }

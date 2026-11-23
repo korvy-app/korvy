@@ -20,6 +20,13 @@ endif()
 set(LLAMA_SRC ${CMAKE_CURRENT_LIST_DIR}/llama.cpp)
 add_subdirectory(${LLAMA_SRC} build-llama)
 
-add_library(assistant SHARED assistant_jni.cpp)
+# whisper.cpp (git submodule): only its library source, built against llama.cpp's ggml so the app ships one copy.
+set(WHISPER_SRC ${CMAKE_CURRENT_LIST_DIR}/whisper.cpp)
+add_library(whisper STATIC ${WHISPER_SRC}/src/whisper.cpp ${WHISPER_SRC}/src/aneforge/whisper-aneforge.cpp)
+target_include_directories(whisper PUBLIC ${WHISPER_SRC}/include PRIVATE ${WHISPER_SRC}/src)
+target_compile_definitions(whisper PRIVATE WHISPER_VERSION="1.9.5")
+target_link_libraries(whisper PUBLIC ggml)
+
+add_library(assistant SHARED assistant_jni.cpp whisper_jni.cpp)
 target_include_directories(assistant PRIVATE ${LLAMA_SRC}/common ${LLAMA_SRC}/include ${LLAMA_SRC}/ggml/include)
-target_link_libraries(assistant llama llama-common android log)
+target_link_libraries(assistant llama llama-common whisper android log)

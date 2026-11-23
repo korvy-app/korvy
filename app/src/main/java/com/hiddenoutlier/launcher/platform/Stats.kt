@@ -45,10 +45,12 @@ data class StatsSnapshot(
  * Measures this app (CPU share, memory, frames drawn) and the phone (RAM, core speeds, battery drain,
  * temperature, thermal state). Everything is read locally; nothing is stored or sent anywhere.
  */
-class StatsSampler(private val activity: Activity) {
-    private val am = activity.getSystemService(ActivityManager::class.java)
-    private val bm = activity.getSystemService(BatteryManager::class.java)
-    private val pm = activity.getSystemService(PowerManager::class.java)
+class StatsSampler(private val context: Context, private val activity: Activity? = null) {
+    /** On a screen: also counts that screen's frames. */
+    constructor(activity: Activity) : this(activity, activity)
+    private val am = context.getSystemService(ActivityManager::class.java)
+    private val bm = context.getSystemService(BatteryManager::class.java)
+    private val pm = context.getSystemService(PowerManager::class.java)
     private val cores = Runtime.getRuntime().availableProcessors()
 
     private var lastWall = SystemClock.elapsedRealtime()
@@ -71,18 +73,18 @@ class StatsSampler(private val activity: Activity) {
         frameBudgetNs = (1_000_000_000L / hz).toLong()
         val t = HandlerThread("frame-metrics").also { it.start() }
         thread = t
-        activity.window.addOnFrameMetricsAvailableListener(listener, Handler(t.looper))
+        activity?.window?.addOnFrameMetricsAvailableListener(listener, Handler(t.looper))
         lastWall = SystemClock.elapsedRealtime(); lastCpu = Process.getElapsedCpuTime()
     }
 
     fun stop() {
-        runCatching { activity.window.removeOnFrameMetricsAvailableListener(listener) }
+        runCatching { activity?.window?.removeOnFrameMetricsAvailableListener(listener) }
         thread?.quitSafely(); thread = null
     }
 
     @Suppress("DEPRECATION")
     private fun refreshHz(): Float =
-        (if (Build.VERSION.SDK_INT >= 30) activity.display?.refreshRate else activity.windowManager.defaultDisplay.refreshRate) ?: 60f
+        context.getSystemService(android.hardware.display.DisplayManager::class.java)?.getDisplay(android.view.Display.DEFAULT_DISPLAY)?.refreshRate ?: 60f
 
     fun sample(): StatsSnapshot {
         val now = SystemClock.elapsedRealtime()
@@ -95,7 +97,7 @@ class StatsSampler(private val activity: Activity) {
         val mem = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
         val appMem = Debug.MemoryInfo().also { Debug.getMemoryInfo(it) }.totalPss / 1024.0
 
-        val battery = activity.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val status = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1

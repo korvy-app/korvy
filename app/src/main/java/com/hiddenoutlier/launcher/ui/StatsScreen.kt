@@ -49,7 +49,7 @@ import kotlinx.coroutines.delay
 
 /** Live device and app stats, updated every second while this screen is open. */
 @Composable
-fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit) {
+fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable () -> Unit = {}) {
     var snap by remember { mutableStateOf<StatsSnapshot?>(null) }
     var stress by remember { mutableStateOf(false) }
     DisposableEffect(sampler) { sampler.start(); onDispose { sampler.stop() } }
@@ -62,6 +62,7 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit) {
         }
         val s = snap
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            extra()
             if (s == null) { Text("Measuring…", modifier = Modifier.padding(16.dp)); return@Column }
 
             Card("This app") {

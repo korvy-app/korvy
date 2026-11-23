@@ -234,6 +234,22 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.9.0** – Whisper speech recognition (whisper.cpp v1.9.5 submodule, built on llama.cpp's ggml;
+  models tiny/base/small, English or 99 languages; energy endpointing in `core/Endpointer`; audio only in memory and a
+  temp file deleted after). Pro unlock (`platform/ProStore`: Play Billing 8.3 in `play` only, product `pro_unlock`;
+  F-Droid and non-Play installs unlocked; Pro = natural voices, Whisper, wake word, slideshow, stats overlay).
+  Wake word (sherpa-onnx keyword spotter, 3.3M gigaspeech model, any phrase via `core/WordPieces` unigram encoder
+  matching the model's examples; `:wake` process, mic foreground service, pauses in battery saver / screen off).
+  Stats overlay (specialUse foreground service, draggable). Widgets (stack under the clock, own picker, hold for
+  size/move/remove; hidden apps' widgets never offered). WhatsApp (wa.me, prefilled) and Telegram (tg://resolve,
+  clipboard) for texting, "text Jen on WhatsApp …". Screen rotation setting (follow phone / portrait / landscape).
+  Fixes: first sentence of a natural voice was silent; whole replies now spoken sentence by sentence; a Whisper
+  download no longer becomes the chat model; "weather in Seattle tomorrow", "what was the weather like" and a
+  model-invented time as the place ("4:26 PM") now handled.
+  Verified on the 4a: Whisper base.en transcribed speech played from the Mac's speaker exactly; Kokoro read-aloud
+  (spinner → stop → done); Pro shows unlocked on a sideloaded build; F-Droid APK has no billing classes; landscape
+  lock rotates the home screen; the weather phrasing. **Not yet tried on a phone:** wake word, overlay, widgets,
+  WhatsApp/Telegram hand-off, a real Play purchase (needs `pro_unlock` created in Play Console and a Play install).
 - 2026-11-23: **0.8.3** – Read-aloud button follows the real speech: spinner while the voice gets ready, Stop while
   speaking (tap either to stop), back to 🔊 when done; also on replies spoken automatically. Android TTS reports
   start/done per utterance; natural voices send MSG_SPEAK_START/DONE from the assistant process.

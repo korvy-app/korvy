@@ -49,10 +49,37 @@ class AssistantController(
     val speaker = Speaker(context)
     private val client = AssistantClient(context, scope)
     val voices: VoiceStore = (context.applicationContext as com.hiddenoutlier.launcher.LauncherApp).voices
+    private val pro get() = (context.applicationContext as com.hiddenoutlier.launcher.LauncherApp).pro
+    private val phoneRecognizer by lazy { VoiceInput(context) }
+    private val whisper by lazy { WhisperInput(context, client, scope) }
+
+    /**
+     * The speech recognizer to use now: the Whisper model chosen in Settings → Voice, else the phone's on-device
+     * recognizer, else any downloaded Whisper model.
+     */
+    val speechInput: SpeechInput = object : SpeechInput {
+        private var current: SpeechInput? = null
+        private fun pick(): SpeechInput? {
+            val installed = if (pro.unlocked.value) models.installed.value else emptySet() // Whisper is Pro
+            val chosen = ModelCatalog.byId(settings.value.sttModel)?.takeIf { it.id in installed }
+                ?: if (phoneRecognizer.available()) null else ModelCatalog.speech.firstOrNull { it.id in installed }
+            if (chosen == null) return phoneRecognizer.takeIf { it.available() }
+            whisper.model = chosen; whisper.modelFile = models.fileFor(chosen)
+            return whisper
+        }
+        override fun available() = pick() != null
+        override fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit) {
+            val s = pick() ?: return onError("No offline speech recognition yet: download a Whisper model in Settings → Voice.")
+            current = s; s.start(onPartial, onFinal, onError, onLevel)
+        }
+        override fun stop() { current?.stop() }
+        override fun cancel() { current?.cancel() }
+    }
 
     init {
         speaker.neural = object : Speaker.Neural {
             override fun say(engine: String, voice: String?, speed: Float, text: String, onStart: () -> Unit, onDone: () -> Unit): Boolean {
+                if (!pro.unlocked.value) return false // natural voices are Pro: fall back to the phone's voice
                 val pack = NeuralVoiceCatalog.byId(engine.removePrefix(Speaker.NEURAL_PREFIX)) ?: return false
                 if (pack.id !in voices.installed.value) return false
                 val speakerId = voice?.toIntOrNull() ?: pack.speakers.first().id
@@ -137,7 +164,7 @@ class AssistantController(
                 if (speak) {
                     // Say the details too (forecast, headlines), not just the first line.
                     val words = r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines)
-                    if (streamed) speaker.endStream(r.text) else speaker.say(words)
+                    if (streamed) speaker.endStream(r.text) else speaker.sayAll(words)
                 }
             } catch (e: CancellationException) {
                 update(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
@@ -152,7 +179,7 @@ class AssistantController(
 
     private suspend fun modelAction(q: String, replyId: Long, speak: Boolean): Action? {
         val s = settings.value
-        val m = ModelCatalog.byId(s.modelId)
+        val m = ModelCatalog.chatById(s.modelId)
         if (m == null || m.id !in models.installed.value) {
             update(replyId) { it.copy(pending = false, text = "To answer questions I need a model. Pick one in Settings → Assistant → Model. " +
                 "Without one I can still open apps, set timers, do maths, and (with Online features on) get the weather, news and stock prices.") }
@@ -226,7 +253,7 @@ class AssistantController(
         val s = settings.value
         speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
         readingAloud.value = id
-        speaker.say(item.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(item.text, item.lines))
+        speaker.sayAll(item.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(item.text, item.lines))
         warnIfQuiet()
     }
 
@@ -247,7 +274,7 @@ class AssistantController(
 
     /** Called when the assistant opens: load the chosen model now so the first answer starts sooner. */
     fun warmUp() {
-        val m = ModelCatalog.byId(settings.value.modelId) ?: return
+        val m = ModelCatalog.chatById(settings.value.modelId) ?: return
         if (m.id in models.installed.value) client.preload(models.fileFor(m).path)
     }
 
@@ -289,7 +316,7 @@ class AssistantController(
             update(id) { it.copy(text = r.text, lines = r.lines, card = r.card, lineLinks = r.lineLinks) }
             if (speaking(byVoice = false)) {
                 stopSpeaking(); readingAloud.value = id
-                speaker.say(r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines))
+                speaker.sayAll(r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines))
             }
         }
     }

@@ -19,4 +19,10 @@ object Native {
     external fun complete(roles: Array<String>, contents: Array<String>, grammar: String, maxTokens: Int, temp: Float, listener: Listener): String?
     external fun stop()
     external fun unload()
+
+    // whisper.cpp speech recognition (whisper_jni.cpp)
+    external fun whisperLoad(path: String): Int
+    external fun whisperTranscribe(pcm: FloatArray, lang: String, threads: Int, prompt: String): String?
+    external fun whisperStop()
+    external fun whisperUnload()
 }

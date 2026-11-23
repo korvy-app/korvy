@@ -17,6 +17,11 @@
     <!-- Model downloads run as a foreground service (progress notification) with Wi-Fi and CPU kept awake. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Wake word (opt-in): listening needs an ongoing notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <!-- Stats overlay (opt-in): "Display over other apps", kept alive by a small ongoing notification. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -47,7 +52,7 @@
             android:stateNotNeeded="true"
             android:clearTaskOnLaunch="true"
             android:resumeWhilePausing="true"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="user"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
             android:configChanges="keyboard|keyboardHidden|navigation|uiMode|screenSize|smallestScreenSize|screenLayout|orientation|density">
             <intent-filter>
@@ -86,5 +91,21 @@
             android:name=".assistant.AssistantService"
             android:exported="false"
             android:process=":assistant" />
+
+        <!-- Wake word (opt-in, off by default): a tiny keyword model in its own process. -->
+        <service
+            android:name=".assistant.WakeWordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:process=":wake" />
+
+        <service
+            android:name=".platform.StatsOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="A performance overlay the user turns on, showing the phone's CPU speed, memory, battery drain and temperature over other apps." />
+        </service>
     </application>
 </manifest>

@@ -5,7 +5,7 @@ enum class ActionType(val id: String, val help: String) {
     ANSWER("answer", "reply in words; arg = the reply"),
     OPEN_APP("open_app", "open an app on this phone; arg = app name"),
     WEB_SEARCH("web_search", "look something up on the web; arg = search words"),
-    WEATHER("weather", "current weather and today's forecast; arg = place, or empty for the user's home"),
+    WEATHER("weather", "current weather and the coming days; arg = a city or place name only (never a time or date), or empty for where the user is"),
     NEWS("news", "latest news headlines; arg = topic, or empty"),
     STOCK("stock", "stock price; arg = ticker symbol like AAPL"),
     TIMER("timer", "start a countdown timer; arg = length like \"5 minutes\""),
@@ -67,7 +67,7 @@ object AgentCore {
     // ---- Plain-code fast path ------------------------------------------------------------------------------
 
     private val OPEN = Regex("^(?:please\\s+)?(?:open|launch|start|run)\\s+(?:the\\s+|my\\s+)?(.+?)(?:\\s+app)?$", RegexOption.IGNORE_CASE)
-    private val WEATHER = Regex("^(?:what'?s\\s+the\\s+|how'?s\\s+the\\s+)?weather(?:\\s+(?:like\\s+)?(?:in|for|at)\\s+(.+?))?(?:\\s+today)?\\??$", RegexOption.IGNORE_CASE)
+    private val WEATHER = Regex("^(?:(?:what|how)(?:'?s|\\s+is|\\s+was|\\s+will)\\s+(?:be\\s+)?the\\s+|(?:tell\\s+me\\s+)?the\\s+)?weather(?:\\s+(?:be|been|going\\s+to\\s+be))?(?:\\s+like)?(?:\\s+(?:in|for|at)\\s+(.+?))?(?:\\s+(?:today|tomorrow|tonight|this\\s+(?:week|weekend|morning|afternoon|evening)|right\\s+now|now))?\\??$", RegexOption.IGNORE_CASE)
     private val NEWS = Regex("^(?:the\\s+|latest\\s+|today'?s\\s+)?(?:news|headlines)(?:\\s+(?:about|on)\\s+(.+?))?\\??$", RegexOption.IGNORE_CASE)
     private val STOCK = Regex("^(?:stock|quote|price)\\s+(?:of\\s+|for\\s+)?([A-Za-z.]{1,6})\\??$|^([A-Za-z.]{1,6})\\s+(?:stock|share)\\s*(?:price)?\\??$", RegexOption.IGNORE_CASE)
     private val TIMER = Regex("^(?:set\\s+(?:a\\s+)?)?timer\\s+(?:for\\s+)?(.+)$|^(.+?)\\s+timer$", RegexOption.IGNORE_CASE)
@@ -81,6 +81,17 @@ object AgentCore {
     private val SEARCH = Regex("^(?:search(?:\\s+for)?|look\\s+up|google)\\s+(.+)$", RegexOption.IGNORE_CASE)
 
     /** Recognises common requests without the model. Null means "ask the model". */
+    /**
+     * A weather "place" that is really a time or date ("4:26 PM", "tomorrow", "Monday") means "here", not a place.
+     * Small models sometimes copy the current time from the prompt into the place.
+     */
+    fun weatherPlace(arg: String): String {
+        val t = arg.trim().trim('.', '?', '!', ',')
+        val timeLike = Regex("(?i)^(?:\\d{1,2}(?::\\d{2})?\\s*(?:[ap]\\.?m\\.?)?|now|right now|today|tonight|tomorrow|yesterday|this\\s+\\w+|next\\s+\\w+|" +
+            "(?:mon|tues|wednes|thurs|fri|satur|sun)day|here|my\\s+(?:area|location)|where\\s+i\\s+am|outside|current(?:ly)?|.*\\b\\d{4}-\\d{2}-\\d{2}\\b.*)$")
+        return if (t.isEmpty() || timeLike.matches(t)) "" else t
+    }
+
     fun quickParse(input: String): Action? {
         val t = input.trim().trimEnd('.', '!')
         if (t.isEmpty()) return null

@@ -68,6 +68,7 @@ class AssistActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as LauncherApp
         if (android.os.Build.VERSION.SDK_INT >= 26) window.decorView.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        com.hiddenoutlier.launcher.platform.Orientation.follow(this)
         setContent {
             val settings by app.settingsState.collectAsStateWithLifecycle()
             val chat by app.assistant.chat.collectAsStateWithLifecycle()
@@ -137,7 +138,7 @@ class AssistActivity : ComponentActivity() {
         if (firstResume) {
             firstResume = false
             (application as LauncherApp).assistant.warmUp()
-            if ((application as LauncherApp).settingsState.value.listenOnAssist) mic.requestStart()
+            if ((application as LauncherApp).settingsState.value.listenOnAssist || intent.getBooleanExtra(EXTRA_LISTEN, false)) mic.requestStart()
         }
     }
 
@@ -151,5 +152,10 @@ class AssistActivity : ComponentActivity() {
         super.onStop()
         (application as LauncherApp).assistant.speaker.stop()
         if (!isChangingConfigurations) finish() // a fresh panel each time
+    }
+
+    companion object {
+        /** Start listening right away (the wake word opened the panel). */
+        const val EXTRA_LISTEN = "listen"
     }
 }

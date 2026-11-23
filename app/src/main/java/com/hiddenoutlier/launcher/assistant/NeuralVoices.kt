@@ -36,9 +36,12 @@ data class NeuralVoicePack(
     val modelFile: String,
     val speakers: List<NeuralSpeaker>,
     val note: String,
+    /** GitHub release tag the archive is attached to. */
+    val release: String = "tts-models",
 ) {
-    enum class Kind { KOKORO, VITS }
-    val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$archive"
+    /** KOKORO and VITS are voices; KWS is the wake-word (keyword spotting) model. */
+    enum class Kind { KOKORO, VITS, KWS }
+    val url get() = "https://github.com/k2-fsa/sherpa-onnx/releases/download/$release/$archive"
     val sizeText get() = "${bytes / 1_000_000} MB"
 }
 
@@ -67,7 +70,16 @@ object NeuralVoiceCatalog {
         ),
     )
 
-    fun byId(id: String?) = all.firstOrNull { it.id == id }
+    /** The wake-word model: a 3.3M-parameter open-vocabulary keyword spotter (Apache 2.0), checked 2026-11-23. */
+    val wakeWord = NeuralVoicePack(
+        "kws-en", "Wake word (English)", NeuralVoicePack.Kind.KWS, "Apache 2.0",
+        "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2", 17_626_723,
+        "f170013b4716e41b62b9bfd809687c207cef798ef9bc6534d524e17af9b6561a",
+        "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01", "encoder-epoch-12-avg-2-chunk-16-left-64.int8.onnx",
+        emptyList(), "Listens for your wake word only; nothing else is recognised or kept.", release = "kws-models",
+    )
+    val packs get() = all + wakeWord
+    fun byId(id: String?) = packs.firstOrNull { it.id == id }
 }
 
 /** Downloaded voice packs, unpacked in private storage. Downloads resume and are checksum-verified. */
@@ -80,7 +92,7 @@ class VoiceStore(context: Context) {
 
     fun folderFor(p: NeuralVoicePack) = File(dir, p.folder)
     private fun ready(p: NeuralVoicePack) = File(folderFor(p), ".ready").exists()
-    private fun scan() = NeuralVoiceCatalog.all.filter(::ready).map { it.id }.toSet()
+    private fun scan() = NeuralVoiceCatalog.packs.filter(::ready).map { it.id }.toSet()
 
     suspend fun download(p: NeuralVoicePack, allowed: (OnlineSource) -> Boolean) = withContext(Dispatchers.IO) {
         val part = File(dir, p.archive + ".part")

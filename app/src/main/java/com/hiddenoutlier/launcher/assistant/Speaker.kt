@@ -98,6 +98,12 @@ class Speaker(private val context: Context) {
         if (ready) enqueue(text, gen) else pending += text to gen
     }
 
+    /** Speaks a whole reply sentence by sentence, so the first one starts sooner (natural voices are slow on long text). */
+    fun sayAll(text: String) {
+        val sp = SentenceSplitter()
+        (sp.feed(text) + sp.finish(text)).ifEmpty { listOf(text) }.forEach(::say)
+    }
+
     /** Starts a new streamed reply: call [stream] with the text so far, then [endStream] with the full text. */
     fun beginStream() { splitter = SentenceSplitter() }
     fun stream(textSoFar: String) = splitter.feed(textSoFar).forEach(::say)

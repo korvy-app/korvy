@@ -24,9 +24,11 @@ class NeuralTts {
 
     private fun ensure(dir: File, kind: NeuralVoicePack.Kind, modelFile: String) {
         if (loadedDir == dir.path && tts != null) return
-        release()
+        // Free the previous voice without raising the stop flag (that would silence the sentence being loaded for).
+        runCatching { tts?.release() }; tts = null; loadedDir = null
         val threads = (Runtime.getRuntime().availableProcessors() - 4).coerceIn(2, 4)
         val model = when (kind) {
+            NeuralVoicePack.Kind.KWS -> error("not a voice")
             NeuralVoicePack.Kind.KOKORO -> OfflineTtsModelConfig(
                 kokoro = OfflineTtsKokoroModelConfig(
                     model = File(dir, modelFile).path, voices = File(dir, "voices.bin").path,

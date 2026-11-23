@@ -29,7 +29,12 @@ data class ModelInfo(
     /** Total phone memory (as Android reports it) below which we warn. */
     val minRamGb: Double,
     val note: String,
+    /** CHAT models answer; SPEECH models (whisper.cpp) turn speech into text. */
+    val kind: Kind = Kind.CHAT,
 ) {
+    enum class Kind { CHAT, SPEECH }
+    /** Speech models: English-only models are faster and more accurate for English. */
+    val englishOnly get() = file.contains(".en")
     val url get() = "https://huggingface.co/$repo/resolve/main/$file"
     val sizeText get() = if (bytes >= 1_000_000_000) "%.1f GB".format(bytes / 1e9) else "${bytes / 1_000_000} MB"
 }
@@ -65,7 +70,28 @@ object ModelCatalog {
             8.0, "Good at reasoning; flagship phones."),
     )
 
-    fun byId(id: String?) = all.firstOrNull { it.id == id }
+    /** Whisper speech-recognition models (ggerganov/whisper.cpp on Hugging Face, MIT). Checked 2026-11-23. */
+    val speech = listOf(
+        ModelInfo("whisper-tiny.en", "Whisper tiny · English", "OpenAI (open model)", "MIT", "ggerganov/whisper.cpp",
+            "ggml-tiny.en-q5_1.bin", 32_166_155, "c77c5766f1cef09b6b7d47f21b546cbddd4157886b3b5d6d4f709e91e66c7c2b", 2.0,
+            "Fastest. Good for short commands on older phones.", ModelInfo.Kind.SPEECH),
+        ModelInfo("whisper-base.en", "Whisper base · English", "OpenAI (open model)", "MIT", "ggerganov/whisper.cpp",
+            "ggml-base.en-q5_1.bin", 59_721_011, "4baf70dd0d7c4247ba2b81fafd9c01005ac77c2f9ef064e00dcf195d0e2fdd2f", 3.0,
+            "Recommended: accurate and quick on most phones.", ModelInfo.Kind.SPEECH),
+        ModelInfo("whisper-small.en", "Whisper small · English", "OpenAI (open model)", "MIT", "ggerganov/whisper.cpp",
+            "ggml-small.en-q5_1.bin", 190_098_681, "bfdff4894dcb76bbf647d56263ea2a96645423f1669176f4844a1bf8e478ad30", 6.0,
+            "Most accurate. Takes a few seconds on mid-range phones.", ModelInfo.Kind.SPEECH),
+        ModelInfo("whisper-base", "Whisper base · 99 languages", "OpenAI (open model)", "MIT", "ggerganov/whisper.cpp",
+            "ggml-base-q5_1.bin", 59_707_625, "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898", 3.0,
+            "Understands many languages (detects which one you speak).", ModelInfo.Kind.SPEECH),
+        ModelInfo("whisper-small", "Whisper small · 99 languages", "OpenAI (open model)", "MIT", "ggerganov/whisper.cpp",
+            "ggml-small-q5_1.bin", 190_085_487, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", 6.0,
+            "Many languages, more accurate, slower.", ModelInfo.Kind.SPEECH),
+    )
+    val everything get() = all + speech
+    fun byId(id: String?) = everything.firstOrNull { it.id == id }
+    /** Only chat models (a speech model id must never be used to answer). */
+    fun chatById(id: String?) = all.firstOrNull { it.id == id }
 }
 
 sealed interface DownloadState {
@@ -86,7 +112,7 @@ class ModelStore(private val context: Context) {
     val download: StateFlow<DownloadState> = _download
 
     fun fileFor(m: ModelInfo) = File(dir, m.file)
-    private fun scan() = ModelCatalog.all.filter { File(dir, it.file).length() == it.bytes }.map { it.id }.toSet()
+    private fun scan() = ModelCatalog.everything.filter { File(dir, it.file).length() == it.bytes }.map { it.id }.toSet()
 
     fun freeBytes() = dir.usableSpace
 
