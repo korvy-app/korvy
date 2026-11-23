@@ -44,6 +44,8 @@ data class ChatItem(
     val card: com.hiddenoutlier.launcher.assistant.Card? = null,
     /** A web page per detail line (e.g. each headline's article), or null. */
     val lineLinks: List<String?> = emptyList(),
+    /** What to say when read aloud, when different from the text plus lines. */
+    val spoken: String? = null,
 )
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {

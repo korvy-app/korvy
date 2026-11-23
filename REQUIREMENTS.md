@@ -234,6 +234,8 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.8.1** – 🔊 button beside Copy on every assistant reply reads it aloud (details included) even when
+  spoken replies are off; tap again to stop. Verified on the 4a with spoken replies off.
 - 2026-11-23: **0.8.0** – People shortcuts, apps per task, play/help, contact photos, news links, spoken details,
   weather location and no repeated names. On the Pixel 4a: news headlines link to articles (opened in Firefox);
   "weather" → location card → approximate location → "Clear, 51°F in your area"; two test "Zelda" contacts →

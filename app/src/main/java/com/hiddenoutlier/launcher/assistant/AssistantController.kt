@@ -123,7 +123,7 @@ class AssistantController(
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
                 if (action.type != ActionType.ANSWER) update(replyId) { it.copy(text = "…") }
                 val r = tools.run(action)
-                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, card = r.card, lineLinks = r.lineLinks, pending = false) }
+                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, card = r.card, lineLinks = r.lineLinks, spoken = r.spoken, pending = false) }
                 if (speak) {
                     // Say the details too (forecast, headlines), not just the first line.
                     val words = r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines)
@@ -204,6 +204,25 @@ class AssistantController(
     }
 
     /** Short confirmation when the user turns spoken replies on (also proves the volume is up). */
+    /** The reply being read aloud by its 🔊 button (null when none). */
+    val readingAloud = MutableStateFlow<Long?>(null)
+    private var readJob: Job? = null
+
+    /** Reads one reply aloud on request, whatever the "speak replies" setting. Tapping again stops it. */
+    fun readAloud(id: Long) {
+        val item = chat.value.firstOrNull { it.id == id } ?: return
+        speaker.stop(); readJob?.cancel()
+        if (readingAloud.value == id) { readingAloud.value = null; return }
+        val s = settings.value
+        speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
+        val words = item.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(item.text, item.lines)
+        speaker.say(words)
+        warnIfQuiet()
+        readingAloud.value = id
+        // Speech engines don't all report when they finish; clear the "playing" state after a generous estimate.
+        readJob = scope.launch { kotlinx.coroutines.delay((words.length * 75L / s.ttsRate).toLong() + 2_000); if (readingAloud.value == id) readingAloud.value = null }
+    }
+
     fun sayHello() {
         val s = settings.value
         speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
