@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -101,6 +103,7 @@ fun AssistantScreen(
     cardActions: CardActions? = null,
     onReadAloud: ((Long) -> Unit)? = null,
     readingAloud: Long? = null,
+    speechState: com.hiddenoutlier.launcher.assistant.Speaker.State = com.hiddenoutlier.launcher.assistant.Speaker.State.IDLE,
 ) {
     var input by remember { mutableStateOf("") }
     val mic = remember { MicState() }
@@ -128,7 +131,7 @@ fun AssistantScreen(
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
-            items(chat, key = { it.id }) { m -> Bubble(m, actions = cardActions, onSpeak = onReadAloud, speaking = readingAloud == m.id, openLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) }
+            items(chat, key = { it.id }) { m -> Bubble(m, actions = cardActions, onSpeak = onReadAloud, speech = if (readingAloud == m.id) speechState else null, openLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) }
         }
         val status = mic.error ?: if (mic.listening) mic.partial.ifBlank { "Listening…" } else null
         status?.let { Text(it, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp)) }
@@ -153,7 +156,7 @@ fun AssistantScreen(
 }
 
 @Composable
-internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardActions? = null, onSpeak: ((Long) -> Unit)? = null, speaking: Boolean = false) {
+internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardActions? = null, onSpeak: ((Long) -> Unit)? = null, speech: com.hiddenoutlier.launcher.assistant.Speaker.State? = null) {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val context = LocalContext.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
@@ -184,9 +187,17 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 // Read this reply aloud now, whatever the "speak replies" setting (tap again to stop).
                 if (!m.fromUser && onSpeak != null) IconButton(onClick = { onSpeak(m.id) }, modifier = Modifier.size(28.dp).testTag("speak_${m.id}")) {
-                    Icon(if (speaking) androidx.compose.material.icons.Icons.Outlined.Stop else androidx.compose.material.icons.Icons.AutoMirrored.Outlined.VolumeUp,
-                        if (speaking) "Stop reading" else "Read aloud", modifier = Modifier.size(16.dp),
-                        tint = if (speaking) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    when (speech) {
+                        // Getting the voice ready (first sentence can take a moment): spinner, tap to cancel.
+                        com.hiddenoutlier.launcher.assistant.Speaker.State.LOADING, com.hiddenoutlier.launcher.assistant.Speaker.State.IDLE ->
+                            Box(contentAlignment = androidx.compose.ui.Alignment.Center, modifier = Modifier.semantics { contentDescription = "Getting ready to read, tap to cancel" }) {
+                                androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            }
+                        com.hiddenoutlier.launcher.assistant.Speaker.State.SPEAKING ->
+                            Icon(androidx.compose.material.icons.Icons.Outlined.Stop, "Stop reading", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        null -> Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.VolumeUp, "Read aloud", modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 IconButton(onClick = {
                     clipboard.setText(androidx.compose.ui.text.AnnotatedString((listOf(m.text) + m.lines.mapIndexed { i, l ->

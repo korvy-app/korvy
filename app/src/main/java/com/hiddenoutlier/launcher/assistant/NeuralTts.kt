@@ -47,7 +47,7 @@ class NeuralTts {
     }
 
     /** Speaks [text] and returns when playback has finished (or [stop] was called). Call from one worker thread. */
-    fun speak(dir: File, kind: NeuralVoicePack.Kind, modelFile: String, speaker: Int, speed: Float, text: String) {
+    fun speak(dir: File, kind: NeuralVoicePack.Kind, modelFile: String, speaker: Int, speed: Float, text: String, onStart: () -> Unit = {}) {
         stopFlag.set(false)
         val t0 = android.os.SystemClock.elapsedRealtime()
         ensure(dir, kind, modelFile)
@@ -70,12 +70,13 @@ class NeuralTts {
             var firstChunkAt = 0L
             val audio = engine.generateWithCallback(text, speaker.coerceIn(0, engine.numSpeakers() - 1), speed, AudioChunkCallback { chunk ->
                 if (stopFlag.get()) false else {
-                    if (firstChunkAt == 0L) firstChunkAt = android.os.SystemClock.elapsedRealtime()
+                    if (firstChunkAt == 0L) { firstChunkAt = android.os.SystemClock.elapsedRealtime(); onStart() }
                     t.write(chunk, 0, chunk.size, AudioTrack.WRITE_BLOCKING); written += chunk.size; true
                 }
             })
             // Seen once on a cold start: audio generated but the callback never called. Play the result instead.
             if (written == 0 && !stopFlag.get() && audio.samples.isNotEmpty()) {
+                onStart()
                 t.write(audio.samples, 0, audio.samples.size, AudioTrack.WRITE_BLOCKING); written = audio.samples.size
             }
             Log.i("NeuralTts", "load ${tLoaded - t0} ms, first audio ${firstChunkAt - tLoaded} ms after load, " +

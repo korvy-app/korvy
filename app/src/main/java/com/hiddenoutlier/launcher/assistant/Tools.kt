@@ -228,14 +228,43 @@ class Tools(
         return resolve(parts.recipient, "text") { p -> textCard(p, parts.message) }
     }
 
-    private fun textCard(p: Person, message: String) = ToolResult(
+    private fun textCard(p: Person, message: String): ToolResult {
+        val viaSignal = appFor(com.hiddenoutlier.launcher.platform.AppTask.MESSAGES) == com.hiddenoutlier.launcher.platform.AppChoices.SIGNAL
+        return ToolResult(
         "Ready to text ${p.name}.",
-        card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Send", message, person = p,
+        card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label, if (viaSignal) "Signal" else "").filter { it.isNotBlank() }.joinToString(" · "),
+            if (viaSignal) "Open Signal" else "Send", message, person = p,
             run = { m ->
-                val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()).via(com.hiddenoutlier.launcher.platform.AppTask.MESSAGES))
-                if (ok) "Opened your messaging app with the text to ${p.name}. Tap send there." else "No messaging app found."
+                if (viaSignal) signal(p, m.orEmpty()) else {
+                    val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()).via(com.hiddenoutlier.launcher.platform.AppTask.MESSAGES))
+                    if (ok) "Opened your messaging app with the text to ${p.name}. Tap send there." else "No messaging app found."
+                }
             }),
-    )
+        )
+    }
+
+    /**
+     * Signal can open a chat with a phone number (signal.me link) but can't be handed the message, so the message
+     * goes on the clipboard to paste. Without a full international number, share the text to Signal to pick the chat.
+     */
+    private fun signal(p: Person, message: String): String {
+        val sig = com.hiddenoutlier.launcher.platform.AppChoices.SIGNAL
+        if (message.isNotBlank()) context.getSystemService(android.content.ClipboardManager::class.java)
+            ?.setPrimaryClip(android.content.ClipData.newPlainText("Message", message))
+        val e164 = e164(p.number)
+        if (e164 != null && start(Intent(Intent.ACTION_VIEW, Uri.parse("https://signal.me/#p/$e164")).setPackage(sig)))
+            return if (message.isBlank()) "Opened Signal with ${p.name}." else "Opened Signal with ${p.name}. Your message is copied: paste it and tap send."
+        if (message.isNotBlank() && start(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, message).setPackage(sig)))
+            return "Opened Signal with your message. Pick ${p.name} and tap send."
+        return "Couldn't open Signal for ${p.name}."
+    }
+
+    /** The number in international form (+15551234567), using the phone's country for local numbers. */
+    private fun e164(number: String): String? {
+        val tm = context.getSystemService(android.telephony.TelephonyManager::class.java)
+        val iso = (tm?.simCountryIso?.ifBlank { null } ?: tm?.networkCountryIso?.ifBlank { null } ?: java.util.Locale.getDefault().country).uppercase()
+        return android.telephony.PhoneNumberUtils.formatNumberToE164(number, iso)
+    }
 
     private fun call(who: String) = resolve(who, "call") { p ->
         ToolResult("Ready to call ${p.name}.", card = Card(Card.Kind.CONFIRM, "Call ${p.name}",

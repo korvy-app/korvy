@@ -44,11 +44,14 @@ class AssistantService : Service() {
                 val d = msg.data
                 val gen = speechGeneration
                 voice.execute {
-                    if (gen != speechGeneration) return@execute
+                    // Always report the end (even when skipped) so the launcher's "speaking" state can't get stuck.
+                    if (gen != speechGeneration) { send(reply, MSG_SPEAK_DONE, ""); return@execute }
                     runCatching {
                         neural.speak(java.io.File(d.getString(K_PATH)!!), NeuralVoicePack.Kind.valueOf(d.getString(K_KIND)!!),
-                            d.getString(K_MODEL)!!, d.getInt(K_SPEAKER), d.getFloat(K_SPEED, 1f), d.getString(K_TEXT)!!)
-                    }.onFailure { Log.e("AssistantService", "speech failed", it); send(msg.replyTo, MSG_ERROR, "Voice failed: ${it.message}") }
+                            d.getString(K_MODEL)!!, d.getInt(K_SPEAKER), d.getFloat(K_SPEED, 1f), d.getString(K_TEXT)!!,
+                            onStart = { send(reply, MSG_SPEAK_START, "") })
+                    }.onFailure { Log.e("AssistantService", "speech failed", it); send(reply, MSG_ERROR, "Voice failed: ${it.message}") }
+                    send(reply, MSG_SPEAK_DONE, "")
                 }
             }
             MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
@@ -108,6 +111,7 @@ class AssistantService : Service() {
         /** Context window: room for the system prompt, examples, a few earlier turns and the reply. */
         const val CTX = 4096
         const val MSG_TOKEN = 10; const val MSG_DONE = 11; const val MSG_ERROR = 12; const val MSG_STATUS = 13
+        const val MSG_SPEAK_START = 14; const val MSG_SPEAK_DONE = 15
         const val K_PATH = "path"; const val K_CTX = "ctx"; const val K_ROLES = "roles"; const val K_CONTENTS = "contents"
         const val K_GRAMMAR = "grammar"; const val K_MAX = "max"; const val K_TEMP = "temp"; const val K_TEXT = "text"
     }

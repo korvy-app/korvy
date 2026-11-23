@@ -21,6 +21,9 @@ data class AppOption(val pkg: String, val label: String)
 
 object AppChoices {
     private val rideApps = linkedMapOf("com.ubercab" to "Uber", "me.lyft.android" to "Lyft")
+    const val SIGNAL = "org.thoughtcrime.securesms"
+    /** Messengers that can open a chat with a phone number but don't register as SMS apps (Signal dropped SMS). */
+    private val messengers = linkedMapOf(SIGNAL to "Signal")
 
     /** A sample intent each task's apps must handle (used to find the installed apps that can do it). */
     fun probe(task: AppTask): Intent? = when (task) {
@@ -38,7 +41,8 @@ object AppChoices {
         val pm = context.packageManager
         if (task == AppTask.RIDES) return rideApps.filterKeys { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.map { AppOption(it.key, it.value) }
         val intent = probe(task) ?: return emptyList()
-        return pm.queryIntentActivities(intent, 0).map { it.activityInfo.packageName }.distinct()
+        val extra = if (task == AppTask.MESSAGES) messengers.keys.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess } else emptyList()
+        return (pm.queryIntentActivities(intent, 0).map { it.activityInfo.packageName } + extra).distinct()
             .filter { it != context.packageName }
             .map { AppOption(it, runCatching { pm.getApplicationLabel(pm.getApplicationInfo(it, 0)).toString() }.getOrDefault(it)) }
             .sortedBy { it.label.lowercase() }

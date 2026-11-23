@@ -42,6 +42,8 @@ class AssistantController(
 ) {
     val chat = MutableStateFlow<List<ChatItem>>(emptyList())
     val busy = MutableStateFlow(false)
+    /** The reply being spoken (by its 🔊 button or because spoken replies are on); null when none. */
+    val readingAloud = MutableStateFlow<Long?>(null)
     /** Set when a request opened another app (the power-button panel closes itself then). */
     val leftForApp = MutableStateFlow(0)
     val speaker = Speaker(context)
@@ -50,14 +52,21 @@ class AssistantController(
 
     init {
         speaker.neural = object : Speaker.Neural {
-            override fun say(engine: String, voice: String?, speed: Float, text: String): Boolean {
+            override fun say(engine: String, voice: String?, speed: Float, text: String, onStart: () -> Unit, onDone: () -> Unit): Boolean {
                 val pack = NeuralVoiceCatalog.byId(engine.removePrefix(Speaker.NEURAL_PREFIX)) ?: return false
                 if (pack.id !in voices.installed.value) return false
                 val speakerId = voice?.toIntOrNull() ?: pack.speakers.first().id
-                client.speak(voices.folderFor(pack).path, pack.kind.name, pack.modelFile, speakerId, speed, text)
+                client.speak(voices.folderFor(pack).path, pack.kind.name, pack.modelFile, speakerId, speed, text, onStart, onDone)
                 return true
             }
             override fun stop() = client.stopSpeaking()
+        }
+    }
+    init {
+        // The reply's button goes back to 🔊 once nothing is queued and the reply has finished arriving.
+        scope.launch {
+            kotlinx.coroutines.flow.combine(speaker.state, busy) { st, b -> st == Speaker.State.IDLE && !b }
+                .collect { idle -> if (idle) readingAloud.value = null }
         }
     }
     private var nextId = 0L
@@ -106,10 +115,11 @@ class AssistantController(
     fun ask(text: String, byVoice: Boolean = false) {
         val q = text.trim()
         if (q.isEmpty() || busy.value) return
-        speaker.stop()
+        stopSpeaking()
         val speak = speaking(byVoice)
         chat.value = chat.value + ChatItem(nextId++, true, q)
         val replyId = nextId++
+        if (speak) readingAloud.value = replyId
         chat.value = chat.value + ChatItem(replyId, false, "", pending = true)
         busy.value = true
         job = scope.launch {
@@ -204,24 +214,23 @@ class AssistantController(
     }
 
     /** Short confirmation when the user turns spoken replies on (also proves the volume is up). */
-    /** The reply being read aloud by its 🔊 button (null when none). */
-    val readingAloud = MutableStateFlow<Long?>(null)
-    private var readJob: Job? = null
+    /** LOADING / SPEAKING for [readingAloud]'s reply: its button shows a spinner, then Stop. */
+    val speech get() = speaker.state
 
-    /** Reads one reply aloud on request, whatever the "speak replies" setting. Tapping again stops it. */
+    /** Reads one reply aloud on request, whatever the "speak replies" setting. Tapping it again stops it. */
     fun readAloud(id: Long) {
         val item = chat.value.firstOrNull { it.id == id } ?: return
-        speaker.stop(); readJob?.cancel()
-        if (readingAloud.value == id) { readingAloud.value = null; return }
+        val wasThis = readingAloud.value == id
+        stopSpeaking()
+        if (wasThis) return
         val s = settings.value
         speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
-        val words = item.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(item.text, item.lines)
-        speaker.say(words)
-        warnIfQuiet()
         readingAloud.value = id
-        // Speech engines don't all report when they finish; clear the "playing" state after a generous estimate.
-        readJob = scope.launch { kotlinx.coroutines.delay((words.length * 75L / s.ttsRate).toLong() + 2_000); if (readingAloud.value == id) readingAloud.value = null }
+        speaker.say(item.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(item.text, item.lines))
+        warnIfQuiet()
     }
+
+    fun stopSpeaking() { speaker.stop(); readingAloud.value = null }
 
     fun sayHello() {
         val s = settings.value
@@ -242,7 +251,7 @@ class AssistantController(
         if (m.id in models.installed.value) client.preload(models.fileFor(m).path)
     }
 
-    fun stop() { client.stop(); speaker.stop(); job?.cancel() }
+    fun stop() { client.stop(); stopSpeaking(); job?.cancel() }
 
     // ---- Confirmation cards ---------------------------------------------------------------------------------
     private fun cardOf(id: Long) = chat.value.firstOrNull { it.id == id }?.card
@@ -279,6 +288,7 @@ class AssistantController(
             val r = tools.run(action)
             update(id) { it.copy(text = r.text, lines = r.lines, card = r.card, lineLinks = r.lineLinks) }
             if (speaking(byVoice = false)) {
+                stopSpeaking(); readingAloud.value = id
                 speaker.say(r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines))
             }
         }

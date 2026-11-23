@@ -53,6 +53,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val webSuggestions by vm.webSuggestions.collectAsStateWithLifecycle()
     val contactResults by vm.contactResults.collectAsStateWithLifecycle()
     val readingAloud by vm.assistant.readingAloud.collectAsStateWithLifecycle()
+    val speechState by vm.assistant.speech.collectAsStateWithLifecycle()
     val drag = remember(vm) {
         DragController(
             grid = { vm.homeGrid.value },
@@ -160,7 +161,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
                     speak = settings.speak, onSpeak = vm::setSpeak, onSpeakOn = { vm.assistant.sayHello() },
                     cardActions = rememberCardActions(vm.assistant),
-                    onReadAloud = vm.assistant::readAloud, readingAloud = readingAloud,
+                    onReadAloud = vm.assistant::readAloud, readingAloud = readingAloud, speechState = speechState,
                 )
             }
             AnimatedVisibility(screen == Screen.MODELS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {

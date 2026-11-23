@@ -234,6 +234,12 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.8.3** – Read-aloud button follows the real speech: spinner while the voice gets ready, Stop while
+  speaking (tap either to stop), back to 🔊 when done; also on replies spoken automatically. Android TTS reports
+  start/done per utterance; natural voices send MSG_SPEAK_START/DONE from the assistant process.
+  Signal as a texting app: it no longer handles smsto:, so it's added by package; texts open
+  `https://signal.me/#p/<E.164>` in Signal with the message on the clipboard (Signal can't be handed a message), or
+  share the text to Signal when the number can't be made international. Signal not installed on the 4a: untested.
 - 2026-11-23: **0.8.1** – 🔊 button beside Copy on every assistant reply reads it aloud (details included) even when
   spoken replies are off; tap again to stop. Verified on the 4a with spoken replies off.
 - 2026-11-23: **0.8.0** – People shortcuts, apps per task, play/help, contact photos, news links, spoken details,
