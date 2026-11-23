@@ -109,4 +109,18 @@ class AgentCoreTest {
         assertTrue(com.hiddenoutlier.launcher.core.TextArgs.isNumber("+1 (555) 123-4567"))
         assertTrue(!com.hiddenoutlier.launcher.core.TextArgs.isNumber("mom"))
     }
+
+    @Test fun musicAndHelp() {
+        assertEquals(Action(ActionType.PLAY, "jazz"), q("play some jazz"))
+        assertEquals(Action(ActionType.PLAY, "Taylor Swift"), q("Play Taylor Swift"))
+        assertEquals(Action(ActionType.PLAY, "my workout playlist"), q("put on my workout playlist"))
+        assertEquals(Action(ActionType.HELP, ""), q("what can you do?"))
+        assertEquals(Action(ActionType.HELP, ""), q("help"))
+        assertEquals(Action(ActionType.OPEN_APP, "Play Store"), q("open Play Store"))
+    }
+
+    @Test fun promptMentionsChosenApps() {
+        val p = AgentCore.systemPrompt("", "Monday", null, "Music: Spotify; Maps: Organic Maps")
+        assertTrue(p.contains("Music: Spotify"))
+    }
 }

@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS }
 
 /** One line of the assistant conversation. */
 data class ChatItem(
@@ -42,6 +42,8 @@ data class ChatItem(
     val actionJson: String? = null,
     /** A confirmation (or contact question) waiting for the user. */
     val card: com.hiddenoutlier.launcher.assistant.Card? = null,
+    /** A web page per detail line (e.g. each headline's article), or null. */
+    val lineLinks: List<String?> = emptyList(),
 )
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
@@ -146,6 +148,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     fun setContactsInSearch(v: Boolean) = save { la.settings.setContactsInSearch(v) }
+    fun setUseLocation(v: Boolean) = save { la.settings.setUseLocation(v) }
+    fun setAppChoice(task: com.hiddenoutlier.launcher.platform.AppTask, pkg: String?) = save { la.settings.setAppChoice(task.name, pkg) }
     fun dial(p: com.hiddenoutlier.launcher.assistant.Person) { leftForApp = true; runCatching {
         getApplication<Application>().startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     fun textTo(p: com.hiddenoutlier.launcher.assistant.Person) { leftForApp = true; runCatching {

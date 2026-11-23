@@ -12,7 +12,9 @@ enum class ActionType(val id: String, val help: String) {
     TEXT("text", "send a text message; arg = \"recipient: message\""),
     CALL("call", "phone someone; arg = contact name or phone number"),
     RIDE("ride", "order a ride; arg = \"uber: destination\" or \"lyft: destination\""),
-    NAVIGATE("navigate", "directions in the maps app; arg = destination");
+    NAVIGATE("navigate", "directions in the maps app; arg = destination"),
+    PLAY("play", "play music in the user's music app; arg = song, artist, album, playlist or genre"),
+    HELP("help", "list what you can do; arg empty");
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
@@ -37,7 +39,7 @@ object AgentCore {
     }
 
     /** Short system prompt (small models slow down with long prompts). The personality can't override the rules. */
-    fun systemPrompt(personality: String, now: String, home: String?): String = buildString {
+    fun systemPrompt(personality: String, now: String, home: String?, apps: String? = null): String = buildString {
         if (personality.isNotBlank()) {
             appendLine("Personality (affects only how answers are worded):")
             appendLine(personality.trim())
@@ -45,6 +47,7 @@ object AgentCore {
         }
         appendLine("You are the assistant built into a phone's home screen. Today is $now. The time is given with each question.")
         if (!home.isNullOrBlank()) appendLine("The user's home area is $home.")
+        if (!apps.isNullOrBlank()) appendLine("Apps the user picked for tasks: $apps. Actions use these automatically.")
         appendLine("Reply with JSON only: {\"action\": ..., \"arg\": ...}. Actions:")
         ActionType.entries.forEach { appendLine("- ${it.id}: ${it.help}") }
         appendLine("Rules: pick the action that does what the user asked. Use answer for chat, facts you are sure of, and maths.")
@@ -72,6 +75,8 @@ object AgentCore {
     private val CALL = Regex("^(?:please\\s+)?(?:call|dial|phone|ring)\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val TEXT_SPLIT = Regex("^(?:please\\s+)?(?:text|message|sms|send\\s+(?:a\\s+)?(?:text|message)\\s+to)\\s+(.+?)\\s*(?::|\\bsaying\\b|\\bthat\\b)\\s*(.+)$", RegexOption.IGNORE_CASE)
     private val TEXT_PLAIN = Regex("^(?:please\\s+)?(?:text|message|sms)\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val PLAY = Regex("^(?:please\\s+)?(?:play|put\\s+on|listen\\s+to)\\s+(?:some\\s+)?(.+)$", RegexOption.IGNORE_CASE)
+    private val HELP = Regex("^(?:help|what\\s+can\\s+you\\s+do|what\\s+are\\s+you\\s+able\\s+to\\s+do|what\\s+do\\s+you\\s+do)\\??$", RegexOption.IGNORE_CASE)
     private val NAVIGATE = Regex("^(?:navigate|directions|drive|take\\s+me|how\\s+do\\s+i\\s+get)\\s+(?:me\\s+)?(?:to\\s+)?(.+?)\\??$", RegexOption.IGNORE_CASE)
     private val SEARCH = Regex("^(?:search(?:\\s+for)?|look\\s+up|google)\\s+(.+)$", RegexOption.IGNORE_CASE)
 
@@ -87,6 +92,8 @@ object AgentCore {
         // "text mom I'm late": where the name ends is decided later against the contacts (TextArgs.split).
         TEXT_PLAIN.matchEntire(t)?.let { return Action(ActionType.TEXT, it.groupValues[1].trim()) }
         NAVIGATE.matchEntire(t)?.let { return Action(ActionType.NAVIGATE, it.groupValues[1].trim()) }
+        HELP.matchEntire(t)?.let { return Action(ActionType.HELP, "") }
+        PLAY.matchEntire(t)?.let { return Action(ActionType.PLAY, it.groupValues[1].trim()) }
         CALL.matchEntire(t)?.let { return Action(ActionType.CALL, it.groupValues[1].trim()) }
         TIMER.matchEntire(t)?.let { m -> parseDuration(m.groupValues[1].ifEmpty { m.groupValues[2] })?.let { return Action(ActionType.TIMER, it.toString()) } }
         WEATHER.matchEntire(t)?.let { return Action(ActionType.WEATHER, it.groupValues[1].trim()) }

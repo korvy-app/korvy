@@ -18,7 +18,16 @@ import java.net.URLEncoder
 import java.util.Locale
 
 /** What an action produced: a sentence for the chat, plus optional detail lines (forecast, headlines…). */
-data class ToolResult(val text: String, val lines: List<String> = emptyList(), val link: String? = null, val card: Card? = null)
+data class ToolResult(
+    val text: String,
+    val lines: List<String> = emptyList(),
+    val link: String? = null,
+    val card: Card? = null,
+    /** A web page per line (e.g. each headline's article), or null. */
+    val lineLinks: List<String?> = emptyList(),
+    /** What to say out loud, when different from the text plus lines. */
+    val spoken: String? = null,
+)
 
 /**
  * Something the user must confirm (or a contact the assistant needs) before anything is sent, called or booked.
@@ -32,8 +41,13 @@ data class Card(
     val message: String? = null,
     val run: (message: String?) -> String = { "" },
     val withContact: (Person) -> ToolResult = { ToolResult("") },
+    /** Who this is about (for the photo). */
+    val person: Person? = null,
+    /** For CHOOSE_CONTACT: the people who match, and the name the user said (to remember the choice for). */
+    val options: List<Person> = emptyList(),
+    val alias: String? = null,
 ) {
-    enum class Kind { CONFIRM, NEED_CONTACT }
+    enum class Kind { CONFIRM, NEED_CONTACT, NEED_LOCATION, CHOOSE_CONTACT }
 }
 
 /**
@@ -50,7 +64,12 @@ class Tools(
     private val fahrenheit: () -> Boolean,
     private val contacts: Contacts = Contacts(context),
     private val opened: () -> Unit = {},
+    private val useLocation: () -> Boolean = { true },
+    private val shortcuts: PeopleShortcuts? = null,
+    /** The app the user picked for a task, or null for Android's choice. */
+    private val appFor: (com.hiddenoutlier.launcher.platform.AppTask) -> String? = { null },
 ) {
+    private fun Intent.via(task: com.hiddenoutlier.launcher.platform.AppTask): Intent = apply { appFor(task)?.let { setPackage(it) } }
     suspend fun run(a: Action): ToolResult = try {
         when (a.type) {
             ActionType.ANSWER -> ToolResult(a.arg)
@@ -64,6 +83,8 @@ class Tools(
             ActionType.CALL -> call(a.arg)
             ActionType.RIDE -> ride(a.arg)
             ActionType.NAVIGATE -> navigate(a.arg)
+            ActionType.PLAY -> play(a.arg)
+            ActionType.HELP -> help()
         }
     } catch (e: OfflineException) {
         ToolResult("${e.source.title} is turned off. You can turn it on in Settings → Online features.")
@@ -88,48 +109,69 @@ class Tools(
     }
 
     private suspend fun weather(placeArg: String): ToolResult {
-        val place = placeArg.ifBlank { homePlace() }
-        if (place.isBlank()) return ToolResult("Which place? Add your home town in Settings → Online features → Weather, or ask “weather in Paris”.")
-        val geo = JSONObject(Net.getText(OnlineSource.WEATHER,
-            "https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + enc(place), allowed))
-        val hit = geo.optJSONArray("results")?.optJSONObject(0) ?: return ToolResult("I couldn't find a place called “$place”.")
+        // A named place wins; otherwise where you are (if allowed); otherwise your home town; otherwise ask.
+        var coords: Pair<Double, Double>? = null
+        var name: String
+        var city: String
+        if (placeArg.isBlank() && useLocation() && com.hiddenoutlier.launcher.platform.Location.granted(context)) {
+            coords = com.hiddenoutlier.launcher.platform.Location.approximate(context)
+        }
+        if (coords != null) { name = "your area"; city = "your area" } else {
+            val place = placeArg.ifBlank { homePlace() }
+            if (place.isBlank()) return ToolResult("Which place?", card = Card(Card.Kind.NEED_LOCATION, "Weather for where you are?",
+                "Allow approximate location (only rounded coordinates go to Open-Meteo), or set a home town in Settings → Online features. You can also ask “weather in Paris”."))
+            val geo = JSONObject(Net.getText(OnlineSource.WEATHER,
+                "https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + enc(place), allowed))
+            val hit = geo.optJSONArray("results")?.optJSONObject(0) ?: return ToolResult("I couldn't find a place called “$place”.")
+            coords = hit.getDouble("latitude") to hit.getDouble("longitude")
+            city = hit.optString("name").ifBlank { place }
+            name = com.hiddenoutlier.launcher.core.Speech.placeName(city, hit.optString("admin1"))
+        }
         val f = fahrenheit()
         val w = JSONObject(Net.getText(OnlineSource.WEATHER,
-            "https://api.open-meteo.com/v1/forecast?latitude=${hit.getDouble("latitude")}&longitude=${hit.getDouble("longitude")}" +
+            "https://api.open-meteo.com/v1/forecast?latitude=${coords.first}&longitude=${coords.second}" +
                 "&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
                 "&timezone=auto&forecast_days=1" + if (f) "&temperature_unit=fahrenheit&wind_speed_unit=mph" else "", allowed))
         val cur = w.getJSONObject("current")
         val daily = w.getJSONObject("daily")
         val unit = if (f) "°F" else "°C"
-        val name = listOf(hit.optString("name"), hit.optString("admin1")).filter { it.isNotBlank() }.joinToString(", ")
-        return ToolResult(
-            "${describe(cur.optInt("weather_code"))}, ${cur.getDouble("temperature_2m").toInt()}$unit in $name.",
-            listOf(
+        val sky = describe(cur.optInt("weather_code")); val temp = cur.getDouble("temperature_2m").toInt()
+        val lines = listOf(
                 "High ${daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()}$unit · low ${daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()}$unit",
                 "Chance of rain ${daily.getJSONArray("precipitation_probability_max").optInt(0)}%",
                 "Wind ${cur.getDouble("wind_speed_10m").toInt()} ${if (f) "mph" else "km/h"}",
                 "Source: Open-Meteo",
-            ),
-        )
+            )
+        // Spoken: just the city (no region), then the forecast lines.
+        return ToolResult("$sky, $temp$unit in $name.", lines,
+            spoken = com.hiddenoutlier.launcher.core.Speech.forSpeech("$sky, $temp$unit in $city.", lines.take(2)))
     }
 
     private suspend fun news(topic: String): ToolResult {
         val feeds = listOf("https://feeds.npr.org/1001/rss.xml", "https://feeds.bbci.co.uk/news/rss.xml")
-        val items = feeds.flatMap { url -> runCatching { rssTitles(Net.getText(OnlineSource.NEWS, url, allowed)) }.getOrElse { if (it is OfflineException) throw it; emptyList() } }
+        val items = feeds.flatMap { url -> runCatching { rssItems(Net.getText(OnlineSource.NEWS, url, allowed)) }.getOrElse { if (it is OfflineException) throw it; emptyList() } }
         val words = topic.lowercase(Locale.US).split(' ').filter { it.length > 2 }
-        val picked = if (words.isEmpty()) items else items.filter { t -> words.any { t.lowercase(Locale.US).contains(it) } }
+        val picked = (if (words.isEmpty()) items else items.filter { (t, _) -> words.any { t.lowercase(Locale.US).contains(it) } })
+            .distinctBy { it.first }.take(6)
         if (picked.isEmpty()) return ToolResult(if (topic.isBlank()) "I couldn't get the news right now." else "No headlines about “$topic” right now.")
-        return ToolResult(if (topic.isBlank()) "Top headlines:" else "Headlines about $topic:", picked.distinct().take(6).map { "• $it" } + "Source: NPR, BBC")
+        val title = if (topic.isBlank()) "Top headlines:" else "Headlines about $topic:"
+        // Each headline links to its article (tap to open it in the browser).
+        return ToolResult(title, picked.map { "• ${it.first}" } + "Source: NPR, BBC", lineLinks = picked.map { it.second } + null,
+            spoken = com.hiddenoutlier.launcher.core.Speech.forSpeech(title, picked.take(3).map { it.first }))
     }
 
-    private fun rssTitles(xml: String): List<String> {
+    /** (headline, article link) for each item of an RSS feed. */
+    private fun rssItems(xml: String): List<Pair<String, String?>> {
         val p = Xml.newPullParser().apply { setInput(xml.reader()) }
-        val out = ArrayList<String>()
-        var inItem = false
+        val out = ArrayList<Pair<String, String?>>()
+        var inItem = false; var title: String? = null; var link: String? = null
         while (p.next() != XmlPullParser.END_DOCUMENT) {
-            if (p.eventType == XmlPullParser.START_TAG && p.name == "item") inItem = true
-            if (p.eventType == XmlPullParser.START_TAG && p.name == "title" && inItem) out += p.nextText().trim()
-            if (p.eventType == XmlPullParser.END_TAG && p.name == "item") inItem = false
+            when {
+                p.eventType == XmlPullParser.START_TAG && p.name == "item" -> { inItem = true; title = null; link = null }
+                p.eventType == XmlPullParser.START_TAG && inItem && p.name == "title" -> title = p.nextText().trim()
+                p.eventType == XmlPullParser.START_TAG && inItem && p.name == "link" -> link = p.nextText().trim().takeIf { it.startsWith("https://") }
+                p.eventType == XmlPullParser.END_TAG && p.name == "item" -> { inItem = false; title?.let { out += it to link } }
+            }
         }
         return out
     }
@@ -169,29 +211,36 @@ class Tools(
                 "Allow contacts (they stay on this phone and are never shown to the AI model), or pick one person.",
                 withContact = then))
         }
+        // A saved shortcut ("Jen" → this Jennifer, "wife" → …) wins, with or without contacts access.
+        shortcuts?.find(who)?.let { return then(it) }
         if (!contacts.granted()) return needContact("To $verb $who I need to know who that is.")
-        val p = contacts.best(who) ?: return needContact("I couldn't find “$who” in your contacts.")
-        return then(p)
+        val people = contacts.candidates(who)
+        return when (people.size) {
+            0 -> needContact("I couldn't find “$who” in your contacts.")
+            1 -> then(people.first())
+            else -> ToolResult("Which $who?", card = Card(Card.Kind.CHOOSE_CONTACT, "Which $who should I $verb?",
+                "Tick the box to always use that person for “$who”.", options = people, alias = who, withContact = then))
+        }
     }
 
     private fun text(arg: String): ToolResult {
-        val parts = com.hiddenoutlier.launcher.core.TextArgs.split(arg) { contacts.granted() && contacts.nameExists(it) }
+        val parts = com.hiddenoutlier.launcher.core.TextArgs.split(arg) { shortcuts?.find(it) != null || (contacts.granted() && contacts.nameExists(it)) }
         return resolve(parts.recipient, "text") { p -> textCard(p, parts.message) }
     }
 
     private fun textCard(p: Person, message: String) = ToolResult(
         "Ready to text ${p.name}.",
-        card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Send", message,
+        card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Send", message, person = p,
             run = { m ->
-                val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()))
+                val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()).via(com.hiddenoutlier.launcher.platform.AppTask.MESSAGES))
                 if (ok) "Opened your messaging app with the text to ${p.name}. Tap send there." else "No messaging app found."
             }),
     )
 
     private fun call(who: String) = resolve(who, "call") { p ->
         ToolResult("Ready to call ${p.name}.", card = Card(Card.Kind.CONFIRM, "Call ${p.name}",
-            listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Call",
-            run = { if (start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))))) "Opening the dialer for ${p.name}." else "No phone app found." }))
+            listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Call", person = p,
+            run = { if (start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))).via(com.hiddenoutlier.launcher.platform.AppTask.PHONE))) "Opening the dialer for ${p.name}." else "No phone app found." }))
     }
 
     private fun installed(pkg: String) = runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
@@ -201,6 +250,7 @@ class Tools(
         var app = if (colon > 0) arg.substring(0, colon).trim().lowercase() else "uber"
         val dest = (if (colon > 0) arg.substring(colon + 1) else arg).trim()
         if (dest.isBlank()) return ToolResult("Where to?")
+        if (colon <= 0) appFor(com.hiddenoutlier.launcher.platform.AppTask.RIDES)?.let { if (it == LYFT) app = "lyft" }
         if (app != "lyft" && !installed(UBER) && installed(LYFT)) app = "lyft"
         return if (app == "lyft") ToolResult("Ready to open Lyft.", card = Card(Card.Kind.CONFIRM, "Lyft to $dest",
             "Opens Lyft and copies the destination so you can paste it. You confirm the ride in Lyft.", "Open Lyft",
@@ -223,8 +273,31 @@ class Tools(
     private fun navigate(dest: String): ToolResult {
         if (dest.isBlank()) return ToolResult("Where to?")
         // geo: works with any maps app the user has (Google Maps, Organic Maps, OsmAnd…).
-        return if (start(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))))) ToolResult("Opening directions to $dest.")
+        return if (start(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))).via(com.hiddenoutlier.launcher.platform.AppTask.MAPS))) ToolResult("Opening directions to $dest.")
         else ToolResult("No maps app found.")
+    }
+
+    private fun play(what: String): ToolResult {
+        if (what.isBlank()) return ToolResult("What should I play?")
+        val i = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .putExtra(android.app.SearchManager.QUERY, what).putExtra(android.provider.MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .via(com.hiddenoutlier.launcher.platform.AppTask.MUSIC)
+        return if (start(i)) ToolResult("Playing $what.") else ToolResult("No music app can play “$what”. Pick one in Settings → Assistant → Apps.")
+    }
+
+    private fun help(): ToolResult {
+        fun app(t: com.hiddenoutlier.launcher.platform.AppTask) = appFor(t)?.let { " (${com.hiddenoutlier.launcher.platform.AppChoices.label(context, it)})" }.orEmpty()
+        return ToolResult("Here's what I can do:", listOf(
+            "• Open apps: “open camera”",
+            "• Text and call people${app(com.hiddenoutlier.launcher.platform.AppTask.MESSAGES)}: “text Jen on my way”, “call Jen”",
+            "• Rides${app(com.hiddenoutlier.launcher.platform.AppTask.RIDES)}: “get me an Uber to the airport”",
+            "• Directions${app(com.hiddenoutlier.launcher.platform.AppTask.MAPS)}: “directions to Costco”",
+            "• Music${app(com.hiddenoutlier.launcher.platform.AppTask.MUSIC)}: “play some jazz”",
+            "• Timers and maths: “timer 10 minutes”, “18% of 64”",
+            "• Weather, news, stocks, quick answers (when allowed online)",
+            "• Anything else: I'll answer with the model you picked",
+            "I always ask before sending, calling or booking.",
+        ), spoken = "I can open apps, text and call people, get rides and directions, play music, set timers, do maths, and get the weather, news and stock prices. I always ask before sending, calling or booking.")
     }
 
     companion object { private const val UBER = "com.ubercab"; private const val LYFT = "me.lyft.android" }

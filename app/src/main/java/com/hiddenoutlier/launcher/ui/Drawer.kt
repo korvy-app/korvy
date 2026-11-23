@@ -168,7 +168,7 @@ fun AppDrawer(
                 items(contacts, key = { "contact-" + it.name + it.number }) { p ->
                     Row(Modifier.fillMaxWidth().combinedClickable(onClick = { leaving { onCall(p) } }).padding(horizontal = 20.dp, vertical = 8.dp).testTag("contact_${p.name}"),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Person, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp).padding(6.dp))
+                        ContactAvatar(p, 40.dp)
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
                             Text(p.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)

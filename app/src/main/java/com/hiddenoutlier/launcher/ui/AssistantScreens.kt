@@ -163,7 +163,16 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Column {
                     Text(linkify(m.text.ifBlank { if (m.pending) "Thinking…" else "" }, MaterialTheme.colorScheme.primary))
-                    m.lines.forEach { Text(linkify(it, MaterialTheme.colorScheme.primary), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp)) }
+                    m.lines.forEachIndexed { i, line ->
+                        val url = m.lineLinks.getOrNull(i)
+                        // A line with its own page (a headline) is a link to it; tapping opens the default browser.
+                        val shown = if (url == null) linkify(line, MaterialTheme.colorScheme.primary) else androidx.compose.ui.text.buildAnnotatedString {
+                            pushLink(androidx.compose.ui.text.LinkAnnotation.Url(url, androidx.compose.ui.text.TextLinkStyles(androidx.compose.ui.text.SpanStyle(
+                                color = MaterialTheme.colorScheme.primary, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline))))
+                            append(line); pop()
+                        }
+                        Text(shown, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
             }
             if (!m.pending && m.text.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,7 +180,8 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
                     modifier = Modifier.padding(top = 4.dp, end = 12.dp).clickable { openLink(url) }) }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 IconButton(onClick = {
-                    clipboard.setText(androidx.compose.ui.text.AnnotatedString((listOf(m.text) + m.lines).joinToString("\n")))
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString((listOf(m.text) + m.lines.mapIndexed { i, l ->
+                        m.lineLinks.getOrNull(i)?.let { "$l ($it)" } ?: l }).joinToString("\n")))
                     android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
                 }, modifier = Modifier.size(28.dp).testTag("copy_${m.id}")) {
                     Icon(androidx.compose.material.icons.Icons.Outlined.ContentCopy, "Copy", modifier = Modifier.size(16.dp),
@@ -332,6 +342,7 @@ fun PersonalityScreen(personality: Personality, onSave: (String) -> Unit, onBack
 @Composable
 fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSource, Boolean) -> Unit,
                   onHomePlace: (String) -> Unit, onFahrenheit: (Boolean) -> Unit, onMobileData: (Boolean) -> Unit,
+                  onUseLocation: ((Boolean) -> Unit)? = null,
                   toggle: @Composable (String, String, Boolean, String, Boolean, (Boolean) -> Unit) -> Unit) {
     toggle("Online features", "Off: the app never connects to the internet. On: only the sources below that you leave on.", s.online, "toggle_online", true, onMaster)
     OnlineSource.entries.forEach { src ->
@@ -348,6 +359,8 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
         )
         if (place != s.homePlace) TextButton(onClick = { onHomePlace(place) }, modifier = Modifier.padding(start = 12.dp)) { Text("Save home town") }
         toggle("Fahrenheit", "Show temperatures in °F (off: °C).", s.fahrenheit, "toggle_fahrenheit", true, onFahrenheit)
+        onUseLocation?.let { toggle("Weather for where I am", "When you ask for the weather without a place, use your approximate location " +
+            "(asked once; rounded to about 1 km before it goes to Open-Meteo). Off: use your home town.", s.useLocation, "toggle_location", true, it) }
         toggle("Download models on mobile data", "Models are 0.5–2.5 GB. Off: downloads wait for Wi-Fi.", s.modelsOnMobileData, "toggle_mobile_data", true, onMobileData)
     }
 }

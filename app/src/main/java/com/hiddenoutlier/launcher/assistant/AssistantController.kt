@@ -71,6 +71,7 @@ class AssistantController(
 
     private var appsCache: List<AppEntry> = emptyList()
     val contacts = Contacts(context)
+    val shortcuts = PeopleShortcuts(context)
     private val tools = Tools(
         context,
         apps = { appsCache },
@@ -89,6 +90,9 @@ class AssistantController(
         fahrenheit = { settings.value.fahrenheit },
         contacts = contacts,
         opened = { leftForApp.value++ },
+        useLocation = { settings.value.useLocation },
+        shortcuts = shortcuts,
+        appFor = { t -> com.hiddenoutlier.launcher.platform.AppChoices.chosen(context, settings.value.appChoices, t) },
     )
 
     private fun update(id: Long, f: (ChatItem) -> ChatItem) { chat.value = chat.value.map { if (it.id == id) f(it) else it } }
@@ -119,8 +123,12 @@ class AssistantController(
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
                 if (action.type != ActionType.ANSWER) update(replyId) { it.copy(text = "…") }
                 val r = tools.run(action)
-                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, card = r.card, pending = false) }
-                if (speak) { if (streamed) speaker.endStream(r.text) else speaker.say(r.card?.let { c -> "${c.title}?" } ?: r.text) }
+                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, card = r.card, lineLinks = r.lineLinks, pending = false) }
+                if (speak) {
+                    // Say the details too (forecast, headlines), not just the first line.
+                    val words = r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines)
+                    if (streamed) speaker.endStream(r.text) else speaker.say(words)
+                }
             } catch (e: CancellationException) {
                 update(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
                 throw e
@@ -145,7 +153,10 @@ class AssistantController(
         val today = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
         val time = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a"))
         val roles = ArrayList<String>(); val contents = ArrayList<String>()
-        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null })
+        val apps = com.hiddenoutlier.launcher.platform.AppTask.entries.mapNotNull { t ->
+            com.hiddenoutlier.launcher.platform.AppChoices.chosen(context, s.appChoices, t)?.let { "${t.title}: ${com.hiddenoutlier.launcher.platform.AppChoices.label(context, it)}" }
+        }.joinToString("; ")
+        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null }, apps)
         AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
         AgentCore.historyMessages(history(excludeFrom = replyId - 1), "(It's $time.) $q").forEach { (r, c) -> roles += r; contents += c }
         val sb = StringBuilder()
@@ -233,13 +244,24 @@ class AssistantController(
         update(id) { it.copy(card = r.card, text = r.text) }
     }
 
+    /** The user picked one of several matching people; [remember] saves them as the default for that name. */
+    fun choose(id: Long, p: Person, remember: Boolean) {
+        val c = cardOf(id) ?: return
+        if (remember) c.alias?.let { shortcuts.set(it, p) }
+        val r = c.withContact(p)
+        update(id) { it.copy(card = r.card, text = r.text) }
+    }
+
     /** Contacts permission was just granted: try that request again. */
     fun retry(id: Long) {
         val item = chat.value.firstOrNull { it.id == id } ?: return
         val action = item.actionJson?.let { AgentCore.parse(it) } ?: return
         scope.launch {
             val r = tools.run(action)
-            update(id) { it.copy(text = r.text, lines = r.lines, card = r.card) }
+            update(id) { it.copy(text = r.text, lines = r.lines, card = r.card, lineLinks = r.lineLinks) }
+            if (speaking(byVoice = false)) {
+                speaker.say(r.card?.let { c -> "${c.title}?" } ?: r.spoken ?: com.hiddenoutlier.launcher.core.Speech.forSpeech(r.text, r.lines))
+            }
         }
     }
     fun clear() { if (!busy.value) chat.value = emptyList() }

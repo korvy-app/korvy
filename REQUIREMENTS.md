@@ -87,6 +87,19 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   the phone (`assistant/Contacts`); the model only ever outputs the name the user said, never sees contacts.
 - **Contacts in search** (switch, on once access is granted): matching people with Text and Call buttons.
 
+## People shortcuts and app choices (0.8.0)
+- **People shortcuts** (`assistant/PeopleShortcuts`, encrypted `people.bin` via `platform/SecureFile`, never backed
+  up, never given to the model): "Jen" → one particular Jennifer, nicknames like "wife". Resolution order: shortcut
+  → Android Nickname field → contact names. Several matches → a "Which Jen?" card with photos and "Always use this
+  person for 'Jen'" (ticked by default) that saves a shortcut. Settings → Assistant → People shortcuts to add/remove.
+- **Apps the assistant uses** (`platform/AppChoices`): per task (texting, calls, maps, rides, music, web, email) the
+  installed apps that can do it; the choice is applied with `setPackage` and told to the model in the system prompt.
+- New actions: **play** (MEDIA_PLAY_FROM_SEARCH to the chosen music app) and **help** ("what can you do?").
+- Also: contact photos (thumbnail or initial), news headlines link to their articles, spoken replies include the
+  details (`core/Speech`: no "Source:" lines, "·" as a pause, degrees/percent spelled out), weather never repeats a
+  place name ("New York, New York" → "New York") and speaks only the city, optional approximate location for weather
+  (ACCESS_COARSE_LOCATION, asked from a card, rounded to ~1 km, LocationManager, no Play services).
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
@@ -216,10 +229,17 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true` (phone connected, Android 13+, unlocked).
   It writes `app/src/main/generated/baselineProfiles/{baseline,startup}-prof.txt`; `dexLayoutOptimization = true`
   makes R8 put startup code first in the dex files. Afterwards uninstall `.foss` and `.baselineprofile` from the
-  phone and set the launcher as home again (reinstalling resets it).
+  phone and set the launcher as home again (reinstalling resets it). **The runs clear the app's data** on that phone
+  (settings, downloaded models and voices), so use a test phone.
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.8.0** – People shortcuts, apps per task, play/help, contact photos, news links, spoken details,
+  weather location and no repeated names. On the Pixel 4a: news headlines link to articles (opened in Firefox);
+  "weather" → location card → approximate location → "Clear, 51°F in your area"; two test "Zelda" contacts →
+  "Which zelda?" card → picked one with "always" → next "call zelda" went straight to that person; Maps chosen in
+  Settings → directions opened Maps directly; "what can you do?" listed the tools. Test contacts and the shortcut
+  were removed again. Note: the 0.6.1 profile/benchmark runs reset the 4a's app data (Macrobenchmark clears it).
 - 2026-11-22 (later): **0.6.1** – Baseline + startup profiles with dex layout optimization (cold start 348 → 312 ms
   median on the Pixel 4a). Contacts now come before "Ask the assistant" in search results.
 - 2026-11-22 (later): **0.6.0** – Actions in other apps with confirmation cards, optional contacts, contacts in

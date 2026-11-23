@@ -169,6 +169,18 @@ fun SettingsScreen(
                             Text("Choose digital assistant app")
                         }
                     }
+                    Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.PEOPLE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_people")) {
+                        Column(Modifier.weight(1f)) {
+                            Text("People shortcuts")
+                            Text("“Jen” always means this Jennifer; nicknames like “wife”.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.APPS) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_apps")) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Apps the assistant uses")
+                            Text("Which app texts, navigates, plays music, books rides…", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.open(Screen.PERSONALITY) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_personality"),
                     ) {
@@ -183,7 +195,7 @@ fun SettingsScreen(
                 Section("Online features")
                 OnlineSection(
                     s, onMaster = vm::setOnline, onSource = vm::setSource, onHomePlace = vm::setHomePlace,
-                    onFahrenheit = vm::setFahrenheit, onMobileData = vm::setModelsOnMobileData,
+                    onFahrenheit = vm::setFahrenheit, onMobileData = vm::setModelsOnMobileData, onUseLocation = vm::setUseLocation,
                 ) { title, detail, checked, tag, enabled, onChange -> Toggle(title, detail, checked, tag, enabled, onChange) }
             }
             item {

@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- Optional, asked for only when first needed: "text Mom", contacts in search. Lookups stay on the phone. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Optional, asked for the first time you ask for the weather without a place: approximate location only. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Model downloads run as a foreground service (progress notification) with Wi-Fi and CPU kept awake. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

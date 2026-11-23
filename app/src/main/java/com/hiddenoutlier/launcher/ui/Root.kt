@@ -180,6 +180,12 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.VOICE, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 VoiceSettingsScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
             }
+            AnimatedVisibility(screen == Screen.PEOPLE, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                PeopleScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
+            }
+            AnimatedVisibility(screen == Screen.APPS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                AppsForTasksScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
+            }
             DragOverlay(drag, vm.repo)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
@@ -187,7 +193,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
         }
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
-                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE -> vm.open(Screen.SETTINGS)
+                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE, Screen.PEOPLE, Screen.APPS -> vm.open(Screen.SETTINGS)
                 Screen.CROP -> vm.skipCrop()
                 Screen.TUTORIAL -> vm.finishTutorial()
                 else -> vm.goHome()

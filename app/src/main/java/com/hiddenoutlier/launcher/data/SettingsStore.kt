@@ -54,6 +54,10 @@ data class Settings(
     val listenOnAssist: Boolean = true,
     /** Show matching contacts in search (only when the contacts permission is granted). */
     val contactsInSearch: Boolean = true,
+    /** Weather for where you are (when no place is named and location is allowed). */
+    val useLocation: Boolean = true,
+    /** Which app does each assistant task (AppTask name → package). Missing = Android decides. */
+    val appChoices: Map<String, String> = emptyMap(),
 ) {
     fun allows(source: com.hiddenoutlier.launcher.platform.OnlineSource) =
         online && if (source.optIn) source.name in sourcesOn else source.name !in sourcesOff
@@ -86,6 +90,8 @@ class SettingsStore(private val context: Context) {
         val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
         val listenOnAssist = booleanPreferencesKey("listen_on_assist")
         val contactsInSearch = booleanPreferencesKey("contacts_in_search")
+        val useLocation = booleanPreferencesKey("use_location")
+        val appChoices = androidx.datastore.preferences.core.stringSetPreferencesKey("app_choices")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -113,6 +119,8 @@ class SettingsStore(private val context: Context) {
             ttsPitch = p[K.ttsPitch] ?: 1f,
             listenOnAssist = p[K.listenOnAssist] ?: true,
             contactsInSearch = p[K.contactsInSearch] ?: true,
+            useLocation = p[K.useLocation] ?: true,
+            appChoices = (p[K.appChoices] ?: emptySet()).mapNotNull { e -> e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap(),
         )
     }
 
@@ -149,4 +157,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setTtsPitch(v: Float) = set { it[K.ttsPitch] = v }
     suspend fun setListenOnAssist(v: Boolean) = set { it[K.listenOnAssist] = v }
     suspend fun setContactsInSearch(v: Boolean) = set { it[K.contactsInSearch] = v }
+    suspend fun setUseLocation(v: Boolean) = set { it[K.useLocation] = v }
+    suspend fun setAppChoice(task: String, pkg: String?) = set {
+        val m = (it[K.appChoices] ?: emptySet()).filterNot { e -> e.startsWith("$task=") }.toMutableSet()
+        if (pkg != null) m += "$task=$pkg"
+        it[K.appChoices] = m
+    }
 }
