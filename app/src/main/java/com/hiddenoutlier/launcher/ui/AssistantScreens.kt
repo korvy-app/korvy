@@ -93,6 +93,9 @@ fun AssistantScreen(
     onClear: () -> Unit,
     onOpenModels: () -> Unit,
     onBack: () -> Unit,
+    speak: com.hiddenoutlier.launcher.data.SpeakMode = com.hiddenoutlier.launcher.data.SpeakMode.AFTER_VOICE,
+    onSpeak: (com.hiddenoutlier.launcher.data.SpeakMode) -> Unit = {},
+    onSpeakOn: () -> Unit = {},
 ) {
     var input by remember { mutableStateOf("") }
     val mic = remember { MicState() }
@@ -103,6 +106,7 @@ fun AssistantScreen(
     LaunchedEffect(Unit) { if (chat.isEmpty()) runCatching { focus.requestFocus() } }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("assistant")) {
         TopBar("Assistant", onBack) {
+            SpeakToggle(speak, onSpeak, onSpeakOn)
             TextButton(onClick = onOpenModels) { Text(modelName ?: "No model", maxLines = 1) }
             if (chat.isNotEmpty() && !busy) IconButton(onClick = onClear) { Icon(Icons.Outlined.DeleteSweep, "Clear conversation") }
         }

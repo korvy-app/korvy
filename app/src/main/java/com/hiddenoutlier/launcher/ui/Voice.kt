@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.FilterChip
@@ -145,7 +147,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 Text("Pitch %.1f".format(s.ttsPitch))
                 Slider(s.ttsPitch, { vm.setTtsPitch((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
                 OutlinedButton(onClick = {
-                    speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say("Hi! This is how I'll sound.")
+                    speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say("Hi! This is how I'll sound."); vm.assistant.warnIfQuiet()
                 }, modifier = Modifier.testTag("voice_test")) { Text("Test voice") }
                 Text("Speech engine", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
                 Text("Any text-to-speech app you install appears here (e.g. RHVoice or eSpeak NG from F-Droid).", style = MaterialTheme.typography.bodySmall)
@@ -180,5 +182,17 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 }
             }
         }
+    }
+}
+
+/** Speaker button in the assistant: on = speak every reply; off = speak only after the user spoke (the default). */
+@Composable
+fun SpeakToggle(mode: SpeakMode, onChange: (SpeakMode) -> Unit, onTurnedOn: () -> Unit = {}) {
+    val on = mode == SpeakMode.ALWAYS
+    IconButton(onClick = { if (on) onChange(SpeakMode.AFTER_VOICE) else { onChange(SpeakMode.ALWAYS); onTurnedOn() } },
+        modifier = Modifier.testTag("speak_toggle")) {
+        Icon(if (on) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
+            if (on) "Spoken replies on (tap to only speak after I talk)" else "Spoken replies off (tap to speak every reply)",
+            tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

@@ -73,6 +73,13 @@ class Speaker(private val context: Context) {
     fun voices(): List<Voice> = runCatching { tts?.voices.orEmpty().toList() }.getOrDefault(emptyList())
         .sortedWith(compareBy<Voice>({ it.isNetworkConnectionRequired }, { it.locale.toLanguageTag() != Locale.getDefault().toLanguageTag() }, { it.name }))
 
+    /** True when the media volume (which spoken replies use) is muted or very low. */
+    fun volumeLow(): Boolean {
+        val am = context.getSystemService(android.media.AudioManager::class.java)
+        val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        return am.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) * 100 / max < 20
+    }
+
     fun isReady() = ready
     fun warmUp() = ensure()
 }

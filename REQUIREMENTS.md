@@ -197,6 +197,9 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.5** – Speaker button in the assistant screen and the power-button panel: on = speak
+  every reply (says a short confirmation, which also proves the volume is up); off = only after you talk.
+  Turning it on, and Test voice, warn on screen when the media volume (used for speech) is below 20%.
 - 2026-11-22 (later): **0.4.4** – The gear fix in 0.4.3 didn't hold: pressing Home in another app reset the
   "close instantly" flag before a frame was drawn. Now a return from another app always closes instantly, and
   taps are swallowed on the list's outer layer while it closes. Verified on the Pixel 4a: launch from search,

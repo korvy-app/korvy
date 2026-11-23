@@ -155,6 +155,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     chat, busy, com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(settings.modelId)?.takeIf { it.id in installedModels }?.name,
                     onSend = { vm.ask(it) }, onVoice = { vm.ask(it, byVoice = true) }, onStop = vm::stopAssistant, onClear = vm::clearChat,
                     onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
+                    speak = settings.speak, onSpeak = vm::setSpeak, onSpeakOn = { vm.assistant.sayHello() },
                 )
             }
             AnimatedVisibility(screen == Screen.MODELS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {

@@ -175,6 +175,20 @@ class AssistantController(
         return turns
     }
 
+    /** Short confirmation when the user turns spoken replies on (also proves the volume is up). */
+    fun sayHello() {
+        val s = settings.value
+        speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
+        speaker.stop(); speaker.say("Okay, I'll read my answers out loud.")
+        warnIfQuiet()
+    }
+
+    /** Spoken replies use the media volume; say so on screen if it's too low to hear. */
+    fun warnIfQuiet() {
+        if (speaker.volumeLow()) android.widget.Toast.makeText(context,
+            "Media volume is low: turn it up to hear replies.", android.widget.Toast.LENGTH_LONG).show()
+    }
+
     /** Called when the assistant opens: load the chosen model now so the first answer starts sooner. */
     fun warmUp() {
         val m = ModelCatalog.byId(settings.value.modelId) ?: return

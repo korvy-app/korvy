@@ -54,6 +54,7 @@ import com.hiddenoutlier.launcher.ui.LauncherTheme
 import com.hiddenoutlier.launcher.ui.MicButton
 import com.hiddenoutlier.launcher.ui.MicState
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.launch
 
 /**
  * The assistant panel shown over any app when the user holds the power button (this app must be the phone's
@@ -90,6 +91,8 @@ class AssistActivity : ComponentActivity() {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Assistant", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                            com.hiddenoutlier.launcher.ui.SpeakToggle(settings.speak,
+                                { m -> app.scope.launch { app.settings.setSpeak(m) } }, { app.assistant.sayHello() })
                             IconButton(onClick = {
                                 context.startActivity(Intent(context, MainActivity::class.java).setAction(MainActivity.ACTION_OPEN_ASSISTANT).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                 finish()
