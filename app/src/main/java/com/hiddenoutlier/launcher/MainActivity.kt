@@ -67,5 +67,6 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         vm.refreshSuggestions() // the time of day has probably changed
         vm.refreshDefaultHome()
+        vm.refreshContactsGranted()
     }
 }

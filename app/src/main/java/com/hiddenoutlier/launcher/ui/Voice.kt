@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,6 +121,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
     var engines by remember { mutableStateOf(speaker.engines()) }
     var voices by remember { mutableStateOf<List<Voice>>(emptyList()) }
     var showOnline by remember { mutableStateOf(false) }
+    var voiceQuery by remember { mutableStateOf("") }
     LaunchedEffect(s.ttsEngine) {
         speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.warmUp()
         repeat(30) { if (speaker.isReady()) return@repeat; delay(100) }
@@ -149,6 +152,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 OutlinedButton(onClick = {
                     speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say("Hi! This is how I'll sound."); vm.assistant.warnIfQuiet()
                 }, modifier = Modifier.testTag("voice_test")) { Text("Test voice") }
+                NaturalVoices(s, vm)
                 Text("Speech engine", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
                 Text("Any text-to-speech app you install appears here (e.g. RHVoice or eSpeak NG from F-Droid).", style = MaterialTheme.typography.bodySmall)
             }
@@ -168,11 +172,20 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                     Text("Show voices that need internet", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                     Switch(showOnline, { showOnline = it })
                 }
+                androidx.compose.material3.OutlinedTextField(
+                    value = voiceQuery, onValueChange = { voiceQuery = it }, singleLine = true,
+                    placeholder = { Text("Search voices (language, country, name)") },
+                    leadingIcon = { Icon(androidx.compose.material.icons.Icons.Outlined.Search, null) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("voice_search"),
+                )
                 Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(null) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = s.ttsVoice == null, onClick = { vm.setTtsVoice(null) }); Text("Engine default for my language")
                 }
             }
-            items(voices.filter { showOnline || !it.isNetworkConnectionRequired }, key = { it.name }) { v ->
+            val q = voiceQuery.trim().lowercase()
+            items(voices.filter { (showOnline || !it.isNetworkConnectionRequired) && (q.isEmpty() ||
+                listOf(it.locale.displayName, it.locale.displayLanguage, it.locale.displayCountry, it.locale.toLanguageTag(), it.name)
+                    .any { f -> f.lowercase().contains(q) }) }, key = { it.name }) { v ->
                 Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(v.name) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = s.ttsVoice == v.name, onClick = { vm.setTtsVoice(v.name) })
                     Column {
@@ -194,5 +207,64 @@ fun SpeakToggle(mode: SpeakMode, onChange: (SpeakMode) -> Unit, onTurnedOn: () -
         Icon(if (on) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
             if (on) "Spoken replies on (tap to only speak after I talk)" else "Spoken replies off (tap to speak every reply)",
             tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Natural voices (Kokoro, Piper) that run on the phone: download, choose, pick a speaker, delete. */
+@Composable
+private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
+    val installed by vm.voices.installed.collectAsStateWithLifecycle()
+    val download by vm.voices.download.collectAsStateWithLifecycle()
+    val allowed = s.allows(com.hiddenoutlier.launcher.platform.OnlineSource.VOICES)
+    Text("Natural voices", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text("Human-sounding voices that run entirely on this phone (open source, via sherpa-onnx). Nothing you hear is sent anywhere.",
+        style = MaterialTheme.typography.bodySmall)
+    if (!allowed) Text("Downloading needs Settings → Online features → Voice downloads.", color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+    com.hiddenoutlier.launcher.assistant.NeuralVoiceCatalog.all.forEach { p ->
+        val engineId = com.hiddenoutlier.launcher.assistant.Speaker.NEURAL_PREFIX + p.id
+        val has = p.id in installed
+        val selected = has && s.ttsEngine == engineId
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(12.dp).testTag("voice_${p.id}")
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (has) RadioButton(selected = selected, onClick = { vm.setTtsEngine(engineId) })
+                Column(Modifier.weight(1f)) {
+                    Text(p.name)
+                    Text("${p.license} · ${p.sizeText}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Text(p.note, style = MaterialTheme.typography.bodySmall)
+            when {
+                download is com.hiddenoutlier.launcher.assistant.DownloadState.Running && (download as com.hiddenoutlier.launcher.assistant.DownloadState.Running).id == p.id -> {
+                    val d = download as com.hiddenoutlier.launcher.assistant.DownloadState.Running
+                    androidx.compose.material3.LinearProgressIndicator(progress = { d.done.toFloat() / d.total }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                    Text("%.0f of %.0f MB".format(d.done / 1e6, d.total / 1e6), style = MaterialTheme.typography.bodySmall)
+                }
+                download is com.hiddenoutlier.launcher.assistant.DownloadState.Verifying && (download as com.hiddenoutlier.launcher.assistant.DownloadState.Verifying).id == p.id ->
+                    Text("Checking and unpacking…", style = MaterialTheme.typography.bodySmall)
+                has -> {
+                    if (selected && p.speakers.size > 1) {
+                        Text("Speaker", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                        p.speakers.forEach { sp ->
+                            Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(sp.id.toString()) }, verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = (s.ttsVoice?.toIntOrNull() ?: p.speakers.first().id) == sp.id, onClick = { vm.setTtsVoice(sp.id.toString()) })
+                                Text("${sp.name} · ${sp.accent}")
+                            }
+                        }
+                    }
+                    androidx.compose.material3.TextButton(onClick = { vm.deleteVoice(p) }) { Text("Delete") }
+                }
+                else -> {
+                    (download as? com.hiddenoutlier.launcher.assistant.DownloadState.Failed)?.takeIf { it.id == p.id }?.let {
+                        Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    OutlinedButton(onClick = { vm.downloadVoice(p) }, enabled = allowed && download !is com.hiddenoutlier.launcher.assistant.DownloadState.Running,
+                        modifier = Modifier.padding(top = 6.dp).testTag("download_voice_${p.id}")) { Text("Download ${p.sizeText}") }
+                }
+            }
+        }
     }
 }

@@ -15,8 +15,8 @@ android {
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 11
-        versionName = "0.4.5"
+        versionCode = 13
+        versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.
@@ -109,6 +109,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    // Natural voices: sherpa-onnx (prebuilt, fetched by scripts/fetch-libs.sh) and tar.bz2 unpacking for voice packs.
+    val sherpa = file("libs/sherpa-onnx-1.13.8.aar")
+    if (!sherpa.exists()) throw GradleException("Missing ${sherpa.name}: run ./scripts/fetch-libs.sh")
+    implementation(files(sherpa))
+    implementation(libs.commons.compress)
     implementation(libs.kotlinx.coroutines.android)
     debugImplementation(libs.androidx.compose.ui.tooling)
 

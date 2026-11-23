@@ -10,6 +10,8 @@
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <!-- Voice input: asked for only when the user first taps the mic; on-device recognition only. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Optional, asked for only when first needed: "text Mom", contacts in search. Lookups stay on the phone. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Model downloads run as a foreground service (progress notification) with Wi-Fi and CPU kept awake. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

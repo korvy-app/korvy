@@ -74,6 +74,19 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   pitch, test. Model answers are spoken sentence by sentence as they stream (`core/SentenceSplitter`).
 - Later: bundled open-source recognizer (whisper.cpp / Moonshine) and voices (Piper), wake word.
 
+## Actions in other apps and contacts (0.6.0)
+- Actions: **text** ("recipient: message"), **call**, **ride** (Uber universal link with the destination filled in;
+  Lyft opens with the destination copied, since its link needs coordinates), **navigate** (`geo:` intent, any maps
+  app). Plain-code parsing covers "text Alex saying…", "text mom I'm late" (name split against contacts:
+  `core/TextArgs`), "call…", "get me an uber to…", "directions to…".
+- **Nothing is sent, called or booked without a confirmation card** in the chat (Send / Call / Open, Cancel; the
+  message is editable). Confirming hands off to the user's own app (Messages, dialer, Uber), where they send / call /
+  book. No SMS or call permissions.
+- **Contacts** (READ_CONTACTS) are optional and asked for only when first needed ("Allow contacts" on the card, or
+  Settings → Privacy → Contacts). Without them: Android's contact picker for just one person. Lookups run in code on
+  the phone (`assistant/Contacts`); the model only ever outputs the name the user said, never sees contacts.
+- **Contacts in search** (switch, on once access is granted): matching people with Text and Call buttons.
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
@@ -197,6 +210,14 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.6.0** – Actions in other apps with confirmation cards, optional contacts, contacts in
+  search; natural voices (Kokoro, Piper via sherpa-onnx 1.13.8, which still has the espeak phonemizer that 2.0
+  removed; the JNI audio callback is a kept named class, since as a lambda R8 merged it away and the voice process
+  aborted); copyable chat messages, clickable links (default browser), searchable voice list. On the Pixel 4a:
+  Kokoro speaks 0.5 s after a request once loaded (3.6 s first load); Piper and Kokoro downloads verified and
+  unpacked; "text zed on my way" → asked for contacts → card with the message → Messages opened (no SIM, so it
+  couldn't start the conversation; nothing sent); "uber to the airport" → Uber opened; "directions to Costco" →
+  maps chooser; contacts in search with Text/Call. A test contact was added and removed again.
 - 2026-11-22 (later): **0.4.5** – Speaker button in the assistant screen and the power-button panel: on = speak
   every reply (says a short confirmation, which also proves the volume is up); off = only after you talk.
   Turning it on, and Test voice, warn on screen when the media volume (used for speech) is below 20%.

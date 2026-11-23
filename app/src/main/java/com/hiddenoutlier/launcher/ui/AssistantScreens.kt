@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
@@ -96,6 +97,7 @@ fun AssistantScreen(
     speak: com.hiddenoutlier.launcher.data.SpeakMode = com.hiddenoutlier.launcher.data.SpeakMode.AFTER_VOICE,
     onSpeak: (com.hiddenoutlier.launcher.data.SpeakMode) -> Unit = {},
     onSpeakOn: () -> Unit = {},
+    cardActions: CardActions? = null,
 ) {
     var input by remember { mutableStateOf("") }
     val mic = remember { MicState() }
@@ -123,7 +125,7 @@ fun AssistantScreen(
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
-            items(chat, key = { it.id }) { m -> Bubble(m) { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } } }
+            items(chat, key = { it.id }) { m -> Bubble(m, actions = cardActions, openLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) }
         }
         val status = mic.error ?: if (mic.listening) mic.partial.ifBlank { "Listening…" } else null
         status?.let { Text(it, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp)) }
@@ -148,21 +150,56 @@ fun AssistantScreen(
 }
 
 @Composable
-internal fun Bubble(m: ChatItem, openLink: (String) -> Unit) {
+internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardActions? = null) {
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    val context = LocalContext.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
         Column(
             Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp))
                 .background(if (m.fromUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Text(m.text.ifBlank { if (m.pending) "Thinking…" else "" })
-            m.lines.forEach { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp)) }
-            m.link?.let { url -> Text("Read more", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp).clickable { openLink(url) }) }
+            // Long-press to select and copy any part of a message; web addresses open in the default browser.
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Column {
+                    Text(linkify(m.text.ifBlank { if (m.pending) "Thinking…" else "" }, MaterialTheme.colorScheme.primary))
+                    m.lines.forEach { Text(linkify(it, MaterialTheme.colorScheme.primary), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp)) }
+                }
+            }
+            if (!m.pending && m.text.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
+                m.link?.let { url -> Text("Read more", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp, end = 12.dp).clickable { openLink(url) }) }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                IconButton(onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString((listOf(m.text) + m.lines).joinToString("\n")))
+                    android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
+                }, modifier = Modifier.size(28.dp).testTag("copy_${m.id}")) {
+                    Icon(androidx.compose.material.icons.Icons.Outlined.ContentCopy, "Copy", modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (m.card != null && actions != null) ActionCard(m.id, m.card, actions)
             if (m.pending) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 6.dp))
         }
     }
 }
+
+private val URL = Regex("""(https?://[^\s<>"')\]]+[^\s<>"')\].,;:!?])""")
+
+/** Text with web addresses turned into links that open in the default browser. */
+internal fun linkify(text: String, color: androidx.compose.ui.graphics.Color): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        var last = 0
+        for (m in URL.findAll(text)) {
+            append(text.substring(last, m.range.first))
+            pushLink(androidx.compose.ui.text.LinkAnnotation.Url(m.value, androidx.compose.ui.text.TextLinkStyles(
+                androidx.compose.ui.text.SpanStyle(color = color, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline))))
+            append(m.value)
+            pop()
+            last = m.range.last + 1
+        }
+        append(text.substring(last))
+    }
 
 /** Pick, download, switch and delete models. Shows each model's maker, license, size and memory needs. */
 @Composable

@@ -27,7 +27,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material.icons.outlined.NorthWest
 import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
 import androidx.compose.material.icons.outlined.Language
@@ -85,6 +88,9 @@ fun AppDrawer(
     modifier: Modifier = Modifier,
     onAsk: ((String) -> Unit)? = null,
     webSuggestions: List<String> = emptyList(),
+    contacts: List<com.hiddenoutlier.launcher.assistant.Person> = emptyList(),
+    onCall: (com.hiddenoutlier.launcher.assistant.Person) -> Unit = {},
+    onText: (com.hiddenoutlier.launcher.assistant.Person) -> Unit = {},
 ) {
     // Inline autocomplete: the rest of the top app's name, drawn greyed after the cursor; → accepts it.
     val completion = com.hiddenoutlier.launcher.core.Completion.suffix(query, results.apps.map { it.label })
@@ -158,6 +164,19 @@ fun AppDrawer(
                 items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { launch(app) }, menu, drag, dragStarted) }
                 items(results.revealed, key = { "hidden-" + it.first.key }) { (app, level) ->
                     ResultRow(app, repo, level, { launchHidden(app, level) }, menu, null, dragStarted)
+                }
+                items(contacts, key = { "contact-" + it.name + it.number }) { p ->
+                    Row(Modifier.fillMaxWidth().combinedClickable(onClick = { leaving { onCall(p) } }).padding(horizontal = 20.dp, vertical = 8.dp).testTag("contact_${p.name}"),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Person, null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(40.dp).padding(6.dp))
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(p.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                            Text(listOf(p.label, p.number).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+                        }
+                        IconButton(onClick = { leaving { onText(p) } }) { Icon(Icons.Outlined.Sms, "Text ${p.name}", tint = Color.White) }
+                        IconButton(onClick = { leaving { onCall(p) } }) { Icon(Icons.Outlined.Call, "Call ${p.name}", tint = Color.White) }
+                    }
                 }
                 if (onAsk != null) item(key = "ask") {
                     Row(

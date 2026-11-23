@@ -74,6 +74,7 @@ class AssistActivity : ComponentActivity() {
             val busy by app.assistant.busy.collectAsStateWithLifecycle()
             var input by remember { mutableStateOf("") }
             val context = LocalContext.current
+            val cardActions = com.hiddenoutlier.launcher.ui.rememberCardActions(app.assistant)
             // Opening an app or a web page from here: get out of the way.
             LaunchedEffect(Unit) { app.assistant.leftForApp.drop(1).collect { finish() } }
             LauncherTheme(animations = settings.animations ?: true) {
@@ -103,7 +104,7 @@ class AssistActivity : ComponentActivity() {
                         val recent = chat.takeLast(6)
                         LaunchedEffect(recent.size, recent.lastOrNull()?.text) { if (recent.isNotEmpty()) list.animateScrollToItem(recent.lastIndex) }
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(recent, key = { it.id }) { m -> Bubble(m) { url -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) } } }
+                            items(recent, key = { it.id }) { m -> Bubble(m, actions = cardActions, openLink = { url -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }) }
                         }
                         val status = mic.error ?: if (mic.listening) (mic.partial.ifBlank { "Listening…" }) else null
                         status?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp)) }

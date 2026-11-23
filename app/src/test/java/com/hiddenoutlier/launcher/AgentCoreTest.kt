@@ -22,14 +22,13 @@ class AgentCoreTest {
         assertEquals(Action(ActionType.STOCK, "TSLA"), q("tsla stock price"))
         assertEquals(Action(ActionType.TIMER, "300"), q("set a timer for 5 minutes"))
         assertEquals(Action(ActionType.TIMER, "90"), q("90 sec timer"))
-        assertEquals(Action(ActionType.DIAL, "555 123 4567"), q("call 555 123 4567"))
+        assertEquals(Action(ActionType.CALL, "555 123 4567"), q("call 555 123 4567"))
         assertEquals(Action(ActionType.WEB_SEARCH, "best tacos near me"), q("search for best tacos near me"))
     }
 
     @Test fun questionsGoToTheModel() {
         assertNull(q("what's the capital of France"))
         assertNull(q("tell me a joke"))
-        assertNull(q("call mom")) // no contacts access: the model explains
     }
 
     @Test fun durations() {
@@ -82,5 +81,32 @@ class AgentCoreTest {
         val many = (1..10).map { AgentCore.Turn("q$it", "{}", "", false) }
         assertEquals(4 * 2 + 1, AgentCore.historyMessages(many, "new").size)
         assertEquals("q7", AgentCore.historyMessages(many, "new")[0].second)
+    }
+
+    @Test fun actionsOnOtherApps() {
+        assertEquals(Action(ActionType.CALL, "mom"), q("call mom"))
+        assertEquals(Action(ActionType.TEXT, "Alex: running 10 minutes late"), q("text Alex saying running 10 minutes late"))
+        assertEquals(Action(ActionType.TEXT, "Mom: on my way"), q("send a text to Mom: on my way"))
+        assertEquals(Action(ActionType.TEXT, "mom I'm on my way"), q("text mom I'm on my way"))
+        assertEquals(Action(ActionType.RIDE, "uber: the airport"), q("get me an uber to the airport"))
+        assertEquals(Action(ActionType.RIDE, "lyft: 500 Pine St"), q("Lyft to 500 Pine St"))
+        assertEquals(Action(ActionType.RIDE, "uber: downtown"), q("call me a cab to downtown"))
+        assertEquals(Action(ActionType.NAVIGATE, "Costco"), q("directions to Costco"))
+        assertEquals(Action(ActionType.NAVIGATE, "the nearest gas station"), q("take me to the nearest gas station"))
+    }
+
+    @Test fun textArgsSplitOnKnownContacts() {
+        val known = setOf("mom", "aunt sally")
+        val isKnown: (String) -> Boolean = { it.lowercase() in known }
+        assertEquals(com.hiddenoutlier.launcher.core.TextArgs.Parts("aunt sally", "see you soon"),
+            com.hiddenoutlier.launcher.core.TextArgs.split("aunt sally see you soon", isKnown))
+        assertEquals(com.hiddenoutlier.launcher.core.TextArgs.Parts("mom", "I'm late"),
+            com.hiddenoutlier.launcher.core.TextArgs.split("mom I'm late", isKnown))
+        assertEquals(com.hiddenoutlier.launcher.core.TextArgs.Parts("Bob", "hi there"),
+            com.hiddenoutlier.launcher.core.TextArgs.split("Bob hi there"))
+        assertEquals(com.hiddenoutlier.launcher.core.TextArgs.Parts("Bob Smith", "hi: there"),
+            com.hiddenoutlier.launcher.core.TextArgs.split("Bob Smith: hi: there"))
+        assertTrue(com.hiddenoutlier.launcher.core.TextArgs.isNumber("+1 (555) 123-4567"))
+        assertTrue(!com.hiddenoutlier.launcher.core.TextArgs.isNumber("mom"))
     }
 }

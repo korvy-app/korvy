@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -200,6 +201,7 @@ fun SettingsScreen(
                     s.revealHiddenByName, "toggle_reveal") { vm.setRevealHiddenByName(it) }
                 Toggle("Suggested apps", "Learns which apps you open at which times, on this phone only. Hidden apps are never recorded.",
                     s.suggestions, "toggle_suggestions") { vm.setSuggestions(it) }
+                ContactsSetting(s, vm)
                 Row(Modifier.padding(horizontal = 20.dp)) {
                     TextButton(onClick = { vm.forgetHistory() }, modifier = Modifier.testTag("forget_history")) { Text("Forget app history") }
                 }
@@ -267,4 +269,20 @@ private fun Toggle(title: String, detail: String, checked: Boolean, tag: String,
         }
         Switch(checked = checked, onCheckedChange = onChange, enabled = enabled, modifier = Modifier.testTag(tag))
     }
+}
+
+/** Settings → Privacy → Contacts: allow access (optional), and whether contacts show up in search. */
+@Composable
+private fun ContactsSetting(s: Settings, vm: LauncherViewModel) {
+    val granted by vm.contactsGranted.collectAsStateWithLifecycle()
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshContactsGranted() }
+    if (!granted) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
+        Text("Contacts")
+        Text("Optional. Lets search find people and the assistant text or call them by name. Contacts stay on this phone " +
+            "and are never shown to the AI model.", style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = { ask.launch(android.Manifest.permission.READ_CONTACTS) }, modifier = Modifier.padding(top = 6.dp).testTag("allow_contacts")) {
+            Text("Allow contacts")
+        }
+    } else Toggle("Contacts in search", "Show matching people when you search, with call and text buttons. (Turn off contacts access in Android settings.)",
+        s.contactsInSearch, "toggle_contacts_search") { vm.setContactsInSearch(it) }
 }

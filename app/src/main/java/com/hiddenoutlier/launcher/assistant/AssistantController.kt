@@ -46,6 +46,20 @@ class AssistantController(
     val leftForApp = MutableStateFlow(0)
     val speaker = Speaker(context)
     private val client = AssistantClient(context, scope)
+    val voices: VoiceStore = (context.applicationContext as com.hiddenoutlier.launcher.LauncherApp).voices
+
+    init {
+        speaker.neural = object : Speaker.Neural {
+            override fun say(engine: String, voice: String?, speed: Float, text: String): Boolean {
+                val pack = NeuralVoiceCatalog.byId(engine.removePrefix(Speaker.NEURAL_PREFIX)) ?: return false
+                if (pack.id !in voices.installed.value) return false
+                val speakerId = voice?.toIntOrNull() ?: pack.speakers.first().id
+                client.speak(voices.folderFor(pack).path, pack.kind.name, pack.modelFile, speakerId, speed, text)
+                return true
+            }
+            override fun stop() = client.stopSpeaking()
+        }
+    }
     private var nextId = 0L
     private var job: Job? = null
 
@@ -56,6 +70,7 @@ class AssistantController(
     }
 
     private var appsCache: List<AppEntry> = emptyList()
+    val contacts = Contacts(context)
     private val tools = Tools(
         context,
         apps = { appsCache },
@@ -72,6 +87,8 @@ class AssistantController(
         allowed = { settings.value.allows(it) },
         homePlace = { settings.value.homePlace },
         fahrenheit = { settings.value.fahrenheit },
+        contacts = contacts,
+        opened = { leftForApp.value++ },
     )
 
     private fun update(id: Long, f: (ChatItem) -> ChatItem) { chat.value = chat.value.map { if (it.id == id) f(it) else it } }
@@ -102,8 +119,8 @@ class AssistantController(
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
                 if (action.type != ActionType.ANSWER) update(replyId) { it.copy(text = "…") }
                 val r = tools.run(action)
-                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, pending = false) }
-                if (speak) { if (streamed) speaker.endStream(r.text) else speaker.say(r.text) }
+                update(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, card = r.card, pending = false) }
+                if (speak) { if (streamed) speaker.endStream(r.text) else speaker.say(r.card?.let { c -> "${c.title}?" } ?: r.text) }
             } catch (e: CancellationException) {
                 update(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
                 throw e
@@ -196,6 +213,35 @@ class AssistantController(
     }
 
     fun stop() { client.stop(); speaker.stop(); job?.cancel() }
+
+    // ---- Confirmation cards ---------------------------------------------------------------------------------
+    private fun cardOf(id: Long) = chat.value.firstOrNull { it.id == id }?.card
+
+    /** The user tapped Send / Call / Open on a card (with the message as edited). */
+    fun confirm(id: Long, message: String?) {
+        val c = cardOf(id) ?: return
+        val status = c.run(message)
+        update(id) { it.copy(card = null, text = status) }
+    }
+
+    fun cancel(id: Long) = update(id) { it.copy(card = null, text = "Cancelled.") }
+
+    /** A contact was chosen in the picker for a "who should I text/call?" card. */
+    fun withContact(id: Long, p: Person) {
+        val c = cardOf(id) ?: return
+        val r = c.withContact(p)
+        update(id) { it.copy(card = r.card, text = r.text) }
+    }
+
+    /** Contacts permission was just granted: try that request again. */
+    fun retry(id: Long) {
+        val item = chat.value.firstOrNull { it.id == id } ?: return
+        val action = item.actionJson?.let { AgentCore.parse(it) } ?: return
+        scope.launch {
+            val r = tools.run(action)
+            update(id) { it.copy(text = r.text, lines = r.lines, card = r.card) }
+        }
+    }
     fun clear() { if (!busy.value) chat.value = emptyList() }
 
     companion object { const val STALL_MS = 90_000L }

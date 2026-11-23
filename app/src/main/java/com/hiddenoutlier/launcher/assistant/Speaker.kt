@@ -12,6 +12,13 @@ import java.util.UUID
  * Created on first use and shut down when idle; changing the engine re-creates it.
  */
 class Speaker(private val context: Context) {
+    /** Natural voices (sherpa-onnx) speak in the assistant process; set by AssistantController. */
+    interface Neural {
+        fun say(engine: String, voice: String?, speed: Float, text: String): Boolean
+        fun stop()
+    }
+    var neural: Neural? = null
+    private fun isNeural() = config.engine?.startsWith(NEURAL_PREFIX) == true
     data class Config(val engine: String?, val voice: String?, val rate: Float, val pitch: Float)
 
     private var tts: TextToSpeech? = null
@@ -23,6 +30,7 @@ class Speaker(private val context: Context) {
 
     fun configure(c: Config) {
         if (c.engine != ttsEngine && tts != null) shutdown()
+        if (c.engine?.startsWith(NEURAL_PREFIX) == true) { config = c; return } // Android TTS not needed
         config = c
         if (ready) apply()
     }
@@ -52,6 +60,7 @@ class Speaker(private val context: Context) {
     /** Speaks [text] after anything already queued. */
     fun say(text: String) {
         if (text.isBlank()) return
+        if (isNeural() && neural?.say(config.engine!!, config.voice, config.rate, text) == true) return
         ensure()
         if (ready) enqueue(text) else pending += text
     }
@@ -61,7 +70,7 @@ class Speaker(private val context: Context) {
     fun stream(textSoFar: String) = splitter.feed(textSoFar).forEach(::say)
     fun endStream(fullText: String) = splitter.finish(fullText).forEach(::say)
 
-    fun stop() { pending.clear(); tts?.stop() }
+    fun stop() { pending.clear(); tts?.stop(); neural?.stop() }
 
     fun shutdown() {
         tts?.shutdown(); tts = null; ready = false; pending.clear()
@@ -81,5 +90,7 @@ class Speaker(private val context: Context) {
     }
 
     fun isReady() = ready
+
+    companion object { const val NEURAL_PREFIX = "neural:" }
     fun warmUp() = ensure()
 }

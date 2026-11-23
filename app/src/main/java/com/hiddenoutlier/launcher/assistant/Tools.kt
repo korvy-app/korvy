@@ -18,7 +18,23 @@ import java.net.URLEncoder
 import java.util.Locale
 
 /** What an action produced: a sentence for the chat, plus optional detail lines (forecast, headlines…). */
-data class ToolResult(val text: String, val lines: List<String> = emptyList(), val link: String? = null)
+data class ToolResult(val text: String, val lines: List<String> = emptyList(), val link: String? = null, val card: Card? = null)
+
+/**
+ * Something the user must confirm (or a contact the assistant needs) before anything is sent, called or booked.
+ * [run] does it, with the message as the user left it; [withContact] continues with a contact chosen in the picker.
+ */
+data class Card(
+    val kind: Kind,
+    val title: String,
+    val detail: String,
+    val confirmLabel: String = "OK",
+    val message: String? = null,
+    val run: (message: String?) -> String = { "" },
+    val withContact: (Person) -> ToolResult = { ToolResult("") },
+) {
+    enum class Kind { CONFIRM, NEED_CONTACT }
+}
 
 /**
  * Carries out an [Action]. Results are formatted by plain code (no second model pass), which keeps answers fast
@@ -32,6 +48,8 @@ class Tools(
     private val allowed: (OnlineSource) -> Boolean,
     private val homePlace: () -> String,
     private val fahrenheit: () -> Boolean,
+    private val contacts: Contacts = Contacts(context),
+    private val opened: () -> Unit = {},
 ) {
     suspend fun run(a: Action): ToolResult = try {
         when (a.type) {
@@ -42,7 +60,10 @@ class Tools(
             ActionType.NEWS -> news(a.arg)
             ActionType.STOCK -> stock(a.arg)
             ActionType.TIMER -> timer(a.arg)
-            ActionType.DIAL -> dial(a.arg)
+            ActionType.TEXT -> text(a.arg)
+            ActionType.CALL -> call(a.arg)
+            ActionType.RIDE -> ride(a.arg)
+            ActionType.NAVIGATE -> navigate(a.arg)
         }
     } catch (e: OfflineException) {
         ToolResult("${e.source.title} is turned off. You can turn it on in Settings → Online features.")
@@ -136,12 +157,77 @@ class Tools(
         return ToolResult("Timer set for ${text}${if (text.startsWith("1 ")) "" else "s"}.")
     }
 
-    private fun dial(number: String): ToolResult {
-        val digits = number.filter { it.isDigit() || it == '+' }
-        if (digits.length < 3) return ToolResult("I can only dial phone numbers for now (no access to your contacts).")
-        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$digits")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        return ToolResult("Opening the dialer with $number.")
+    // ---- Actions in other apps: always confirmed first, then handed to the user's own app ----------------------
+
+    private fun start(i: Intent): Boolean = runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); opened() }.isSuccess
+
+    /** Finds who [who] is: a number as typed, a contact, or a card asking for contacts access / a pick. */
+    private fun resolve(who: String, verb: String, then: (Person) -> ToolResult): ToolResult {
+        if (com.hiddenoutlier.launcher.core.TextArgs.isNumber(who)) return then(Person(who, who, ""))
+        val needContact = { why: String ->
+            ToolResult(why, card = Card(Card.Kind.NEED_CONTACT, "Who should I $verb?",
+                "Allow contacts (they stay on this phone and are never shown to the AI model), or pick one person.",
+                withContact = then))
+        }
+        if (!contacts.granted()) return needContact("To $verb $who I need to know who that is.")
+        val p = contacts.best(who) ?: return needContact("I couldn't find “$who” in your contacts.")
+        return then(p)
     }
+
+    private fun text(arg: String): ToolResult {
+        val parts = com.hiddenoutlier.launcher.core.TextArgs.split(arg) { contacts.granted() && contacts.nameExists(it) }
+        return resolve(parts.recipient, "text") { p -> textCard(p, parts.message) }
+    }
+
+    private fun textCard(p: Person, message: String) = ToolResult(
+        "Ready to text ${p.name}.",
+        card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Send", message,
+            run = { m ->
+                val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()))
+                if (ok) "Opened your messaging app with the text to ${p.name}. Tap send there." else "No messaging app found."
+            }),
+    )
+
+    private fun call(who: String) = resolve(who, "call") { p ->
+        ToolResult("Ready to call ${p.name}.", card = Card(Card.Kind.CONFIRM, "Call ${p.name}",
+            listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Call",
+            run = { if (start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))))) "Opening the dialer for ${p.name}." else "No phone app found." }))
+    }
+
+    private fun installed(pkg: String) = runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
+
+    private fun ride(arg: String): ToolResult {
+        val colon = arg.indexOf(':')
+        var app = if (colon > 0) arg.substring(0, colon).trim().lowercase() else "uber"
+        val dest = (if (colon > 0) arg.substring(colon + 1) else arg).trim()
+        if (dest.isBlank()) return ToolResult("Where to?")
+        if (app != "lyft" && !installed(UBER) && installed(LYFT)) app = "lyft"
+        return if (app == "lyft") ToolResult("Ready to open Lyft.", card = Card(Card.Kind.CONFIRM, "Lyft to $dest",
+            "Opens Lyft and copies the destination so you can paste it. You confirm the ride in Lyft.", "Open Lyft",
+            run = {
+                val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                cm.setPrimaryClip(android.content.ClipData.newPlainText("Destination", dest))
+                val i = context.packageManager.getLaunchIntentForPackage(LYFT) ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://ride.lyft.com"))
+                if (start(i)) "Opened Lyft. “$dest” is copied; paste it as the destination." else "Couldn't open Lyft."
+            }))
+        else ToolResult("Ready to open Uber.", card = Card(Card.Kind.CONFIRM, "Uber to $dest",
+            "Opens Uber with the destination filled in. You choose and confirm the ride in Uber.", "Open Uber",
+            run = {
+                // Uber's universal link: opens the app if installed, otherwise m.uber.com.
+                val url = "https://m.uber.com/ul/?action=setPickup&pickup=my_location" +
+                    "&dropoff[formatted_address]=" + Uri.encode(dest) + "&dropoff[nickname]=" + Uri.encode(dest)
+                if (start(Intent(Intent.ACTION_VIEW, Uri.parse(url)))) "Opened Uber with “$dest” as the destination." else "Couldn't open Uber."
+            }))
+    }
+
+    private fun navigate(dest: String): ToolResult {
+        if (dest.isBlank()) return ToolResult("Where to?")
+        // geo: works with any maps app the user has (Google Maps, Organic Maps, OsmAnd…).
+        return if (start(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))))) ToolResult("Opening directions to $dest.")
+        else ToolResult("No maps app found.")
+    }
+
+    companion object { private const val UBER = "com.ubercab"; private const val LYFT = "me.lyft.android" }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 

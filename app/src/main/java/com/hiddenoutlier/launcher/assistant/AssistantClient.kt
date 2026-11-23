@@ -87,6 +87,25 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
         }
     }
 
+    /** Speaks one sentence with a natural voice in the assistant process (queued after earlier ones). */
+    fun speak(dir: String, kind: String, modelFile: String, speaker: Int, speed: Float, text: String) {
+        scope.launch {
+            idleJob?.cancel()
+            runCatching {
+                bind().send(Message.obtain(null, AssistantService.MSG_SPEAK).apply {
+                    data = Bundle().apply {
+                        putString(AssistantService.K_PATH, dir); putString(AssistantService.K_KIND, kind)
+                        putString(AssistantService.K_MODEL, modelFile); putInt(AssistantService.K_SPEAKER, speaker)
+                        putFloat(AssistantService.K_SPEED, speed); putString(AssistantService.K_TEXT, text)
+                    }
+                })
+            }
+            scheduleIdle()
+        }
+    }
+
+    fun stopSpeaking() { runCatching { service?.send(Message.obtain(null, AssistantService.MSG_STOP_SPEAK)) } }
+
     fun stop() { runCatching { service?.send(Message.obtain(null, AssistantService.MSG_STOP)) } }
 
     private fun scheduleIdle() {

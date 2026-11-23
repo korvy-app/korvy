@@ -40,6 +40,8 @@ data class ChatItem(
     val pending: Boolean = false,
     /** For assistant replies: the action that produced it, as the model's JSON (used as chat history). */
     val actionJson: String? = null,
+    /** A confirmation (or contact question) waiting for the user. */
+    val card: com.hiddenoutlier.launcher.assistant.Card? = null,
 )
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
@@ -131,6 +133,23 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             }.getOrElse { emptyList() }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Contacts matching the search (on the phone; only with the permission and the setting on). */
+    val contactsGranted = MutableStateFlow(false)
+    fun refreshContactsGranted() { contactsGranted.value = la.assistant.contacts.granted() }
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val contactResults: StateFlow<List<com.hiddenoutlier.launcher.assistant.Person>> = combine(query, settings, contactsGranted) { q, s, g -> Triple(q, s, g) }
+        .debounce(120)
+        .mapLatest { (q, s, g) ->
+            if (q.isBlank() || !g || !s.contactsInSearch) emptyList()
+            else withContext(Dispatchers.IO) { la.assistant.contacts.find(q, 4).distinctBy { it.name } }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    fun setContactsInSearch(v: Boolean) = save { la.settings.setContactsInSearch(v) }
+    fun dial(p: com.hiddenoutlier.launcher.assistant.Person) { leftForApp = true; runCatching {
+        getApplication<Application>().startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+    fun textTo(p: com.hiddenoutlier.launcher.assistant.Person) { leftForApp = true; runCatching {
+        getApplication<Application>().startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 
     data class Results(val apps: List<AppEntry>, val revealed: List<Pair<AppEntry, HideLevel>>)
 
@@ -252,6 +271,13 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setHomePlace(v: String) = save { la.settings.setHomePlace(v) }
     fun setFahrenheit(v: Boolean) = save { la.settings.setFahrenheit(v) }
     fun setModelsOnMobileData(v: Boolean) = save { la.settings.setModelsOnMobileData(v) }
+    val voices = la.voices
+    fun downloadVoice(p: com.hiddenoutlier.launcher.assistant.NeuralVoicePack) =
+        com.hiddenoutlier.launcher.assistant.ModelDownloadService.startVoice(getApplication(), p)
+    fun deleteVoice(p: com.hiddenoutlier.launcher.assistant.NeuralVoicePack) {
+        voices.delete(p)
+        if (settings.value.ttsEngine == com.hiddenoutlier.launcher.assistant.Speaker.NEURAL_PREFIX + p.id) setTtsEngine(null)
+    }
     fun setSpeak(v: com.hiddenoutlier.launcher.data.SpeakMode) = save { la.settings.setSpeak(v) }
     fun setTtsEngine(v: String?) = save { la.settings.setTtsEngine(v) }
     fun setTtsVoice(v: String?) = save { la.settings.setTtsVoice(v) }

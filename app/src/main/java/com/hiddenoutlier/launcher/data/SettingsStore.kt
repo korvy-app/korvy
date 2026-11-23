@@ -52,6 +52,8 @@ data class Settings(
     val ttsPitch: Float = 1f,
     /** Start listening right away when the assistant is opened with the power button. */
     val listenOnAssist: Boolean = true,
+    /** Show matching contacts in search (only when the contacts permission is granted). */
+    val contactsInSearch: Boolean = true,
 ) {
     fun allows(source: com.hiddenoutlier.launcher.platform.OnlineSource) =
         online && if (source.optIn) source.name in sourcesOn else source.name !in sourcesOff
@@ -83,6 +85,7 @@ class SettingsStore(private val context: Context) {
         val ttsRate = androidx.datastore.preferences.core.floatPreferencesKey("tts_rate")
         val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
         val listenOnAssist = booleanPreferencesKey("listen_on_assist")
+        val contactsInSearch = booleanPreferencesKey("contacts_in_search")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -109,6 +112,7 @@ class SettingsStore(private val context: Context) {
             ttsRate = p[K.ttsRate] ?: 1f,
             ttsPitch = p[K.ttsPitch] ?: 1f,
             listenOnAssist = p[K.listenOnAssist] ?: true,
+            contactsInSearch = p[K.contactsInSearch] ?: true,
         )
     }
 
@@ -144,4 +148,5 @@ class SettingsStore(private val context: Context) {
     suspend fun setTtsRate(v: Float) = set { it[K.ttsRate] = v }
     suspend fun setTtsPitch(v: Float) = set { it[K.ttsPitch] = v }
     suspend fun setListenOnAssist(v: Boolean) = set { it[K.listenOnAssist] = v }
+    suspend fun setContactsInSearch(v: Boolean) = set { it[K.contactsInSearch] = v }
 }

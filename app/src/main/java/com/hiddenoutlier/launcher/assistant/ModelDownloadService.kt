@@ -39,6 +39,7 @@ class ModelDownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) { job?.cancel(); stop(); return START_NOT_STICKY }
+        NeuralVoiceCatalog.byId(intent?.getStringExtra(EXTRA_VOICE))?.let { downloadVoice(it); return START_NOT_STICKY }
         val model = ModelCatalog.byId(intent?.getStringExtra(EXTRA_MODEL)) ?: run { stop(); return START_NOT_STICKY }
         val app = application as LauncherApp
         startInForeground(notification(model, 0, model.bytes, "Starting…"))
@@ -65,6 +66,36 @@ class ModelDownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Same as models, for a natural-voice pack (download, verify, unpack). */
+    private fun downloadVoice(p: NeuralVoicePack) {
+        val app = application as LauncherApp
+        fun note(done: Long, total: Long, text: String?) = notification(p.name, done, total, text)
+        startInForeground(note(0, p.bytes, "Starting…"))
+        if (job?.isActive == true) return
+        acquireLocks()
+        job = scope.launch {
+            val progress = launch {
+                app.voices.download.collect { st ->
+                    val n = when (st) {
+                        is DownloadState.Running -> note(st.done, st.total, null)
+                        is DownloadState.Retrying -> note(st.done, st.total, "Connection dropped, retrying in ${st.inSeconds} s")
+                        is DownloadState.Verifying -> note(-1, 0, "Checking and unpacking…")
+                        else -> null
+                    }
+                    n?.let { getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, it) }
+                }
+            }
+            app.voices.download(p) { app.settingsState.value.allows(it) }
+            progress.cancel()
+            val ok = p.id in app.voices.installed.value
+            if (ok && !app.settingsState.value.ttsEngine.orEmpty().startsWith(Speaker.NEURAL_PREFIX)) {
+                app.settings.setTtsEngine(Speaker.NEURAL_PREFIX + p.id) // first natural voice: switch to it
+            }
+            finished(p.name, ok, (app.voices.download.value as? DownloadState.Failed)?.message)
+            stop()
+        }
+    }
+
     private fun startInForeground(n: Notification) {
         ServiceCompat.startForeground(this, NOTIFICATION_ID, n,
             if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0)
@@ -83,12 +114,14 @@ class ModelDownloadService : Service() {
     private fun openApp() = PendingIntent.getActivity(this, 0,
         Intent(this, MainActivity::class.java).setAction(MainActivity.ACTION_OPEN_MODELS), PendingIntent.FLAG_IMMUTABLE)
 
-    private fun notification(m: ModelInfo, done: Long, total: Long, text: String?): Notification {
+    private fun notification(m: ModelInfo, done: Long, total: Long, text: String?) = notification(m.name, done, total, text)
+
+    private fun notification(name: String, done: Long, total: Long, text: String?): Notification {
         channel()
         val cancel = PendingIntent.getService(this, 1, Intent(this, ModelDownloadService::class.java).setAction(ACTION_CANCEL), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Downloading ${m.name}")
+            .setContentTitle("Downloading $name")
             .setContentText(text ?: "%.0f of %.0f MB".format(done / 1e6, total / 1e6))
             .setProgress(if (done < 0) 0 else 100, if (done < 0 || total <= 0) 0 else (done * 100 / total).toInt(), done < 0)
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
@@ -101,11 +134,15 @@ class ModelDownloadService : Service() {
     /** A short, dismissible notification when it finishes (or fails), since the user may have left the app. */
     private fun done(m: ModelInfo, state: DownloadState) {
         val ok = state is DownloadState.Idle && m.id in (application as LauncherApp).models.installed.value
-        val text = if (ok) "${m.name} is ready. The assistant can use it now." else (state as? DownloadState.Failed)?.message ?: return
+        finished(m.name, ok, (state as? DownloadState.Failed)?.message)
+    }
+
+    private fun finished(name: String, ok: Boolean, error: String?) {
+        val text = if (ok) "$name is ready. The assistant can use it now." else error ?: return
         channel()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID + 1,
             NotificationCompat.Builder(this, CHANNEL).setSmallIcon(if (ok) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error)
-                .setContentTitle(if (ok) "Model downloaded" else "Model download stopped").setContentText(text)
+                .setContentTitle(if (ok) "Download finished" else "Download stopped").setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(openApp()).setAutoCancel(true).build())
     }
@@ -137,10 +174,14 @@ class ModelDownloadService : Service() {
         private const val CHANNEL = "model_downloads"
         private const val NOTIFICATION_ID = 41
         private const val EXTRA_MODEL = "model"
+        private const val EXTRA_VOICE = "voice"
         private const val ACTION_CANCEL = "com.hiddenoutlier.launcher.CANCEL_DOWNLOAD"
 
         fun start(context: Context, m: ModelInfo) = ContextCompat.startForegroundService(context,
             Intent(context, ModelDownloadService::class.java).putExtra(EXTRA_MODEL, m.id))
+
+        fun startVoice(context: Context, p: NeuralVoicePack) = ContextCompat.startForegroundService(context,
+            Intent(context, ModelDownloadService::class.java).putExtra(EXTRA_VOICE, p.id))
 
         fun cancel(context: Context) = context.startService(Intent(context, ModelDownloadService::class.java).setAction(ACTION_CANCEL))
     }

@@ -22,6 +22,7 @@ class LauncherApp : Application() {
         settings.settings.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, com.hiddenoutlier.launcher.data.Settings(tutorialDone = true))
     }
     val models by lazy { com.hiddenoutlier.launcher.assistant.ModelStore(this) }
+    val voices by lazy { com.hiddenoutlier.launcher.assistant.VoiceStore(this) }
     val personality by lazy { com.hiddenoutlier.launcher.assistant.Personality(this) }
     val assistant by lazy {
         com.hiddenoutlier.launcher.assistant.AssistantController(this, scope, settingsState, apps, privacy, usage, models, personality)

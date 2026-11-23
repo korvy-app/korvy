@@ -9,7 +9,10 @@ enum class ActionType(val id: String, val help: String) {
     NEWS("news", "latest news headlines; arg = topic, or empty"),
     STOCK("stock", "stock price; arg = ticker symbol like AAPL"),
     TIMER("timer", "start a countdown timer; arg = length like \"5 minutes\""),
-    DIAL("dial", "open the phone dialer; arg = phone number");
+    TEXT("text", "send a text message; arg = \"recipient: message\""),
+    CALL("call", "phone someone; arg = contact name or phone number"),
+    RIDE("ride", "order a ride; arg = \"uber: destination\" or \"lyft: destination\""),
+    NAVIGATE("navigate", "directions in the maps app; arg = destination");
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
@@ -55,6 +58,7 @@ object AgentCore {
         "can you open my camera" to """{"action": "open_app", "arg": "Camera"}""",
         "how much is tesla trading at" to """{"action": "stock", "arg": "TSLA"}""",
         "what's 15% of 80" to """{"action": "answer", "arg": "15% of 80 is 12."}""",
+        "let my sister know I'll be late" to """{"action": "text", "arg": "sister: I'll be late"}""",
     )
 
     // ---- Plain-code fast path ------------------------------------------------------------------------------
@@ -64,14 +68,26 @@ object AgentCore {
     private val NEWS = Regex("^(?:the\\s+|latest\\s+|today'?s\\s+)?(?:news|headlines)(?:\\s+(?:about|on)\\s+(.+?))?\\??$", RegexOption.IGNORE_CASE)
     private val STOCK = Regex("^(?:stock|quote|price)\\s+(?:of\\s+|for\\s+)?([A-Za-z.]{1,6})\\??$|^([A-Za-z.]{1,6})\\s+(?:stock|share)\\s*(?:price)?\\??$", RegexOption.IGNORE_CASE)
     private val TIMER = Regex("^(?:set\\s+(?:a\\s+)?)?timer\\s+(?:for\\s+)?(.+)$|^(.+?)\\s+timer$", RegexOption.IGNORE_CASE)
-    private val DIAL = Regex("^(?:call|dial)\\s+([+0-9][0-9 ()\\-]{2,})$", RegexOption.IGNORE_CASE)
+    private val RIDE = Regex("^(?:(?:please\\s+)?(?:get|call|book|order|find)\\s+(?:me\\s+)?)?(?:an?\\s+)?(uber|lyft|ride|taxi|cab)\\s+(?:to|for)\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val CALL = Regex("^(?:please\\s+)?(?:call|dial|phone|ring)\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val TEXT_SPLIT = Regex("^(?:please\\s+)?(?:text|message|sms|send\\s+(?:a\\s+)?(?:text|message)\\s+to)\\s+(.+?)\\s*(?::|\\bsaying\\b|\\bthat\\b)\\s*(.+)$", RegexOption.IGNORE_CASE)
+    private val TEXT_PLAIN = Regex("^(?:please\\s+)?(?:text|message|sms)\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val NAVIGATE = Regex("^(?:navigate|directions|drive|take\\s+me|how\\s+do\\s+i\\s+get)\\s+(?:me\\s+)?(?:to\\s+)?(.+?)\\??$", RegexOption.IGNORE_CASE)
     private val SEARCH = Regex("^(?:search(?:\\s+for)?|look\\s+up|google)\\s+(.+)$", RegexOption.IGNORE_CASE)
 
     /** Recognises common requests without the model. Null means "ask the model". */
     fun quickParse(input: String): Action? {
         val t = input.trim().trimEnd('.', '!')
         if (t.isEmpty()) return null
-        DIAL.matchEntire(t)?.let { return Action(ActionType.DIAL, it.groupValues[1].trim()) }
+        RIDE.matchEntire(t)?.let { m ->
+            val app = m.groupValues[1].lowercase().let { if (it == "lyft") "lyft" else "uber" }
+            return Action(ActionType.RIDE, "$app: ${m.groupValues[2].trim()}")
+        }
+        TEXT_SPLIT.matchEntire(t)?.let { return Action(ActionType.TEXT, "${it.groupValues[1].trim()}: ${it.groupValues[2].trim()}") }
+        // "text mom I'm late": where the name ends is decided later against the contacts (TextArgs.split).
+        TEXT_PLAIN.matchEntire(t)?.let { return Action(ActionType.TEXT, it.groupValues[1].trim()) }
+        NAVIGATE.matchEntire(t)?.let { return Action(ActionType.NAVIGATE, it.groupValues[1].trim()) }
+        CALL.matchEntire(t)?.let { return Action(ActionType.CALL, it.groupValues[1].trim()) }
         TIMER.matchEntire(t)?.let { m -> parseDuration(m.groupValues[1].ifEmpty { m.groupValues[2] })?.let { return Action(ActionType.TIMER, it.toString()) } }
         WEATHER.matchEntire(t)?.let { return Action(ActionType.WEATHER, it.groupValues[1].trim()) }
         NEWS.matchEntire(t)?.let { return Action(ActionType.NEWS, it.groupValues[1].trim()) }

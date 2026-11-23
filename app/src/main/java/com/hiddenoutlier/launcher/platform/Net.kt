@@ -13,6 +13,8 @@ import java.net.URL
 enum class OnlineSource(val title: String, val hosts: Set<String>, val detail: String, val optIn: Boolean = false) {
     MODELS("Model downloads", setOf("huggingface.co", "hf.co"), // and their download CDNs (*.huggingface.co, *.hf.co)
         "Downloads the assistant model you pick from Hugging Face."),
+    VOICES("Voice downloads", setOf("github.com", "githubusercontent.com"), // and *.githubusercontent.com (release files)
+        "Downloads natural voices (Kokoro, Piper) from the sherpa-onnx project's releases on GitHub."),
     WEATHER("Weather", setOf("api.open-meteo.com", "geocoding-api.open-meteo.com"),
         "Open-Meteo: free, no account. Sends the place name you ask about."),
     NEWS("News headlines", setOf("feeds.npr.org", "feeds.bbci.co.uk"),

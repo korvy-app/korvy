@@ -51,6 +51,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val download by vm.models.download.collectAsStateWithLifecycle()
     val pendingCrops by vm.pendingCrops.collectAsStateWithLifecycle()
     val webSuggestions by vm.webSuggestions.collectAsStateWithLifecycle()
+    val contactResults by vm.contactResults.collectAsStateWithLifecycle()
     val drag = remember(vm) {
         DragController(
             grid = { vm.homeGrid.value },
@@ -127,6 +128,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                         .swallowTouches(screen != Screen.DRAWER && !listDrag),
                     onAsk = if (settings.assistant) ({ q -> vm.openAssistant(q) }) else null,
                     webSuggestions = webSuggestions,
+                    contacts = contactResults, onCall = vm::dial, onText = vm::textTo,
                 )
             }
             AnimatedVisibility(screen == Screen.SETTINGS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
@@ -156,6 +158,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     onSend = { vm.ask(it) }, onVoice = { vm.ask(it, byVoice = true) }, onStop = vm::stopAssistant, onClear = vm::clearChat,
                     onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
                     speak = settings.speak, onSpeak = vm::setSpeak, onSpeakOn = { vm.assistant.sayHello() },
+                    cardActions = rememberCardActions(vm.assistant),
                 )
             }
             AnimatedVisibility(screen == Screen.MODELS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {

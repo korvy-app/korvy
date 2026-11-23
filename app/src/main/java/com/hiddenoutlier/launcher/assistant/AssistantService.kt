@@ -19,6 +19,11 @@ import java.util.concurrent.Executors
  */
 class AssistantService : Service() {
     private val worker = Executors.newSingleThreadExecutor()
+    // Speech gets its own thread so a reply can be spoken while the model keeps writing the next sentence.
+    private val voice = Executors.newSingleThreadExecutor()
+    private val neural by lazy { NeuralTts() }
+    /** Bumped by "stop speaking": queued sentences from before the stop are skipped. */
+    @Volatile private var speechGeneration = 0
     private var loadedPath: String? = null
     private lateinit var messenger: Messenger
 
@@ -34,6 +39,18 @@ class AssistantService : Service() {
         val reply = msg.replyTo
         when (msg.what) {
             MSG_STOP -> Native.stop()
+            MSG_STOP_SPEAK -> { speechGeneration++; neural.stop() }
+            MSG_SPEAK -> {
+                val d = msg.data
+                val gen = speechGeneration
+                voice.execute {
+                    if (gen != speechGeneration) return@execute
+                    runCatching {
+                        neural.speak(java.io.File(d.getString(K_PATH)!!), NeuralVoicePack.Kind.valueOf(d.getString(K_KIND)!!),
+                            d.getString(K_MODEL)!!, d.getInt(K_SPEAKER), d.getFloat(K_SPEED, 1f), d.getString(K_TEXT)!!)
+                    }.onFailure { Log.e("AssistantService", "speech failed", it); send(msg.replyTo, MSG_ERROR, "Voice failed: ${it.message}") }
+                }
+            }
             MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
             MSG_COMPLETE -> worker.execute {
                 val d = msg.data
@@ -78,14 +95,16 @@ class AssistantService : Service() {
 
     override fun onDestroy() {
         Native.stop()
-        worker.shutdown()
+        speechGeneration++; runCatching { neural.release() }
+        worker.shutdown(); voice.shutdown()
         super.onDestroy()
         // Give the memory back right away instead of leaving a cached process holding a model.
         Process.killProcess(Process.myPid())
     }
 
     companion object {
-        const val MSG_COMPLETE = 1; const val MSG_STOP = 2; const val MSG_PRELOAD = 3
+        const val MSG_COMPLETE = 1; const val MSG_STOP = 2; const val MSG_PRELOAD = 3; const val MSG_SPEAK = 4; const val MSG_STOP_SPEAK = 5
+        const val K_KIND = "kind"; const val K_MODEL = "model"; const val K_SPEAKER = "speaker"; const val K_SPEED = "speed"
         /** Context window: room for the system prompt, examples, a few earlier turns and the reply. */
         const val CTX = 4096
         const val MSG_TOKEN = 10; const val MSG_DONE = 11; const val MSG_ERROR = 12; const val MSG_STATUS = 13
