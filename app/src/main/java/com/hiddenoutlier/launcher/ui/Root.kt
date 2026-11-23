@@ -124,7 +124,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             }
             AnimatedVisibility(screen == Screen.SETTINGS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 SettingsScreen(
-                    settings, animations, vm.tier, bgFiles, privacy.hidden.size, isDefaultHome, vm,
+                    settings, animations, vm.tier, bgFiles, isDefaultHome, vm,
                     onSetDefaultHome = host.setDefaultHome, onBack = { vm.goHome() },
                 )
             }

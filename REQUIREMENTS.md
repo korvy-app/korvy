@@ -123,6 +123,8 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - **Level 2 – Hide and lock:** the hidden list and launching those apps need fingerprint, face or the phone PIN
   (AndroidX BiometricPrompt, not Play services).
 - The hidden list is stored on the device, encrypted, and excluded from backups.
+- Nothing outside the locked/hidden screens reveals that hidden apps exist: no counts or badges (Settings shows
+  only "Hidden apps", never how many).
 - The app says plainly that hiding only applies in this launcher (apps still show in Android Settings).
 - Later: Android 15+ Private Space support (check the permission requirements first).
 
@@ -193,6 +195,7 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.1** – Privacy fix: Settings no longer shows how many apps are hidden.
 - 2026-11-22 (later): **0.4.0** – Hold the power button for the assistant (panel over any app), voice input
   (on-device recognizer only) and spoken replies with engine/voice choice. The assistant moved into an app-wide
   `AssistantController`. Checked on the Pixel 4a release build: the app was accepted as Digital assistant; the

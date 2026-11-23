@@ -64,7 +64,6 @@ fun SettingsScreen(
     animationsOn: Boolean,
     tier: Tier,
     backgrounds: List<File>,
-    hiddenCount: Int,
     isDefaultHome: Boolean,
     vm: LauncherViewModel,
     onSetDefaultHome: () -> Unit,
@@ -196,7 +195,6 @@ fun SettingsScreen(
                         Text("Hidden apps")
                         Text("Long-press any app to hide or lock it.", style = MaterialTheme.typography.bodySmall)
                     }
-                    Text(if (hiddenCount == 0) "None" else "$hiddenCount", style = MaterialTheme.typography.bodyMedium)
                 }
                 Toggle("Find hidden apps by full name", "Typing a hidden app's whole name shows it in search. Locked apps still ask for your fingerprint or PIN.",
                     s.revealHiddenByName, "toggle_reveal") { vm.setRevealHiddenByName(it) }
