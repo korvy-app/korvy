@@ -176,6 +176,15 @@ fun ModelsScreen(
     onBack: () -> Unit,
 ) {
     val ramGb = Device.specs(LocalContext.current).totalRamMb / 1024.0
+    // Ask (once) to show the download's progress notification. The download runs either way.
+    val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    val ctx = LocalContext.current
+    val startDownload: (ModelInfo) -> Unit = { m ->
+        if (android.os.Build.VERSION.SDK_INT >= 33 && androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        onDownload(m)
+    }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("models")) {
         TopBar("Assistant model", onBack)
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -218,6 +227,13 @@ fun ModelsScreen(
                                 TextButton(onClick = onCancel) { Text("Pause") }
                             }
                         }
+                        download is DownloadState.Retrying && download.id == m.id -> {
+                            LinearProgressIndicator(progress = { download.done.toFloat() / download.total }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Connection dropped; retrying in ${download.inSeconds} s", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                TextButton(onClick = onCancel) { Text("Pause") }
+                            }
+                        }
                         download is DownloadState.Verifying && download.id == m.id -> Text("Checking the download…", modifier = Modifier.padding(top = 8.dp))
                         has -> Row(Modifier.padding(top = 6.dp)) {
                             if (!selected) Button(onClick = { onUse(m) }) { Text("Use") } else Text("In use", modifier = Modifier.padding(end = 12.dp, top = 10.dp))
@@ -227,8 +243,8 @@ fun ModelsScreen(
                         else -> {
                             if (download is DownloadState.Failed && download.id == m.id)
                                 Text(download.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                            val canDownload = s.allows(OnlineSource.MODELS) && (!metered || s.modelsOnMobileData) && download !is DownloadState.Running
-                            OutlinedButton(onClick = { onDownload(m) }, enabled = canDownload, modifier = Modifier.padding(top = 6.dp).testTag("download_${m.id}")) {
+                            val canDownload = s.allows(OnlineSource.MODELS) && (!metered || s.modelsOnMobileData) && download !is DownloadState.Running && download !is DownloadState.Retrying
+                            OutlinedButton(onClick = { startDownload(m) }, enabled = canDownload, modifier = Modifier.padding(top = 6.dp).testTag("download_${m.id}")) {
                                 Text("Download ${m.sizeText}")
                             }
                         }

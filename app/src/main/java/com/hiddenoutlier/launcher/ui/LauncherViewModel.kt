@@ -227,15 +227,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun stopAssistant() = assistant.stop()
     fun clearChat() = assistant.clear()
 
-    private var downloadJob: kotlinx.coroutines.Job? = null
-    fun downloadModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
-        if (downloadJob?.isActive == true) return
-        downloadJob = viewModelScope.launch {
-            models.download(m) { settings.value.allows(it) }
-            if (m.id in models.installed.value && settings.value.modelId == null) la.settings.setModelId(m.id)
-        }
-    }
-    fun cancelDownload() { downloadJob?.cancel() }
+    /** Runs in a foreground service so it survives the screen turning off (see ModelDownloadService). */
+    fun downloadModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) =
+        com.hiddenoutlier.launcher.assistant.ModelDownloadService.start(getApplication(), m)
+    fun cancelDownload() { com.hiddenoutlier.launcher.assistant.ModelDownloadService.cancel(getApplication()) }
     fun deleteModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
         models.delete(m)
         if (settings.value.modelId == m.id) save { la.settings.setModelId(null) }

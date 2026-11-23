@@ -47,7 +47,9 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   in code (`assistant/Tools.kt`); no second model pass. Hidden apps are never offered to it.
 - **Models:** `assistant/Models.kt` catalog (Qwen 2.5 0.5B/1.5B/3B, Llama 3.2 1B/3B, Gemma 3 1B/4B, SmolLM2 1.7B,
   Phi 3.5 mini; Q4_K_M GGUF from Hugging Face, sizes and SHA-256 recorded). Private storage, resumable downloads,
-  checksum verified, Wi-Fi only unless allowed, RAM warning per model.
+  checksum verified, Wi-Fi only unless allowed, RAM warning per model. Downloads run in `ModelDownloadService`, a
+  foreground service (type dataSync) with a progress notification and Pause, holding a Wi-Fi lock and partial wake
+  lock only while running; dropped connections retry with backoff (2–60 s, 6 tries without progress) and resume.
 - **Personality:** `agent.md` in private storage (`assistant/Personality.kt`), presets, size meter; rules come
   after it in the system prompt so it can't override them.
 - **Online sources** (`platform/Net.kt`, https only, host allow-list per source, redirects re-checked):
@@ -195,6 +197,9 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.2** – Fixed: long model downloads failed after a while (the app was paused with the
+  screen off). Downloads now run in a foreground service with a progress notification, keep Wi-Fi/CPU awake while
+  running, and retry dropped connections automatically.
 - 2026-11-22 (later): **0.4.1** – Privacy fix: Settings no longer shows how many apps are hidden.
 - 2026-11-22 (later): **0.4.0** – Hold the power button for the assistant (panel over any app), voice input
   (on-device recognizer only) and spoken replies with engine/voice choice. The assistant moved into an app-wide

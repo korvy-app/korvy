@@ -36,6 +36,7 @@ class MainActivity : FragmentActivity() {
         )
         setContent { Root(vm, host) }
         if (intent?.action == ACTION_OPEN_ASSISTANT) vm.openAssistant()
+        if (intent?.action == ACTION_OPEN_MODELS) vm.open(com.hiddenoutlier.launcher.ui.Screen.MODELS)
         // Privacy: keep autofill services (e.g. Google's) out of everything typed here: searches, questions.
         if (android.os.Build.VERSION.SDK_INT >= 26) {
             window.decorView.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
@@ -47,6 +48,7 @@ class MainActivity : FragmentActivity() {
         super.onNewIntent(intent)
         if (intent.hasCategory(Intent.CATEGORY_HOME)) vm.goHome()
         if (intent.action == ACTION_OPEN_ASSISTANT) vm.openAssistant()
+        if (intent.action == ACTION_OPEN_MODELS) vm.open(com.hiddenoutlier.launcher.ui.Screen.MODELS)
     }
 
     /** Leaving for another app: come back to a clean home screen, not the app list or search. */
@@ -55,7 +57,10 @@ class MainActivity : FragmentActivity() {
         vm.onStopped()
     }
 
-    companion object { const val ACTION_OPEN_ASSISTANT = "com.hiddenoutlier.launcher.OPEN_ASSISTANT" }
+    companion object {
+        const val ACTION_OPEN_ASSISTANT = "com.hiddenoutlier.launcher.OPEN_ASSISTANT"
+        const val ACTION_OPEN_MODELS = "com.hiddenoutlier.launcher.OPEN_MODELS"
+    }
 
     override fun onResume() {
         super.onResume()

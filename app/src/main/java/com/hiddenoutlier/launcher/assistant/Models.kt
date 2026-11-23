@@ -71,6 +71,8 @@ object ModelCatalog {
 sealed interface DownloadState {
     data object Idle : DownloadState
     data class Running(val id: String, val done: Long, val total: Long) : DownloadState
+    /** Waiting [inSeconds] before resuming after a dropped connection. */
+    data class Retrying(val id: String, val done: Long, val total: Long, val inSeconds: Int) : DownloadState
     data class Verifying(val id: String) : DownloadState
     data class Failed(val id: String, val message: String) : DownloadState
 }
@@ -94,38 +96,35 @@ class ModelStore(private val context: Context) {
         return !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
 
+    /**
+     * Downloads [m], resuming from any partial file. Dropped connections are retried with backoff (2 s … 60 s,
+     * up to [MAX_TRIES] tries in a row without progress), so a flaky network or a sleeping phone doesn't lose
+     * work. Run it from [ModelDownloadService] so Android keeps it alive with the screen off.
+     */
     suspend fun download(m: ModelInfo, allowed: (OnlineSource) -> Boolean) = withContext(Dispatchers.IO) {
         val part = File(dir, m.file + ".part")
         try {
             if (freeBytes() < m.bytes - part.length() + 200_000_000) throw IOException("Not enough free space (needs ${m.sizeText})")
-            var done = part.length()
-            _download.value = DownloadState.Running(m.id, done, m.bytes)
-            if (done < m.bytes) {
-                val c = Net.open(OnlineSource.MODELS, m.url, allowed, range = done)
+            var failures = 0
+            while (part.length() < m.bytes) {
+                val before = part.length()
                 try {
-                    if (done > 0 && c.responseCode != 206) { part.delete(); done = 0 } // server ignored the range
-                    if (c.responseCode !in 200..299) throw IOException("Download failed: HTTP ${c.responseCode}")
-                    c.inputStream.use { input ->
-                        FileOutputStream(part, done > 0).use { out ->
-                            val buf = ByteArray(256 * 1024)
-                            var lastReport = 0L
-                            while (true) {
-                                currentCoroutineContext().ensureActive()
-                                val n = input.read(buf)
-                                if (n < 0) break
-                                out.write(buf, 0, n)
-                                done += n
-                                if (done - lastReport > 4_000_000) { lastReport = done; _download.value = DownloadState.Running(m.id, done, m.bytes) }
-                            }
-                        }
-                    }
-                } finally { c.disconnect() }
+                    transfer(m, part, allowed)
+                } catch (e: com.hiddenoutlier.launcher.platform.OfflineException) {
+                    throw e
+                } catch (e: IOException) {
+                    if (part.length() > before) failures = 0 // made progress: start counting again
+                    if (++failures >= MAX_TRIES) throw IOException("Connection kept dropping (${e.message}). Tap Download to resume.")
+                    val wait = minOf(60L, 1L shl failures) // 2, 4, 8, 16, 32, 60 s
+                    _download.value = DownloadState.Retrying(m.id, part.length(), m.bytes, wait.toInt())
+                    kotlinx.coroutines.delay(wait * 1000)
+                }
             }
             _download.value = DownloadState.Verifying(m.id)
             val digest = MessageDigest.getInstance("SHA-256")
             part.inputStream().buffered(1 shl 20).use { s ->
                 val buf = ByteArray(1 shl 20)
-                while (true) { val n = s.read(buf); if (n < 0) break; digest.update(buf, 0, n) }
+                while (true) { currentCoroutineContext().ensureActive(); val n = s.read(buf); if (n < 0) break; digest.update(buf, 0, n) }
             }
             val hex = digest.digest().joinToString("") { "%02x".format(it) }
             if (hex != m.sha256) { part.delete(); throw IOException("The download was damaged (checksum mismatch). Try again.") }
@@ -139,6 +138,34 @@ class ModelStore(private val context: Context) {
             _download.value = DownloadState.Failed(m.id, e.message ?: "Download failed")
         }
     }
+
+    /** One connection: appends to [part] from where it stopped. Returns when the server closes the stream. */
+    private suspend fun transfer(m: ModelInfo, part: File, allowed: (OnlineSource) -> Boolean) {
+        var done = part.length()
+        _download.value = DownloadState.Running(m.id, done, m.bytes)
+        val c = Net.open(OnlineSource.MODELS, m.url, allowed, range = done)
+        try {
+            if (done > 0 && c.responseCode != 206) { part.delete(); done = 0 } // server ignored the range
+            if (c.responseCode !in 200..299) throw IOException("HTTP ${c.responseCode}")
+            c.inputStream.use { input ->
+                FileOutputStream(part, done > 0).use { out ->
+                    val buf = ByteArray(256 * 1024)
+                    var lastReport = 0L
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        done += n
+                        if (done - lastReport > 4_000_000) { lastReport = done; _download.value = DownloadState.Running(m.id, done, m.bytes) }
+                    }
+                }
+            }
+            if (done < m.bytes) throw IOException("connection closed early")
+        } finally { c.disconnect() }
+    }
+
+    companion object { const val MAX_TRIES = 6 }
 
     fun delete(m: ModelInfo) {
         fileFor(m).delete(); File(dir, m.file + ".part").delete()
