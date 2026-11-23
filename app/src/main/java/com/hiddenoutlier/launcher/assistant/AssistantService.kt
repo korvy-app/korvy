@@ -34,17 +34,13 @@ class AssistantService : Service() {
         val reply = msg.replyTo
         when (msg.what) {
             MSG_STOP -> Native.stop()
+            MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
             MSG_COMPLETE -> worker.execute {
                 val d = msg.data
                 val path = d.getString(K_PATH)!!
                 try {
-                    if (path != loadedPath) {
-                        send(reply, MSG_STATUS, "Loading model…")
-                        val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
-                        val rc = Native.load(path, d.getInt(K_CTX, 2048), threads)
-                        if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, "Couldn't load the model (code $rc)"); return@execute }
-                        loadedPath = path
-                    }
+                    if (!ensureLoaded(path, d.getInt(K_CTX, CTX), reply)) return@execute
+                    send(reply, MSG_STATUS, "Thinking…")
                     val out = Native.complete(
                         d.getStringArray(K_ROLES)!!, d.getStringArray(K_CONTENTS)!!, d.getString(K_GRAMMAR) ?: "",
                         d.getInt(K_MAX, 256), d.getFloat(K_TEMP, 0.3f),
@@ -57,6 +53,17 @@ class AssistantService : Service() {
                 }
             }
         }
+    }
+
+    /** Loads [path] unless it's already loaded. Runs on the worker thread. */
+    private fun ensureLoaded(path: String, ctx: Int, reply: Messenger?): Boolean {
+        if (path == loadedPath) return true
+        send(reply, MSG_STATUS, "Loading model…")
+        val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
+        val rc = Native.load(path, ctx, threads)
+        if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, "Couldn't load the model (code $rc)"); return false }
+        loadedPath = path
+        return true
     }
 
     private fun send(to: Messenger?, what: Int, text: String) {
@@ -78,7 +85,9 @@ class AssistantService : Service() {
     }
 
     companion object {
-        const val MSG_COMPLETE = 1; const val MSG_STOP = 2
+        const val MSG_COMPLETE = 1; const val MSG_STOP = 2; const val MSG_PRELOAD = 3
+        /** Context window: room for the system prompt, examples, a few earlier turns and the reply. */
+        const val CTX = 4096
         const val MSG_TOKEN = 10; const val MSG_DONE = 11; const val MSG_ERROR = 12; const val MSG_STATUS = 13
         const val K_PATH = "path"; const val K_CTX = "ctx"; const val K_ROLES = "roles"; const val K_CONTENTS = "contents"
         const val K_GRAMMAR = "grammar"; const val K_MAX = "max"; const val K_TEMP = "temp"; const val K_TEXT = "text"

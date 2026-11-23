@@ -40,7 +40,7 @@ object AgentCore {
             appendLine(personality.trim())
             appendLine()
         }
-        appendLine("You are the assistant built into a phone's home screen. It is $now.")
+        appendLine("You are the assistant built into a phone's home screen. Today is $now. The time is given with each question.")
         if (!home.isNullOrBlank()) appendLine("The user's home area is $home.")
         appendLine("Reply with JSON only: {\"action\": ..., \"arg\": ...}. Actions:")
         ActionType.entries.forEach { appendLine("- ${it.id}: ${it.help}") }
@@ -115,6 +115,38 @@ object AgentCore {
         val end = Regex("(?<!\\\\)\"").find(rest)?.range?.first ?: rest.length
         return unescape(rest.substring(0, end).removeSuffix("\\"))
     }
+
+    /** An action as the model writes it, for chat history. */
+    fun toJson(a: Action): String = "{\"action\": \"${a.type.id}\", \"arg\": \"${escape(a.arg)}\"}"
+
+    fun escape(s: String): String = buildString {
+        for (c in s) when (c) {
+            '"' -> append("\\\""); '\\' -> append("\\\\"); '\n' -> append("\\n"); '\t' -> append("\\t")
+            else -> if (c.code < 0x20) append(' ') else append(c)
+        }
+    }
+
+    /**
+     * Chat history for the model: earlier turns as (user question, assistant action JSON) pairs, newest last, at most
+     * [maxTurns]. When the previous action fetched something (weather, news…), its result is put in front of the new
+     * question, so follow-ups like "and tomorrow?" or "what about Seattle?" make sense to the model.
+     */
+    data class Turn(val question: String, val actionJson: String, val resultText: String, val wasTool: Boolean)
+
+    fun historyMessages(turns: List<Turn>, newQuestion: String, maxTurns: Int = 4): List<Pair<String, String>> {
+        val recent = turns.takeLast(maxTurns)
+        val out = ArrayList<Pair<String, String>>()
+        recent.forEachIndexed { i, t ->
+            val prev = recent.getOrNull(i - 1)
+            out += "user" to withResult(prev, t.question)
+            out += "assistant" to t.actionJson
+        }
+        out += "user" to withResult(recent.lastOrNull(), newQuestion)
+        return out
+    }
+
+    private fun withResult(prev: Turn?, question: String) =
+        if (prev != null && prev.wasTool && prev.resultText.isNotBlank()) "(Result of your last action: ${prev.resultText.take(400)})\n$question" else question
 
     fun unescape(s: String): String = buildString {
         var i = 0

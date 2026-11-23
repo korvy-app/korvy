@@ -130,6 +130,7 @@ class AssistActivity : ComponentActivity() {
         super.onResume()
         if (firstResume) {
             firstResume = false
+            (application as LauncherApp).assistant.warmUp()
             if ((application as LauncherApp).settingsState.value.listenOnAssist) mic.requestStart()
         }
     }

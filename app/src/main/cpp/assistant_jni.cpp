@@ -19,6 +19,9 @@ static llama_model *g_model = nullptr;
 static llama_context *g_ctx = nullptr;
 static common_chat_templates_ptr g_tmpls;
 static std::atomic<bool> g_stop{false};
+// Tokens currently in the KV cache (prompt + reply of the last request). A new request that starts the same way
+// (system prompt, examples, earlier turns) reuses them instead of reading everything again.
+static std::vector<llama_token> g_cached;
 static int g_n_ctx = 4096;
 constexpr int BATCH = 512;
 
@@ -46,6 +49,7 @@ static bool valid_utf8(const std::string &s) {
 }
 
 static void free_all() {
+    g_cached.clear();
     g_tmpls.reset();
     if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
     if (g_model) { llama_model_free(g_model); g_model = nullptr; }
@@ -129,14 +133,22 @@ Java_com_hiddenoutlier_launcher_assistant_Native_complete(
         return nullptr;
     }
 
-    llama_memory_clear(llama_get_memory(g_ctx), false);
+    // Reuse the cached prefix; always re-read at least the last token so there are fresh logits to sample from.
+    size_t keep = 0;
+    while (keep < g_cached.size() && keep < tokens.size() && g_cached[keep] == tokens[keep]) keep++;
+    if (keep >= tokens.size()) keep = tokens.size() - 1;
+    auto *mem = llama_get_memory(g_ctx);
+    if (keep == 0 || !llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1)) { llama_memory_clear(mem, false); keep = 0; }
+    LOGI("prompt %d tokens, reused %d from cache", (int) tokens.size(), (int) keep);
+    g_cached.assign(tokens.begin(), tokens.begin() + keep);
     common_batch batch(g_ctx);
-    for (int i = 0; i < (int) tokens.size(); i += BATCH) {
+    for (int i = (int) keep; i < (int) tokens.size(); i += BATCH) {
         batch.clear();
         const int end = std::min((int) tokens.size(), i + BATCH);
         for (int j = i; j < end; j++) batch.add(tokens[j], j, 0, j == (int) tokens.size() - 1);
-        if (llama_process(g_ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) { LOGE("prompt decode failed"); return nullptr; }
+        if (llama_process(g_ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) { LOGE("prompt decode failed"); g_cached.clear(); llama_memory_clear(mem, false); return nullptr; }
     }
+    g_cached = tokens;
 
     common_params_sampling sp;
     sp.temp = temp;
@@ -166,7 +178,8 @@ Java_com_hiddenoutlier_launcher_assistant_Native_complete(
         }
         batch.clear();
         batch.add(tok, pos++, 0, true);
-        if (llama_process(g_ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) { LOGE("decode failed"); break; }
+        if (llama_process(g_ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) { LOGE("decode failed"); g_cached.clear(); llama_memory_clear(llama_get_memory(g_ctx), false); break; }
+        g_cached.push_back(tok);
     }
     common_sampler_free(smpl);
     return env->NewStringUTF(out.c_str());

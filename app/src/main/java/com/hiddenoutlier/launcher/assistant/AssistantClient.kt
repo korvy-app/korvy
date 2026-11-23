@@ -74,6 +74,19 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
         try { result.await() } finally { scheduleIdle() }
     }
 
+    /** Loads the model in the background (e.g. when the assistant opens) so the first answer starts sooner. */
+    fun preload(modelPath: String) {
+        scope.launch {
+            idleJob?.cancel()
+            runCatching {
+                bind().send(Message.obtain(null, AssistantService.MSG_PRELOAD).apply {
+                    data = Bundle().apply { putString(AssistantService.K_PATH, modelPath) }
+                })
+            }
+            scheduleIdle()
+        }
+    }
+
     fun stop() { runCatching { service?.send(Message.obtain(null, AssistantService.MSG_STOP)) } }
 
     private fun scheduleIdle() {
@@ -87,5 +100,6 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
         connection = null; service = null
     }
 
-    companion object { const val IDLE_MS = 120_000L }
+    /** Keep the model loaded this long after the last use (the conversation's KV cache is kept with it). */
+    companion object { const val IDLE_MS = 300_000L }
 }

@@ -61,4 +61,26 @@ class AgentCoreTest {
         assertTrue(p.indexOf("Rules:") > p.indexOf("pirate"))
         assertTrue(p.contains("Seattle"))
     }
+
+    @Test fun actionJsonRoundTrips() {
+        val a = Action(ActionType.ANSWER, "He said \"hi\"\nthen \\left")
+        assertEquals(a, AgentCore.parse(AgentCore.toJson(a)))
+    }
+
+    @Test fun historyKeepsRecentTurnsAndCarriesToolResultsForward() {
+        val t1 = AgentCore.Turn("weather in Paris", AgentCore.toJson(Action(ActionType.WEATHER, "Paris")), "Rain, 44°F in Paris.", true)
+        val t2 = AgentCore.Turn("thanks", AgentCore.toJson(Action(ActionType.ANSWER, "You're welcome!")), "You're welcome!", false)
+        val m = AgentCore.historyMessages(listOf(t1, t2), "and in Seattle?")
+        assertEquals(listOf("user", "assistant", "user", "assistant", "user"), m.map { it.first })
+        assertEquals("weather in Paris", m[0].second)
+        assertTrue(m[2].second.startsWith("(Result of your last action: Rain, 44°F in Paris.)"))
+        assertEquals("and in Seattle?", m[4].second) // previous turn was an answer: no result note
+
+        val follow = AgentCore.historyMessages(listOf(t1), "what about tomorrow?")
+        assertTrue(follow.last().second.contains("Rain, 44°F") && follow.last().second.endsWith("what about tomorrow?"))
+
+        val many = (1..10).map { AgentCore.Turn("q$it", "{}", "", false) }
+        assertEquals(4 * 2 + 1, AgentCore.historyMessages(many, "new").size)
+        assertEquals("q7", AgentCore.historyMessages(many, "new")[0].second)
+    }
 }

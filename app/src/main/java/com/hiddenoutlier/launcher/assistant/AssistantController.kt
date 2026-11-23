@@ -98,6 +98,7 @@ class AssistantController(
                     ?: AgentCore.quickParse(q)
                     ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
                 if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return@launch }
+                update(replyId) { it.copy(actionJson = AgentCore.toJson(action)) }
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
                 if (action.type != ActionType.ANSWER) update(replyId) { it.copy(text = "…") }
                 val r = tools.run(action)
@@ -122,27 +123,66 @@ class AssistantController(
                 "Without one I can still open apps, set timers, do maths, and (with Online features on) get the weather, news and stock prices.") }
             return null
         }
-        val now = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy, h:mm a"))
+        // The prompt starts identically every time (system prompt with today's date, examples, earlier turns), so the
+        // model process can reuse what it already read and only process the new question.
+        val today = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
+        val time = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a"))
         val roles = ArrayList<String>(); val contents = ArrayList<String>()
-        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, now, s.homePlace.ifBlank { null })
+        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null })
         AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
-        roles += "user"; contents += q
+        AgentCore.historyMessages(history(excludeFrom = replyId - 1), "(It's $time.) $q").forEach { (r, c) -> roles += r; contents += c }
         val sb = StringBuilder()
         if (speak) speaker.beginStream()
-        val out = client.complete(
-            models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = 220, temp = 0.2f,
-            onStatus = { st -> update(replyId) { it.copy(text = st) } },
-            onToken = { piece ->
-                sb.append(piece)
-                AgentCore.partialAnswer(sb.toString())?.let { t ->
-                    update(replyId) { it.copy(text = t) }
-                    if (speak) speaker.stream(t)
-                }
-            },
-        )
+        // Watchdog: if nothing at all happens for a while (no status, no text), stop instead of "thinking" forever.
+        var lastProgress = System.currentTimeMillis()
+        val watchdog = scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(5_000)
+                if (System.currentTimeMillis() - lastProgress > STALL_MS) { client.stop(); break }
+            }
+        }
+        val out = try {
+            client.complete(
+                models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = 220, temp = 0.2f,
+                onStatus = { st -> lastProgress = System.currentTimeMillis(); update(replyId) { it.copy(text = st) } },
+                onToken = { piece ->
+                    lastProgress = System.currentTimeMillis()
+                    sb.append(piece)
+                    AgentCore.partialAnswer(sb.toString())?.let { t ->
+                        update(replyId) { it.copy(text = t) }
+                        if (speak) speaker.stream(t)
+                    }
+                },
+            )
+        } finally { watchdog.cancel() }
+        if (System.currentTimeMillis() - lastProgress > STALL_MS && AgentCore.parse(out) == null) {
+            return Action(ActionType.ANSWER, "That was taking too long, so I stopped. A smaller model answers faster on this phone.")
+        }
         return AgentCore.parse(out) ?: Action(ActionType.ANSWER, "Sorry, I got confused. Could you rephrase that?")
+    }
+
+    /** Earlier finished exchanges (user question + assistant action), oldest first, before item [excludeFrom]. */
+    private fun history(excludeFrom: Long): List<AgentCore.Turn> {
+        val items = chat.value.filter { it.id < excludeFrom }
+        val turns = ArrayList<AgentCore.Turn>()
+        for (i in 0 until items.size - 1) {
+            val u = items[i]; val a = items[i + 1]
+            if (u.fromUser && !a.fromUser && a.actionJson != null && !a.pending) {
+                val wasTool = AgentCore.parse(a.actionJson)?.type?.let { it != ActionType.ANSWER } ?: false
+                turns += AgentCore.Turn(u.text, a.actionJson, (listOf(a.text) + a.lines).joinToString(" "), wasTool)
+            }
+        }
+        return turns
+    }
+
+    /** Called when the assistant opens: load the chosen model now so the first answer starts sooner. */
+    fun warmUp() {
+        val m = ModelCatalog.byId(settings.value.modelId) ?: return
+        if (m.id in models.installed.value) client.preload(models.fileFor(m).path)
     }
 
     fun stop() { client.stop(); speaker.stop(); job?.cancel() }
     fun clear() { if (!busy.value) chat.value = emptyList() }
+
+    companion object { const val STALL_MS = 90_000L }
 }

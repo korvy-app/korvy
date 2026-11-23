@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,6 +43,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val bgFiles by vm.backgrounds.files.collectAsStateWithLifecycle()
     val lockedOpen by vm.lockedListOpen.collectAsStateWithLifecycle()
     val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
+    val closeInstantly by vm.closeInstantly.collectAsStateWithLifecycle()
     val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
     val chat by vm.chat.collectAsStateWithLifecycle()
     val busy by vm.assistantBusy.collectAsStateWithLifecycle()
@@ -107,7 +109,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(
                 visible = screen == Screen.DRAWER || listDrag,
                 enter = slideInVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeIn(Motion.fade(animations)),
-                exit = slideOutVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeOut(Motion.fade(animations)),
+                exit = if (closeInstantly) androidx.compose.animation.ExitTransition.None
+                    else slideOutVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeOut(Motion.fade(animations)),
             ) {
                 AppDrawer(
                     visible, results, query, settings.engine, focus, vm.repo,
@@ -117,7 +120,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     onWebSearch = vm::webSearch,
                     menu = menu,
                     drag = drag,
-                    modifier = Modifier.graphicsLayer { alpha = if (listDrag) 0f else 1f },
+                    // While closing (or hidden under a drag), the list must not take taps meant for the home screen.
+                    modifier = Modifier.graphicsLayer { alpha = if (listDrag) 0f else 1f }
+                        .swallowTouches(screen != Screen.DRAWER && !listDrag),
                     onAsk = if (settings.assistant) ({ q -> vm.openAssistant(q) }) else null,
                     webSuggestions = webSuggestions,
                 )
@@ -184,3 +189,15 @@ fun Root(vm: LauncherViewModel, host: Host) {
         }
     }
 }
+
+/**
+ * While [active], eats every touch before the content sees it. Used on screens that are animating away, which
+ * are still drawn on top for a moment: without this, a tap meant for the home screen (e.g. the Settings gear)
+ * would land on whatever app icon of the closing list sits under the finger.
+ */
+fun Modifier.swallowTouches(active: Boolean): Modifier =
+    if (!active) this else this.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
+    }

@@ -197,6 +197,14 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.3** – Assistant: keeps the conversation (last 4 exchanges, with tool results carried into
+  the next question; `AgentCore.historyMessages`); llama.cpp reuses the cached prompt prefix between requests
+  (only new text is read); model preloads when the assistant opens and stays loaded 5 min; status shows
+  "Loading model…" vs "Thinking…"; a 90 s no-progress watchdog stops a stuck reply. Context window 4096.
+  Fixed: tapping the Settings gear right after returning from an app could open an app from the (still closing,
+  invisible) app list; the list now closes instantly on return, and closing screens swallow taps.
+  **Not verified on a phone yet:** the Pixel 4a was locked (it has a PIN) and restarted during testing, so the
+  gear fix and the follow-up questions still need checking on a device.
 - 2026-11-22 (later): **0.4.2** – Fixed: long model downloads failed after a while (the app was paused with the
   screen off). Downloads now run in a foreground service with a progress notification, keep Wi-Fi/CPU awake while
   running, and retry dropped connections automatically.

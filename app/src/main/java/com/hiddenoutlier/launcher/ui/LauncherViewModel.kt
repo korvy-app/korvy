@@ -38,6 +38,8 @@ data class ChatItem(
     val lines: List<String> = emptyList(),
     val link: String? = null,
     val pending: Boolean = false,
+    /** For assistant replies: the action that produced it, as the model's JSON (used as chat history). */
+    val actionJson: String? = null,
 )
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
@@ -153,15 +155,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // Navigation
-    fun open(s: Screen) { _screen.value = s; if (s != Screen.HIDDEN) lockedListOpen.value = false }
+    fun open(s: Screen) { closeInstantly.value = false; _screen.value = s; if (s != Screen.HIDDEN) lockedListOpen.value = false }
     fun openSearch() { open(Screen.DRAWER); focusSearch.value++ }
-    fun goHome() { _screen.value = Screen.HOME; query.value = ""; lockedListOpen.value = false; refreshSuggestions() }
+    /** True when the last close should be instant (coming back from an app): no closing animation to tap through. */
+    val closeInstantly = MutableStateFlow(false)
+    fun goHome(instant: Boolean = false) {
+        closeInstantly.value = instant
+        _screen.value = Screen.HOME; query.value = ""; lockedListOpen.value = false; refreshSuggestions()
+    }
 
     private var leftForApp = false
 
     /** Called when the launcher goes out of view. Only opening an app resets it to the home screen;
      *  the photo picker, lock prompt and system dialogs come back to where the user was. */
-    fun onStopped() { if (leftForApp) { leftForApp = false; goHome() } }
+    fun onStopped() { if (leftForApp) { leftForApp = false; goHome(instant = true) } }
 
     fun launch(app: AppEntry) {
         leftForApp = true
@@ -220,6 +227,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun openAssistant(question: String? = null) {
         _screen.value = Screen.ASSISTANT
         query.value = ""
+        assistant.warmUp()
         if (!question.isNullOrBlank()) ask(question)
     }
 
