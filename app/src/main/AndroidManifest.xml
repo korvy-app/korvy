@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Lets the assistant start a countdown in the Clock app. -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- Voice input: asked for only when the user first taps the mic; on-device recognition only. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- See every launchable app (a launcher's core job). -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
@@ -49,6 +51,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Holding the power button (when this app is the digital assistant) opens this panel over any app. -->
+        <activity
+            android:name=".AssistActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Launcher.Panel"
+            android:taskAffinity="com.hiddenoutlier.launcher.assist"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:windowSoftInputMode="adjustResize|stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- The on-device model runs in its own process so the launcher stays light. -->
         <service
             android:name=".assistant.AssistantService"

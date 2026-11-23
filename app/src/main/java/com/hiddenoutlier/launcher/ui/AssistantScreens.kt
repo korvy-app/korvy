@@ -88,12 +88,14 @@ fun AssistantScreen(
     busy: Boolean,
     modelName: String?,
     onSend: (String) -> Unit,
+    onVoice: (String) -> Unit,
     onStop: () -> Unit,
     onClear: () -> Unit,
     onOpenModels: () -> Unit,
     onBack: () -> Unit,
 ) {
     var input by remember { mutableStateOf("") }
+    val mic = remember { MicState() }
     val list = rememberLazyListState()
     val focus = remember { FocusRequester() }
     val context = LocalContext.current
@@ -119,17 +121,20 @@ fun AssistantScreen(
             }
             items(chat, key = { it.id }) { m -> Bubble(m) { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } } }
         }
+        val status = mic.error ?: if (mic.listening) mic.partial.ifBlank { "Listening…" } else null
+        status?.let { Text(it, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp)) }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = input,
                 // Enter sends (hardware keyboards and keyboards without a Send key insert a newline otherwise).
-                onValueChange = { v -> if (v.contains('\n')) { val q = v.replace('\n', ' ').trim(); input = ""; if (!busy && q.isNotEmpty()) onSend(q) } else input = v },
+                onValueChange = { v -> if (v.contains('\n')) { val q = v.replace('\n', ' ').trim(); input = ""; if (!busy && q.isNotEmpty()) { mic.error = null; onSend(q) } } else input = v },
                 placeholder = { Text("Ask or tell me to do something") },
                 modifier = Modifier.weight(1f).focusRequester(focus).testTag("assistant_input"), maxLines = 4,
                 shape = RoundedCornerShape(24.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { if (!busy && input.isNotBlank()) { onSend(input); input = "" } }),
             )
+            MicButton(mic, onResult = onVoice)
             if (busy) IconButton(onClick = onStop, modifier = Modifier.testTag("assistant_stop")) { Icon(Icons.Outlined.Stop, "Stop") }
             else IconButton(onClick = { if (input.isNotBlank()) { onSend(input); input = "" } }, modifier = Modifier.testTag("assistant_send")) {
                 Icon(Icons.AutoMirrored.Outlined.Send, "Send")
@@ -139,7 +144,7 @@ fun AssistantScreen(
 }
 
 @Composable
-private fun Bubble(m: ChatItem, openLink: (String) -> Unit) {
+internal fun Bubble(m: ChatItem, openLink: (String) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
         Column(
             Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp))

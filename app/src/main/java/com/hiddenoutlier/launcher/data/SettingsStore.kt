@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore("settings")
 
+/** When the assistant speaks its replies. */
+enum class SpeakMode(val title: String) { ALWAYS("Always"), AFTER_VOICE("When I speak to it"), OFF("Never") }
+
 /** Web search engines. All open the results in the user's browser; nothing passes through this app. */
 enum class SearchEngine(val title: String, val url: String) {
     DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q="),
@@ -41,6 +44,14 @@ data class Settings(
     val homePlace: String = "",
     val fahrenheit: Boolean = java.util.Locale.getDefault().country in setOf("US", "LR", "MM"),
     val modelsOnMobileData: Boolean = false,
+    // Voice
+    val speak: SpeakMode = SpeakMode.AFTER_VOICE,
+    val ttsEngine: String? = null,
+    val ttsVoice: String? = null,
+    val ttsRate: Float = 1f,
+    val ttsPitch: Float = 1f,
+    /** Start listening right away when the assistant is opened with the power button. */
+    val listenOnAssist: Boolean = true,
 ) {
     fun allows(source: com.hiddenoutlier.launcher.platform.OnlineSource) =
         online && if (source.optIn) source.name in sourcesOn else source.name !in sourcesOff
@@ -66,6 +77,12 @@ class SettingsStore(private val context: Context) {
         val homePlace = stringPreferencesKey("home_place")
         val fahrenheit = booleanPreferencesKey("fahrenheit")
         val modelsOnMobileData = booleanPreferencesKey("models_on_mobile_data")
+        val speak = stringPreferencesKey("speak")
+        val ttsEngine = stringPreferencesKey("tts_engine")
+        val ttsVoice = stringPreferencesKey("tts_voice")
+        val ttsRate = androidx.datastore.preferences.core.floatPreferencesKey("tts_rate")
+        val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
+        val listenOnAssist = booleanPreferencesKey("listen_on_assist")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -86,6 +103,12 @@ class SettingsStore(private val context: Context) {
             homePlace = p[K.homePlace] ?: "",
             fahrenheit = p[K.fahrenheit] ?: Settings().fahrenheit,
             modelsOnMobileData = p[K.modelsOnMobileData] ?: false,
+            speak = p[K.speak]?.let { runCatching { SpeakMode.valueOf(it) }.getOrNull() } ?: SpeakMode.AFTER_VOICE,
+            ttsEngine = p[K.ttsEngine],
+            ttsVoice = p[K.ttsVoice],
+            ttsRate = p[K.ttsRate] ?: 1f,
+            ttsPitch = p[K.ttsPitch] ?: 1f,
+            listenOnAssist = p[K.listenOnAssist] ?: true,
         )
     }
 
@@ -115,4 +138,10 @@ class SettingsStore(private val context: Context) {
     suspend fun setHomePlace(v: String) = set { it[K.homePlace] = v.trim() }
     suspend fun setFahrenheit(v: Boolean) = set { it[K.fahrenheit] = v }
     suspend fun setModelsOnMobileData(v: Boolean) = set { it[K.modelsOnMobileData] = v }
+    suspend fun setSpeak(v: SpeakMode) = set { it[K.speak] = v.name }
+    suspend fun setTtsEngine(v: String?) = set { if (v == null) it.remove(K.ttsEngine) else it[K.ttsEngine] = v; it.remove(K.ttsVoice) }
+    suspend fun setTtsVoice(v: String?) = set { if (v == null) it.remove(K.ttsVoice) else it[K.ttsVoice] = v }
+    suspend fun setTtsRate(v: Float) = set { it[K.ttsRate] = v }
+    suspend fun setTtsPitch(v: Float) = set { it[K.ttsPitch] = v }
+    suspend fun setListenOnAssist(v: Boolean) = set { it[K.listenOnAssist] = v }
 }

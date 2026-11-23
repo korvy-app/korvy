@@ -146,7 +146,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.ASSISTANT, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 AssistantScreen(
                     chat, busy, com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(settings.modelId)?.takeIf { it.id in installedModels }?.name,
-                    onSend = vm::ask, onStop = vm::stopAssistant, onClear = vm::clearChat,
+                    onSend = { vm.ask(it) }, onVoice = { vm.ask(it, byVoice = true) }, onStop = vm::stopAssistant, onClear = vm::clearChat,
                     onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
                 )
             }
@@ -166,6 +166,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
                         onUse = vm::finishCrop, onSkip = vm::skipCrop)
                 }
             }
+            AnimatedVisibility(screen == Screen.VOICE, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                VoiceSettingsScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
+            }
             DragOverlay(drag, vm.repo)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
@@ -173,7 +176,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
         }
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
-                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY -> vm.open(Screen.SETTINGS)
+                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE -> vm.open(Screen.SETTINGS)
                 Screen.CROP -> vm.skipCrop()
                 Screen.TUTORIAL -> vm.finishTutorial()
                 else -> vm.goHome()

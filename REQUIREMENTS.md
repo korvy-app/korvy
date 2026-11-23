@@ -57,6 +57,21 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Android's ICU regex differs from the desktop JVM (e.g. a bare `}` is an error on Android): regexes in `core/`
   must be checked on a device, not only by unit tests.
 
+## Power button and voice (0.4.0)
+- **Power button:** `AssistActivity` answers `android.intent.action.ASSIST`, which qualifies the app for Android's
+  Digital assistant role (verified on Android 13). The user picks it in Default apps → Digital assistant app
+  (Settings → Assistant shows the steps and a button); on Pixels the power button must also be set to
+  "Digital assistant" under Gestures. The panel is a see-through activity in its own task (not in Recents) that
+  slides up over the current app, shares the conversation (`assistant/AssistantController`, app-wide in
+  `LauncherApp`), closes itself when a request opens an app or page, and can expand to the full assistant screen.
+- **Voice input:** `assistant/VoiceInput` uses `SpeechRecognizer.createOnDeviceSpeechRecognizer` only (Android 12+);
+  no online fallback, ever. Mic permission is asked on first use. Starts automatically when opened by the power
+  button (setting). The mic is on only while listening (Android shows its indicator).
+- **Spoken replies:** `assistant/Speaker` wraps Android TextToSpeech (any installed engine); Settings → Assistant →
+  Voice: speak Always / When I speak to it (default) / Never, engine, voice (offline voices by default), speed,
+  pitch, test. Model answers are spoken sentence by sentence as they stream (`core/SentenceSplitter`).
+- Later: bundled open-source recognizer (whisper.cpp / Moonshine) and voices (Piper), wake word.
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
@@ -178,6 +193,13 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.0** – Hold the power button for the assistant (panel over any app), voice input
+  (on-device recognizer only) and spoken replies with engine/voice choice. The assistant moved into an app-wide
+  `AssistantController`. Checked on the Pixel 4a release build: the app was accepted as Digital assistant; the
+  assist key opened the panel over Calculator; mic permission prompt then "Listening…" with the system mic
+  indicator; silence timed out cleanly; typed weather answered in the panel; Test voice and a spoken weather
+  reply played through Google's embedded (offline) voice. Speaking to it wasn't tested (no way to talk to the
+  test phone remotely).
 - 2026-11-22 (later): **0.3.0** – On-device assistant (see "Assistant implementation"), Online features with
   per-source switches, autocomplete in search, calculator, picture crop step, and fixes:
   - Fixed: scrolling search results could start a drag (a scroll was mistaken for a long press). Now a drag

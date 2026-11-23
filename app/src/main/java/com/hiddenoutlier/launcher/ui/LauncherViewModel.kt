@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE }
 
 /** One line of the assistant conversation. */
 data class ChatItem(
@@ -210,21 +210,12 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun appInfo(app: AppEntry) = runCatching { repo.openAppInfo(app) }
 
-    // ---- Assistant --------------------------------------------------------------------------------------------
-    val models = com.hiddenoutlier.launcher.assistant.ModelStore(app)
-    val personality = com.hiddenoutlier.launcher.assistant.Personality(app)
-    private val client by lazy { com.hiddenoutlier.launcher.assistant.AssistantClient(app, viewModelScope) }
-    private val tools by lazy {
-        com.hiddenoutlier.launcher.assistant.Tools(
-            app, apps = { visibleApps.value }, launch = { launch(it) }, webSearch = { webSearch(it) },
-            allowed = { settings.value.allows(it) }, homePlace = { settings.value.homePlace },
-            fahrenheit = { settings.value.fahrenheit },
-        )
-    }
-    val chat = MutableStateFlow<List<ChatItem>>(emptyList())
-    val assistantBusy = MutableStateFlow(false)
-    private var nextId = 0L
-    private var askJob: kotlinx.coroutines.Job? = null
+    // ---- Assistant (shared with the power-button panel: see AssistantController) -----------------------------
+    val assistant = la.assistant
+    val models = la.models
+    val personality = la.personality
+    val chat = assistant.chat
+    val assistantBusy = assistant.busy
 
     fun openAssistant(question: String? = null) {
         _screen.value = Screen.ASSISTANT
@@ -232,67 +223,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (!question.isNullOrBlank()) ask(question)
     }
 
-    private fun updateItem(id: Long, f: (ChatItem) -> ChatItem) { chat.value = chat.value.map { if (it.id == id) f(it) else it } }
-
-    fun ask(text: String) {
-        val q = text.trim()
-        if (q.isEmpty() || assistantBusy.value) return
-        chat.value = chat.value + ChatItem(nextId++, true, q)
-        val replyId = nextId++
-        chat.value = chat.value + ChatItem(replyId, false, "", pending = true)
-        assistantBusy.value = true
-        askJob = viewModelScope.launch {
-            try {
-                // 1. Plain code for common requests: instant, no model needed.
-                // Maths is always done by code: small models get arithmetic wrong.
-                val action = com.hiddenoutlier.launcher.core.Calc.answer(q)?.let { com.hiddenoutlier.launcher.core.Action(com.hiddenoutlier.launcher.core.ActionType.ANSWER, it) }
-                    ?: com.hiddenoutlier.launcher.core.AgentCore.quickParse(q) ?: modelAction(q, replyId)
-                if (action == null) return@launch
-                if (action.type != com.hiddenoutlier.launcher.core.ActionType.ANSWER) updateItem(replyId) { it.copy(text = "…") }
-                // 2. Do it, and format the result with plain code.
-                val r = tools.run(action)
-                updateItem(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, pending = false) }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                updateItem(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
-                throw e
-            } catch (e: Exception) {
-                updateItem(replyId) { it.copy(text = "Sorry: ${e.message}", pending = false) }
-            } finally {
-                assistantBusy.value = false
-            }
-        }
-    }
-
-    /** Asks the model to choose an action (JSON constrained by a grammar), streaming an answer as it's written. */
-    private suspend fun modelAction(q: String, replyId: Long): com.hiddenoutlier.launcher.core.Action? {
-        val s = settings.value
-        val m = com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(s.modelId)
-        if (m == null || m.id !in models.installed.value) {
-            updateItem(replyId) { it.copy(pending = false, text = "To answer questions I need a model. Pick one in Settings → Assistant → Model. " +
-                "Without one I can still open apps, set timers, and (with Online features on) get the weather, news and stock prices.") }
-            return null
-        }
-        val now = java.time.ZonedDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy, h:mm a"))
-        val roles = ArrayList<String>(); val contents = ArrayList<String>()
-        roles += "system"; contents += com.hiddenoutlier.launcher.core.AgentCore.systemPrompt(
-            withContext(Dispatchers.IO) { personality.load() }, now, s.homePlace.ifBlank { null })
-        com.hiddenoutlier.launcher.core.AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
-        roles += "user"; contents += q
-        val sb = StringBuilder()
-        val out = client.complete(
-            models.fileFor(m).path, roles, contents, com.hiddenoutlier.launcher.core.AgentCore.GRAMMAR, maxTokens = 220, temp = 0.2f,
-            onStatus = { st -> updateItem(replyId) { it.copy(text = st) } },
-            onToken = { piece ->
-                sb.append(piece)
-                com.hiddenoutlier.launcher.core.AgentCore.partialAnswer(sb.toString())?.let { t -> updateItem(replyId) { it.copy(text = t) } }
-            },
-        )
-        return com.hiddenoutlier.launcher.core.AgentCore.parse(out)
-            ?: com.hiddenoutlier.launcher.core.Action(com.hiddenoutlier.launcher.core.ActionType.ANSWER, "Sorry, I got confused. Could you rephrase that?")
-    }
-
-    fun stopAssistant() { client.stop(); askJob?.cancel() }
-    fun clearChat() { if (!assistantBusy.value) chat.value = emptyList() }
+    fun ask(text: String, byVoice: Boolean = false) = assistant.ask(text, byVoice)
+    fun stopAssistant() = assistant.stop()
+    fun clearChat() = assistant.clear()
 
     private var downloadJob: kotlinx.coroutines.Job? = null
     fun downloadModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
@@ -314,6 +247,12 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setHomePlace(v: String) = save { la.settings.setHomePlace(v) }
     fun setFahrenheit(v: Boolean) = save { la.settings.setFahrenheit(v) }
     fun setModelsOnMobileData(v: Boolean) = save { la.settings.setModelsOnMobileData(v) }
+    fun setSpeak(v: com.hiddenoutlier.launcher.data.SpeakMode) = save { la.settings.setSpeak(v) }
+    fun setTtsEngine(v: String?) = save { la.settings.setTtsEngine(v) }
+    fun setTtsVoice(v: String?) = save { la.settings.setTtsVoice(v) }
+    fun setTtsRate(v: Float) = save { la.settings.setTtsRate(v) }
+    fun setTtsPitch(v: Float) = save { la.settings.setTtsPitch(v) }
+    fun setListenOnAssist(v: Boolean) = save { la.settings.setListenOnAssist(v) }
     fun savePersonality(text: String) = viewModelScope.launch(Dispatchers.IO) { personality.save(text) }
 
     // Settings

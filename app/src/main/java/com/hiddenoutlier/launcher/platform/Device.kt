@@ -35,6 +35,15 @@ object Device {
         return home?.activityInfo?.packageName == context.packageName
     }
 
+    fun isDefaultAssistant(context: Context): Boolean =
+        Build.VERSION.SDK_INT >= 29 && context.getSystemService(RoleManager::class.java).isRoleHeld(RoleManager.ROLE_ASSISTANT)
+
+    /** Android doesn't let apps ask for the assistant role directly; open the screen where the user picks it. */
+    fun openAssistantSettings(context: Context) {
+        val tries = listOf(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS), Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS), Intent(Settings.ACTION_SETTINGS))
+        for (i in tries) if (runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    }
+
     /** The system dialog (Android 10+) or the Default apps screen to make this the home app. */
     fun homeRoleIntent(context: Context): Intent =
         if (Build.VERSION.SDK_INT >= 29) context.getSystemService(RoleManager::class.java).createRequestRoleIntent(RoleManager.ROLE_HOME)

@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -147,6 +148,26 @@ fun SettingsScreen(
                             Text("Choose and download the on-device model.", style = MaterialTheme.typography.bodySmall)
                         }
                         Text(com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(s.modelId)?.name ?: "None")
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.open(Screen.VOICE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_voice"),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Voice")
+                            Text("Spoken replies, speech engine and voice, speed.", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(s.speak.title)
+                    }
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val isAssistant = remember { com.hiddenoutlier.launcher.platform.Device.isDefaultAssistant(ctx) }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).testTag("power_button")) {
+                        Text("Hold the power button for the assistant")
+                        Text(if (isAssistant) "This is your digital assistant app. On Pixels, also check Settings → System → Gestures → Press & hold power button → Digital assistant."
+                            else "1. Choose Launcher as the digital assistant app. 2. On Pixels: Settings → System → Gestures → Press & hold power button → Digital assistant.",
+                            style = MaterialTheme.typography.bodySmall)
+                        if (!isAssistant) OutlinedButton(onClick = { com.hiddenoutlier.launcher.platform.Device.openAssistantSettings(ctx) }, modifier = Modifier.padding(top = 6.dp)) {
+                            Text("Choose digital assistant app")
+                        }
                     }
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.open(Screen.PERSONALITY) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_personality"),
