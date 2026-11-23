@@ -1,6 +1,16 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.androidx.baselineprofile)
+}
+
+// Startup speed: profiles recorded on a phone by the :baselineprofile module
+// (./gradlew :app:generatePlayReleaseBaselineProfile). The startup profile lets R8 put startup code first in the
+// dex files ("dex layout optimization"); the baseline profile is precompiled by Android at install.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    dexLayoutOptimization = true
+    mergeIntoMain = true
 }
 
 android {
@@ -15,8 +25,8 @@ android {
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 13
-        versionName = "0.6.0"
+        versionCode = 14
+        versionName = "0.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.
@@ -109,6 +119,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
     // Natural voices: sherpa-onnx (prebuilt, fetched by scripts/fetch-libs.sh) and tar.bz2 unpacking for voice packs.
     val sherpa = file("libs/sherpa-onnx-1.13.8.aar")
     if (!sherpa.exists()) throw GradleException("Missing ${sherpa.name}: run ./scripts/fetch-libs.sh")

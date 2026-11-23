@@ -209,7 +209,19 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured 2026-11-22, Pixel 4a, release APK (2.1 MB): cold start 417 ms (target < 300 ms; baseline profiles
   next). Debug build: 1.7 s.
 
+## Startup profile (0.6.1)
+- `:baselineprofile` module (androidx.baselineprofile 1.6.0-alpha02; 1.5.0 registers no tasks with AGP 9.5):
+  `BaselineProfileGenerator` records startup + app list + search; `StartupBenchmark` measures cold start.
+- Regenerate after big UI changes: `./gradlew :app:generateBaselineProfile
+  -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true` (phone connected, Android 13+, unlocked).
+  It writes `app/src/main/generated/baselineProfiles/{baseline,startup}-prof.txt`; `dexLayoutOptimization = true`
+  makes R8 put startup code first in the dex files. Afterwards uninstall `.foss` and `.baselineprofile` from the
+  phone and set the launcher as home again (reinstalling resets it).
+- Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
+
 ## Status / log
+- 2026-11-22 (later): **0.6.1** – Baseline + startup profiles with dex layout optimization (cold start 348 → 312 ms
+  median on the Pixel 4a). Contacts now come before "Ask the assistant" in search results.
 - 2026-11-22 (later): **0.6.0** – Actions in other apps with confirmation cards, optional contacts, contacts in
   search; natural voices (Kokoro, Piper via sherpa-onnx 1.13.8, which still has the espeak phonemizer that 2.0
   removed; the JNI audio callback is a kept named class, since as a lambda R8 merged it away and the voice process
