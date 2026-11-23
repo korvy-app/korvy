@@ -181,6 +181,7 @@ class AssistantController(
                 val action = Calc.answer(q)?.let { Action(ActionType.ANSWER, it) }
                     ?: AgentCore.quickParse(q)
                     ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
+                        ?.let { a -> if (AgentCore.grounded(a, q)) a else Action(ActionType.ANSWER, "Sorry, I'm not sure what you meant. Could you say it another way?") }
                 if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return }
                 update(replyId) { it.copy(actionJson = AgentCore.toJson(action)) }
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()

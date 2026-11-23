@@ -9,6 +9,7 @@ enum class ActionType(val id: String, val help: String) {
     NEWS("news", "latest news headlines; arg = topic, or empty"),
     STOCK("stock", "stock price; arg = ticker symbol like AAPL"),
     TIMER("timer", "start a countdown timer; arg = length like \"5 minutes\""),
+    ALARM("alarm", "set an alarm clock for a time of day; arg = time like \"7:30 am\" or \"8 pm\""),
     TEXT("text", "send a text message; arg = \"recipient: message\""),
     CALL("call", "phone someone; arg = contact name or phone number"),
     RIDE("ride", "order a ride; arg = \"uber: destination\" or \"lyft: destination\""),
@@ -62,6 +63,7 @@ object AgentCore {
         "can you open my camera" to """{"action": "open_app", "arg": "Camera"}""",
         "how much is tesla trading at" to """{"action": "stock", "arg": "TSLA"}""",
         "what's 15% of 80" to """{"action": "answer", "arg": "15% of 80 is 12."}""",
+        "wake me up at 6:30 tomorrow" to """{"action": "alarm", "arg": "6:30 am"}""",
         "let my sister know I'll be late" to """{"action": "text", "arg": "sister: I'll be late"}""",
     )
 
@@ -71,6 +73,7 @@ object AgentCore {
     private val WEATHER = Regex("^(?:(?:what|how)(?:'?s|\\s+is|\\s+was|\\s+will)\\s+(?:be\\s+)?the\\s+|(?:tell\\s+me\\s+)?the\\s+)?weather(?:\\s+(?:be|been|going\\s+to\\s+be))?(?:\\s+like)?(?:\\s+(?:in|for|at)\\s+(.+?))?(?:\\s+(?:today|tomorrow|tonight|this\\s+(?:week|weekend|morning|afternoon|evening)|right\\s+now|now))?\\??$", RegexOption.IGNORE_CASE)
     private val NEWS = Regex("^(?:the\\s+|latest\\s+|today'?s\\s+)?(?:news|headlines)(?:\\s+(?:about|on)\\s+(.+?))?\\??$", RegexOption.IGNORE_CASE)
     private val STOCK = Regex("^(?:stock|quote|price)\\s+(?:of\\s+|for\\s+)?([A-Za-z.]{1,6})\\??$|^([A-Za-z.]{1,6})\\s+(?:stock|share)\\s*(?:price)?\\??$", RegexOption.IGNORE_CASE)
+    private val ALARM = Regex("^(?:please\\s+)?(?:(?:set|make|create)\\s+(?:an?\\s+|my\\s+)?alarm|alarm|wake\\s+me(?:\\s+up)?)\\s+(?:for\\s+|at\\s+|to\\s+)?(.+?)(?:\\s+(?:tomorrow(?:\\s+morning)?|today|tonight))?$", RegexOption.IGNORE_CASE)
     private val TIMER = Regex("^(?:set\\s+(?:a\\s+)?)?timer\\s+(?:for\\s+)?(.+)$|^(.+?)\\s+timer$", RegexOption.IGNORE_CASE)
     private val RIDE = Regex("^(?:(?:please\\s+)?(?:get|call|book|order|find)\\s+(?:me\\s+)?)?(?:an?\\s+)?(uber|lyft|ride|taxi|cab)\\s+(?:to|for)\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val CALL = Regex("^(?:please\\s+)?(?:call|dial|phone|ring)\\s+(.+)$", RegexOption.IGNORE_CASE)
@@ -93,6 +96,39 @@ object AgentCore {
         return if (t.isEmpty() || timeLike.matches(t)) "" else t
     }
 
+    /**
+     * A time of day → (hour 0-23, minute). "8pm", "8:30 p.m.", "20:00", "noon", "7 in the morning", "9 tonight".
+     * Without am/pm, an hour of 1-11 means its next occurrence after [nowMinutes] (minutes since midnight).
+     */
+    fun parseClock(s: String, nowMinutes: Int): Pair<Int, Int>? {
+        val t = s.lowercase().trim().replace(".", "").replace(Regex("\\s+"), " ")
+        if (t == "noon" || t == "midday") return 12 to 0
+        if (t == "midnight") return 0 to 0
+        val m = Regex("^(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm|a|p|in the morning|in the afternoon|in the evening|at night|tonight|this evening|this morning)?$").matchEntire(t) ?: return null
+        var h = m.groupValues[1].toInt(); val min = m.groupValues[2].ifEmpty { "0" }.toInt()
+        if (h > 23 || min > 59) return null
+        val mer = m.groupValues[3]
+        val pm = mer.startsWith("p") || mer in setOf("in the afternoon", "in the evening", "at night", "tonight", "this evening")
+        val am = mer.startsWith("a") || mer in setOf("in the morning", "this morning")
+        if (pm || am) {
+            if (h !in 1..12) return null
+            h = when { pm && h < 12 -> h + 12; am && h == 12 -> 0; else -> h }
+        } else if (h in 1..11 && h * 60 + min <= nowMinutes && (h + 12) * 60 + min > nowMinutes) h += 12
+        return h to min
+    }
+
+    /**
+     * True unless the model is acting on someone the user never mentioned (small models sometimes copy a name
+     * from the examples: "set an alarm" → text "sister"). Texts and calls need the person's name in the request.
+     */
+    fun grounded(a: Action, question: String): Boolean {
+        if (a.type != ActionType.TEXT && a.type != ActionType.CALL) return true
+        val who = if (a.type == ActionType.TEXT) a.arg.substringBefore(':') else a.arg
+        if (who.count { it.isDigit() } >= 3) return question.filter { it.isDigit() }.contains(who.filter { it.isDigit() })
+        val q = question.lowercase()
+        return who.lowercase().split(Regex("[^a-z0-9']+")).filter { it.length >= 2 }.any { q.contains(it) }
+    }
+
     fun quickParse(input: String): Action? {
         val t = input.trim().trimEnd('.', '!')
         if (t.isEmpty()) return null
@@ -107,6 +143,7 @@ object AgentCore {
         HELP.matchEntire(t)?.let { return Action(ActionType.HELP, "") }
         PLAY.matchEntire(t)?.let { return Action(ActionType.PLAY, it.groupValues[1].trim()) }
         CALL.matchEntire(t)?.let { return Action(ActionType.CALL, it.groupValues[1].trim()) }
+        ALARM.matchEntire(t)?.let { m -> if (parseClock(m.groupValues[1], 0) != null) return Action(ActionType.ALARM, m.groupValues[1].trim()) }
         TIMER.matchEntire(t)?.let { m -> parseDuration(m.groupValues[1].ifEmpty { m.groupValues[2] })?.let { return Action(ActionType.TIMER, it.toString()) } }
         WEATHER.matchEntire(t)?.let { return Action(ActionType.WEATHER, it.groupValues[1].trim()) }
         NEWS.matchEntire(t)?.let { return Action(ActionType.NEWS, it.groupValues[1].trim()) }

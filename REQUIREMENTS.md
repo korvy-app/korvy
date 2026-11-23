@@ -245,6 +245,11 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.10.1** – Alarm action ("set alarm at 8pm", "wake me up at 6:30", `core/AgentCore.parseClock`; an
+  hour without am/pm means its next occurrence) via AlarmClock.ACTION_SET_ALARM. Grounding guard: a model's text or
+  call is refused unless the person's name (or number) is in the request (a model had turned "set alarm at 8pm"
+  into texting "sister" from the examples). Verified on the 4a: "set alarm at 8pm" → Clock has an 8:00 PM alarm
+  (turned off again afterwards).
 - 2026-11-23: **0.10.0** – Notebook (see its section). Verified on the 4a: taught "when I say morning, weather and
   then 15% of 80" → "morning" ran both steps; "remember I like temperatures in Celsius"; "when I say snapper I mean
   Camera" → "snapper" opened the camera; "what do you remember?" listed all three; "forget …" removed them.

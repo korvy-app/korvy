@@ -80,6 +80,7 @@ class Tools(
             ActionType.NEWS -> news(a.arg)
             ActionType.STOCK -> stock(a.arg)
             ActionType.TIMER -> timer(a.arg)
+            ActionType.ALARM -> alarm(a.arg)
             ActionType.TEXT -> text(a.arg)
             ActionType.CALL -> call(a.arg)
             ActionType.RIDE -> ride(a.arg)
@@ -200,6 +201,17 @@ class Tools(
         context.startActivity(i)
         val text = when { seconds % 3600 == 0 -> "${seconds / 3600} hour"; seconds % 60 == 0 -> "${seconds / 60} minute"; else -> "$seconds second" }
         return ToolResult("Timer set for ${text}${if (text.startsWith("1 ")) "" else "s"}.")
+    }
+
+    private fun alarm(arg: String): ToolResult {
+        val now = java.time.LocalTime.now()
+        val (h, m) = com.hiddenoutlier.launcher.core.AgentCore.parseClock(arg, now.hour * 60 + now.minute)
+            ?: return ToolResult("What time should the alarm be?")
+        val i = Intent(AlarmClock.ACTION_SET_ALARM).putExtra(AlarmClock.EXTRA_HOUR, h).putExtra(AlarmClock.EXTRA_MINUTES, m)
+            .putExtra(AlarmClock.EXTRA_SKIP_UI, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { context.startActivity(i) }.isFailure) return ToolResult("No clock app can set alarms.")
+        val time = java.time.LocalTime.of(h, m).format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
+        return ToolResult("Alarm set for $time.")
     }
 
     // ---- Actions in other apps: always confirmed first, then handed to the user's own app ----------------------

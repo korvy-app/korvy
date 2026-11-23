@@ -146,4 +146,28 @@ class AgentCoreTest {
         assertEquals("Seattle", AgentCore.weatherPlace("Seattle"))
         assertEquals("Paris, France", AgentCore.weatherPlace("Paris, France"))
     }
+
+    @Test fun alarms() {
+        assertEquals(Action(ActionType.ALARM, "8pm"), q("set alarm at 8pm"))
+        assertEquals(Action(ActionType.ALARM, "6:30"), q("wake me up at 6:30 tomorrow"))
+        assertEquals(Action(ActionType.ALARM, "7 am"), q("Set an alarm for 7 am"))
+        assertEquals(Action(ActionType.TIMER, "300"), q("set a timer for 5 minutes"))
+        val evening = 18 * 60
+        assertEquals(20 to 0, AgentCore.parseClock("8pm", evening))
+        assertEquals(20 to 30, AgentCore.parseClock("8:30 p.m.", evening))
+        assertEquals(7 to 0, AgentCore.parseClock("7 in the morning", evening))
+        assertEquals(0 to 0, AgentCore.parseClock("12am", evening))
+        assertEquals(12 to 0, AgentCore.parseClock("noon", evening))
+        assertEquals(20 to 0, AgentCore.parseClock("8", evening))     // 8 o'clock this evening, not this morning
+        assertEquals(6 to 30, AgentCore.parseClock("6:30", 23 * 60)) // late at night: tomorrow morning
+        assertEquals(null, AgentCore.parseClock("soon", evening))
+    }
+
+    @Test fun modelCantTextSomeoneNeverMentioned() {
+        assertTrue(!AgentCore.grounded(Action(ActionType.TEXT, "sister: I'll be late"), "set alarm at 8pm"))
+        assertTrue(AgentCore.grounded(Action(ActionType.TEXT, "sister: I'll be late"), "let my sister know I'll be late"))
+        assertTrue(AgentCore.grounded(Action(ActionType.CALL, "Jennifer Lopez"), "ring Jen... I mean Jennifer"))
+        assertTrue(AgentCore.grounded(Action(ActionType.CALL, "555 123 4567"), "dial 555-123-4567"))
+        assertTrue(AgentCore.grounded(Action(ActionType.WEATHER, ""), "anything"))
+    }
 }
