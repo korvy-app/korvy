@@ -108,6 +108,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
             val listDrag = drag.drag?.let { it.fromCell == null } == true
             AnimatedVisibility(
                 visible = screen == Screen.DRAWER || listDrag,
+                // Swallow taps on the outer layer while the list is closing (it is still drawn on top for a moment).
+                modifier = Modifier.swallowTouches(screen != Screen.DRAWER && !listDrag),
                 enter = slideInVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeIn(Motion.fade(animations)),
                 exit = if (closeInstantly) androidx.compose.animation.ExitTransition.None
                     else slideOutVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeOut(Motion.fade(animations)),

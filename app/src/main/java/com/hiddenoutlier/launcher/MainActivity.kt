@@ -46,7 +46,8 @@ class MainActivity : FragmentActivity() {
     /** Pressing Home while the launcher is showing: close whatever is open and go back to the home screen. */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) vm.goHome()
+        // Home pressed in another app (we're not in front): close everything instantly, no animation to tap into.
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) vm.goHome(instant = !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
         if (intent.action == ACTION_OPEN_ASSISTANT) vm.openAssistant()
         if (intent.action == ACTION_OPEN_MODELS) vm.open(com.hiddenoutlier.launcher.ui.Screen.MODELS)
     }

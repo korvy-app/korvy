@@ -160,7 +160,9 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     /** True when the last close should be instant (coming back from an app): no closing animation to tap through. */
     val closeInstantly = MutableStateFlow(false)
     fun goHome(instant: Boolean = false) {
-        closeInstantly.value = instant
+        // Only a close the user can see (from the list itself) animates. If the home screen is already the target
+        // (e.g. coming back from an app), keep an earlier "instant" request: no frames have been drawn since.
+        if (instant) closeInstantly.value = true else if (_screen.value != Screen.HOME) closeInstantly.value = false
         _screen.value = Screen.HOME; query.value = ""; lockedListOpen.value = false; refreshSuggestions()
     }
 

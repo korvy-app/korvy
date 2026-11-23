@@ -197,14 +197,19 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.4.4** – The gear fix in 0.4.3 didn't hold: pressing Home in another app reset the
+  "close instantly" flag before a frame was drawn. Now a return from another app always closes instantly, and
+  taps are swallowed on the list's outer layer while it closes. Verified on the Pixel 4a: launch from search,
+  Home, tap the gear after 0 / 0.3 / 0.6 s → never an app; Settings opens at 0.3 s+. Also verified 0.4.3's
+  assistant memory on the 4a (Qwen 0.5B): "weather in Paris" → "what about Seattle" → weather for Seattle
+  (18 s: model load + 501-token prompt from scratch) → "and London" → weather for London in 7 s with 484 of 572
+  prompt tokens reused from the cache.
 - 2026-11-22 (later): **0.4.3** – Assistant: keeps the conversation (last 4 exchanges, with tool results carried into
   the next question; `AgentCore.historyMessages`); llama.cpp reuses the cached prompt prefix between requests
   (only new text is read); model preloads when the assistant opens and stays loaded 5 min; status shows
   "Loading model…" vs "Thinking…"; a 90 s no-progress watchdog stops a stuck reply. Context window 4096.
   Fixed: tapping the Settings gear right after returning from an app could open an app from the (still closing,
   invisible) app list; the list now closes instantly on return, and closing screens swallow taps.
-  **Not verified on a phone yet:** the Pixel 4a was locked (it has a PIN) and restarted during testing, so the
-  gear fix and the follow-up questions still need checking on a device.
 - 2026-11-22 (later): **0.4.2** – Fixed: long model downloads failed after a while (the app was paused with the
   screen off). Downloads now run in a foreground service with a progress notification, keep Wi-Fi/CPU awake while
   running, and retry dropped connections automatically.
