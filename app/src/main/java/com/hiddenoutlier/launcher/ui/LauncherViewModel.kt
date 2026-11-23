@@ -21,12 +21,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.ZonedDateTime
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP }
+
+/** One line of the assistant conversation. */
+data class ChatItem(
+    val id: Long,
+    val fromUser: Boolean,
+    val text: String,
+    val lines: List<String> = emptyList(),
+    val link: String? = null,
+    val pending: Boolean = false,
+)
 
 class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private val la = app as LauncherApp
@@ -102,6 +114,21 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
      *  gesture) alive until the drop. */
     fun startDragFromList() { _screen.value = Screen.HOME }
     fun endDrag() { query.value = "" }
+
+    /** DuckDuckGo suggestions for the search box (opt-in source; nothing is fetched unless it's on). */
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    val webSuggestions: StateFlow<List<String>> = combine(query, settings) { q, s -> q to s }
+        .debounce(250)
+        .mapLatest { (q, s) ->
+            if (q.isBlank() || q.length > 100 || !s.allows(com.hiddenoutlier.launcher.platform.OnlineSource.SUGGESTIONS)) emptyList()
+            else runCatching {
+                val body = com.hiddenoutlier.launcher.platform.Net.getText(com.hiddenoutlier.launcher.platform.OnlineSource.SUGGESTIONS,
+                    "https://duckduckgo.com/ac/?type=list&q=" + Uri.encode(q)) { settings.value.allows(it) }
+                val arr = org.json.JSONArray(body).getJSONArray(1)
+                (0 until arr.length()).map { arr.getString(it) }.filter { !it.equals(q, ignoreCase = true) }.take(5)
+            }.getOrElse { emptyList() }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     data class Results(val apps: List<AppEntry>, val revealed: List<Pair<AppEntry, HideLevel>>)
 
@@ -183,6 +210,112 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     fun appInfo(app: AppEntry) = runCatching { repo.openAppInfo(app) }
 
+    // ---- Assistant --------------------------------------------------------------------------------------------
+    val models = com.hiddenoutlier.launcher.assistant.ModelStore(app)
+    val personality = com.hiddenoutlier.launcher.assistant.Personality(app)
+    private val client by lazy { com.hiddenoutlier.launcher.assistant.AssistantClient(app, viewModelScope) }
+    private val tools by lazy {
+        com.hiddenoutlier.launcher.assistant.Tools(
+            app, apps = { visibleApps.value }, launch = { launch(it) }, webSearch = { webSearch(it) },
+            allowed = { settings.value.allows(it) }, homePlace = { settings.value.homePlace },
+            fahrenheit = { settings.value.fahrenheit },
+        )
+    }
+    val chat = MutableStateFlow<List<ChatItem>>(emptyList())
+    val assistantBusy = MutableStateFlow(false)
+    private var nextId = 0L
+    private var askJob: kotlinx.coroutines.Job? = null
+
+    fun openAssistant(question: String? = null) {
+        _screen.value = Screen.ASSISTANT
+        query.value = ""
+        if (!question.isNullOrBlank()) ask(question)
+    }
+
+    private fun updateItem(id: Long, f: (ChatItem) -> ChatItem) { chat.value = chat.value.map { if (it.id == id) f(it) else it } }
+
+    fun ask(text: String) {
+        val q = text.trim()
+        if (q.isEmpty() || assistantBusy.value) return
+        chat.value = chat.value + ChatItem(nextId++, true, q)
+        val replyId = nextId++
+        chat.value = chat.value + ChatItem(replyId, false, "", pending = true)
+        assistantBusy.value = true
+        askJob = viewModelScope.launch {
+            try {
+                // 1. Plain code for common requests: instant, no model needed.
+                // Maths is always done by code: small models get arithmetic wrong.
+                val action = com.hiddenoutlier.launcher.core.Calc.answer(q)?.let { com.hiddenoutlier.launcher.core.Action(com.hiddenoutlier.launcher.core.ActionType.ANSWER, it) }
+                    ?: com.hiddenoutlier.launcher.core.AgentCore.quickParse(q) ?: modelAction(q, replyId)
+                if (action == null) return@launch
+                if (action.type != com.hiddenoutlier.launcher.core.ActionType.ANSWER) updateItem(replyId) { it.copy(text = "…") }
+                // 2. Do it, and format the result with plain code.
+                val r = tools.run(action)
+                updateItem(replyId) { it.copy(text = r.text, lines = r.lines, link = r.link, pending = false) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                updateItem(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
+                throw e
+            } catch (e: Exception) {
+                updateItem(replyId) { it.copy(text = "Sorry: ${e.message}", pending = false) }
+            } finally {
+                assistantBusy.value = false
+            }
+        }
+    }
+
+    /** Asks the model to choose an action (JSON constrained by a grammar), streaming an answer as it's written. */
+    private suspend fun modelAction(q: String, replyId: Long): com.hiddenoutlier.launcher.core.Action? {
+        val s = settings.value
+        val m = com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(s.modelId)
+        if (m == null || m.id !in models.installed.value) {
+            updateItem(replyId) { it.copy(pending = false, text = "To answer questions I need a model. Pick one in Settings → Assistant → Model. " +
+                "Without one I can still open apps, set timers, and (with Online features on) get the weather, news and stock prices.") }
+            return null
+        }
+        val now = java.time.ZonedDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy, h:mm a"))
+        val roles = ArrayList<String>(); val contents = ArrayList<String>()
+        roles += "system"; contents += com.hiddenoutlier.launcher.core.AgentCore.systemPrompt(
+            withContext(Dispatchers.IO) { personality.load() }, now, s.homePlace.ifBlank { null })
+        com.hiddenoutlier.launcher.core.AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
+        roles += "user"; contents += q
+        val sb = StringBuilder()
+        val out = client.complete(
+            models.fileFor(m).path, roles, contents, com.hiddenoutlier.launcher.core.AgentCore.GRAMMAR, maxTokens = 220, temp = 0.2f,
+            onStatus = { st -> updateItem(replyId) { it.copy(text = st) } },
+            onToken = { piece ->
+                sb.append(piece)
+                com.hiddenoutlier.launcher.core.AgentCore.partialAnswer(sb.toString())?.let { t -> updateItem(replyId) { it.copy(text = t) } }
+            },
+        )
+        return com.hiddenoutlier.launcher.core.AgentCore.parse(out)
+            ?: com.hiddenoutlier.launcher.core.Action(com.hiddenoutlier.launcher.core.ActionType.ANSWER, "Sorry, I got confused. Could you rephrase that?")
+    }
+
+    fun stopAssistant() { client.stop(); askJob?.cancel() }
+    fun clearChat() { if (!assistantBusy.value) chat.value = emptyList() }
+
+    private var downloadJob: kotlinx.coroutines.Job? = null
+    fun downloadModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
+        if (downloadJob?.isActive == true) return
+        downloadJob = viewModelScope.launch {
+            models.download(m) { settings.value.allows(it) }
+            if (m.id in models.installed.value && settings.value.modelId == null) la.settings.setModelId(m.id)
+        }
+    }
+    fun cancelDownload() { downloadJob?.cancel() }
+    fun deleteModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) {
+        models.delete(m)
+        if (settings.value.modelId == m.id) save { la.settings.setModelId(null) }
+    }
+    fun useModel(m: com.hiddenoutlier.launcher.assistant.ModelInfo) = save { la.settings.setModelId(m.id) }
+    fun setAssistant(v: Boolean) = save { la.settings.setAssistant(v) }
+    fun setOnline(v: Boolean) = save { la.settings.setOnline(v) }
+    fun setSource(src: com.hiddenoutlier.launcher.platform.OnlineSource, on: Boolean) = save { la.settings.setSource(src, on) }
+    fun setHomePlace(v: String) = save { la.settings.setHomePlace(v) }
+    fun setFahrenheit(v: Boolean) = save { la.settings.setFahrenheit(v) }
+    fun setModelsOnMobileData(v: Boolean) = save { la.settings.setModelsOnMobileData(v) }
+    fun savePersonality(text: String) = viewModelScope.launch(Dispatchers.IO) { personality.save(text) }
+
     // Settings
     private fun save(block: suspend () -> Unit) { viewModelScope.launch { block() } }
     fun setAnimations(v: Boolean) = save { la.settings.setAnimations(v) }
@@ -200,5 +333,24 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun dismissHomePrompt() = save { la.settings.setHomePromptDismissed(true) }
-    fun importBackgrounds(uris: List<Uri>) = save { backgrounds.import(uris) }
+    /** Pictures waiting for the crop step, in order. */
+    val pendingCrops = MutableStateFlow<List<Uri>>(emptyList())
+    var cropTotal = 0
+        private set
+    fun importBackgrounds(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        cropTotal = uris.size
+        pendingCrops.value = uris
+        _screen.value = Screen.CROP
+    }
+    /** Saves the current picture (cropped to [crop], or as it is when null) and moves to the next. */
+    fun finishCrop(crop: android.graphics.RectF?) {
+        val uri = pendingCrops.value.firstOrNull() ?: return
+        viewModelScope.launch { backgrounds.importOne(uri, crop, cropTotal - pendingCrops.value.size) }
+        skipCrop()
+    }
+    fun skipCrop() {
+        pendingCrops.value = pendingCrops.value.drop(1)
+        if (pendingCrops.value.isEmpty()) _screen.value = Screen.SETTINGS
+    }
 }

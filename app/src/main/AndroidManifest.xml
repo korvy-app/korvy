@@ -2,8 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Only for web search results opened in the browser later; the launcher itself needs no network. -->
-    <!-- No INTERNET permission yet: the prototype opens searches in the user's browser. -->
+    <!-- Internet is used only by Online features (off by default; one switch per source, all through
+         platform/Net.kt). Android grants this permission at install; the app's own switches decide use. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Lets the assistant start a countdown in the Clock app. -->
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
 
     <!-- See every launchable app (a launcher's core job). -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
@@ -45,5 +49,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- The on-device model runs in its own process so the launcher stays light. -->
+        <service
+            android:name=".assistant.AssistantService"
+            android:exported="false"
+            android:process=":assistant" />
     </application>
 </manifest>

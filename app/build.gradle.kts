@@ -15,9 +15,44 @@ android {
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.2.0"
+        versionCode = 5
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.
+        ndk { abiFilters += listOf("arm64-v8a") }
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    "-DBUILD_SHARED_LIBS=ON",
+                    "-DLLAMA_BUILD_COMMON=ON",
+                    "-DLLAMA_BUILD_TESTS=OFF",
+                    "-DLLAMA_BUILD_EXAMPLES=OFF",
+                    "-DLLAMA_BUILD_TOOLS=OFF",
+                    "-DLLAMA_BUILD_SERVER=OFF",
+                    "-DLLAMA_BUILD_APP=OFF",
+                    "-DLLAMA_OPENSSL=OFF",
+                    "-DLLAMA_CURL=OFF",
+                    "-DGGML_NATIVE=OFF",
+                    "-DGGML_BACKEND_DL=ON",
+                    "-DGGML_CPU_ALL_VARIANTS=ON",
+                    "-DGGML_LLAMAFILE=OFF",
+                )
+            }
+        }
+    }
+    ndkVersion = "30.0.16248370"
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version = "4.1.2"
+        }
+    }
+    packaging {
+        // ggml picks the best CPU backend at runtime by loading it from the app's native library folder,
+        // so the libraries must be extracted on install.
+        jniLibs { useLegacyPackaging = true }
     }
 
     // Two builds from day one (REQUIREMENTS.md → Distribution):

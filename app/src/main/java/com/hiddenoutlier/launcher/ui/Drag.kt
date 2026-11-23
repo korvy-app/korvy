@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -131,10 +130,23 @@ fun Modifier.appGestures(
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 down.consume() // this touch belongs to the icon: the home screen's own long-press must not fire
-                // Before the long-press timeout: a release is a tap; a cancel (scroll, leaving) ends quietly.
-                val released = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation() }
-                if (released != null) { released.consume(); onTap(); return@awaitEachGesture }
-                if (currentEvent.changes.none { it.id == down.id && it.pressed }) return@awaitEachGesture
+                // Wait for the long-press time. Lifting first = tap. Moving first (beyond touch slop) or a parent
+                // taking the touch (a list scrolling) = not ours: give up, so scrolling never turns into a drag.
+                val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    while (true) {
+                        val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull Outcome.CANCEL
+                        if (!c.pressed) { c.consume(); return@withTimeoutOrNull Outcome.TAP }
+                        if (c.isConsumed || (c.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                            return@withTimeoutOrNull Outcome.CANCEL
+                        }
+                    }
+                    @Suppress("UNREACHABLE_CODE") Outcome.CANCEL
+                }
+                when (outcome) {
+                    Outcome.TAP -> { onTap(); return@awaitEachGesture }
+                    Outcome.CANCEL -> return@awaitEachGesture
+                    null -> {} // held still for the whole long-press time
+                }
                 // Held long enough.
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onMenu(true)
@@ -161,6 +173,8 @@ fun Modifier.appGestures(
             }
         }
 }
+
+private enum class Outcome { TAP, CANCEL }
 
 private val labelShadow = Shadow(Color.Black.copy(alpha = 0.6f), blurRadius = 8f)
 

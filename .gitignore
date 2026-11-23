@@ -13,3 +13,6 @@ captures/
 
 # Personal notes for Claude sessions (home network, devices). Never commit.
 CLAUDE.local.md
+
+# Native build intermediates
+app/.cxx/

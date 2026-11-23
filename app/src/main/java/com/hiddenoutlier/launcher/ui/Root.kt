@@ -43,6 +43,12 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val lockedOpen by vm.lockedListOpen.collectAsStateWithLifecycle()
     val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
     val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
+    val chat by vm.chat.collectAsStateWithLifecycle()
+    val busy by vm.assistantBusy.collectAsStateWithLifecycle()
+    val installedModels by vm.models.installed.collectAsStateWithLifecycle()
+    val download by vm.models.download.collectAsStateWithLifecycle()
+    val pendingCrops by vm.pendingCrops.collectAsStateWithLifecycle()
+    val webSuggestions by vm.webSuggestions.collectAsStateWithLifecycle()
     val drag = remember(vm) {
         DragController(
             grid = { vm.homeGrid.value },
@@ -94,6 +100,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 onDismissHomePrompt = vm::dismissHomePrompt,
                 drag = drag,
                 grid = { m -> HomeGridView(homeGrid, visible.associateBy { it.key }, vm.repo, drag, vm::launch, menu, m) },
+                onOpenAssistant = if (settings.assistant) ({ vm.openAssistant() }) else null,
             ) }
             // During a drag that started in the list, the list stays composed (it owns the gesture) but invisible.
             val listDrag = drag.drag?.let { it.fromCell == null } == true
@@ -111,6 +118,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     menu = menu,
                     drag = drag,
                     modifier = Modifier.graphicsLayer { alpha = if (listDrag) 0f else 1f },
+                    onAsk = if (settings.assistant) ({ q -> vm.openAssistant(q) }) else null,
+                    webSuggestions = webSuggestions,
                 )
             }
             AnimatedVisibility(screen == Screen.SETTINGS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
@@ -134,6 +143,29 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.STATS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 StatsScreen(host.stats, onBack = { vm.open(Screen.SETTINGS) })
             }
+            AnimatedVisibility(screen == Screen.ASSISTANT, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                AssistantScreen(
+                    chat, busy, com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(settings.modelId)?.takeIf { it.id in installedModels }?.name,
+                    onSend = vm::ask, onStop = vm::stopAssistant, onClear = vm::clearChat,
+                    onOpenModels = { vm.open(Screen.MODELS) }, onBack = { vm.goHome() },
+                )
+            }
+            AnimatedVisibility(screen == Screen.MODELS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                ModelsScreen(
+                    settings, installedModels, download, vm.models.freeBytes(), vm.models.isMetered(),
+                    onDownload = vm::downloadModel, onCancel = vm::cancelDownload, onUse = vm::useModel, onDelete = vm::deleteModel,
+                    onOpenOnline = { vm.open(Screen.SETTINGS) }, onBack = { vm.open(Screen.SETTINGS) },
+                )
+            }
+            AnimatedVisibility(screen == Screen.PERSONALITY, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                PersonalityScreen(vm.personality, onSave = { vm.savePersonality(it) }, onBack = { vm.open(Screen.SETTINGS) })
+            }
+            AnimatedVisibility(screen == Screen.CROP && pendingCrops.isNotEmpty(), enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
+                pendingCrops.firstOrNull()?.let { uri ->
+                    CropScreen(uri, vm.cropTotal - pendingCrops.size + 1, vm.cropTotal, vm.backgrounds,
+                        onUse = vm::finishCrop, onSkip = vm::skipCrop)
+                }
+            }
             DragOverlay(drag, vm.repo)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
@@ -141,7 +173,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
         }
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
-                Screen.HIDDEN, Screen.STATS -> vm.open(Screen.SETTINGS)
+                Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY -> vm.open(Screen.SETTINGS)
+                Screen.CROP -> vm.skipCrop()
                 Screen.TUTORIAL -> vm.finishTutorial()
                 else -> vm.goHome()
             }

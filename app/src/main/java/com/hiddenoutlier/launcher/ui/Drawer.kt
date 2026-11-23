@@ -26,7 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.NorthWest
+import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Search
@@ -80,7 +83,16 @@ fun AppDrawer(
     menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
     drag: DragController,
     modifier: Modifier = Modifier,
+    onAsk: ((String) -> Unit)? = null,
+    webSuggestions: List<String> = emptyList(),
 ) {
+    // Inline autocomplete: the rest of the top app's name, drawn greyed after the cursor; → accepts it.
+    val completion = com.hiddenoutlier.launcher.core.Completion.suffix(query, results.apps.map { it.label })
+    var field by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(query)) }
+    LaunchedEffect(query) {
+        if (query != field.text) field = androidx.compose.ui.text.input.TextFieldValue(query, androidx.compose.ui.text.TextRange(query.length))
+    }
+    val calc = remember(query) { com.hiddenoutlier.launcher.core.Calc.answer(query) }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -102,12 +114,17 @@ fun AppDrawer(
             .testTag("drawer")
     ) {
         OutlinedTextField(
-            value = query,
-            onValueChange = onQuery,
+            value = field,
+            onValueChange = { field = it; if (it.text != query) onQuery(it.text) },
             singleLine = true,
+            visualTransformation = ghost(completion),
             placeholder = { Text("Search apps and the web") },
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, "Clear") } },
+            trailingIcon = {
+                if (completion != null) IconButton(onClick = { onQuery(query + completion) }, modifier = Modifier.testTag("accept_completion")) {
+                    Icon(Icons.AutoMirrored.Outlined.KeyboardTab, "Complete to ${query + completion}")
+                } else if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, "Clear") }
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = {
                 val first = results.apps.firstOrNull()
@@ -134,9 +151,35 @@ fun AppDrawer(
             }
         } else {
             LazyColumn(Modifier.fillMaxSize().testTag("results")) {
+                if (calc != null) item(key = "calc") {
+                    Text(calc, color = Color.White, style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).testTag("calc_result"))
+                }
                 items(results.apps, key = { it.key }) { app -> ResultRow(app, repo, null, { launch(app) }, menu, drag, dragStarted) }
                 items(results.revealed, key = { "hidden-" + it.first.key }) { (app, level) ->
                     ResultRow(app, repo, level, { launchHidden(app, level) }, menu, null, dragStarted)
+                }
+                if (onAsk != null) item(key = "ask") {
+                    Row(
+                        Modifier.fillMaxWidth().combinedClickable(onClick = { keyboard?.hide(); onAsk(query) })
+                            .padding(horizontal = 20.dp, vertical = 14.dp).testTag("ask_assistant"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(40.dp).padding(6.dp))
+                        Spacer(Modifier.width(14.dp))
+                        Text("Ask the assistant “$query”", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+                items(webSuggestions, key = { "sugg-$it" }) { s ->
+                    Row(
+                        Modifier.fillMaxWidth().combinedClickable(onClick = { webSearch(s) }).padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.Search, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(40.dp).padding(8.dp))
+                        Spacer(Modifier.width(14.dp))
+                        Text(s, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onQuery(s) }) { Icon(Icons.Outlined.NorthWest, "Put “$s” in the search box", tint = Color.White.copy(alpha = 0.7f)) }
+                    }
                 }
                 item(key = "web") {
                     Row(
@@ -242,3 +285,17 @@ fun AppMenu(
         if (!app.isWorkProfile) DropdownMenuItem(text = { Text("Uninstall") }, onClick = { onDismiss(); onUninstall() })
     }
 }
+
+/** Shows [suffix] greyed after the typed text without making it part of the text (the cursor can't enter it). */
+private fun ghost(suffix: String?): androidx.compose.ui.text.input.VisualTransformation =
+    if (suffix.isNullOrEmpty()) androidx.compose.ui.text.input.VisualTransformation.None
+    else androidx.compose.ui.text.input.VisualTransformation { text ->
+        val shown = androidx.compose.ui.text.buildAnnotatedString {
+            append(text)
+            pushStyle(androidx.compose.ui.text.SpanStyle(color = Color.White.copy(alpha = 0.4f))); append(suffix); pop()
+        }
+        androidx.compose.ui.text.input.TransformedText(shown, object : androidx.compose.ui.text.input.OffsetMapping {
+            override fun originalToTransformed(offset: Int) = offset
+            override fun transformedToOriginal(offset: Int) = minOf(offset, text.length)
+        })
+    }

@@ -30,7 +30,22 @@ data class Settings(
     val slideshowMinutes: Int = 15,
     /** The user tapped "Not now" on the home-screen card that offers to become the default home app. */
     val homePromptDismissed: Boolean = false,
-)
+    // Assistant (off by default)
+    val assistant: Boolean = false,
+    val modelId: String? = null,
+    // Online features: master switch off by default; each source has its own switch (on once the master is on).
+    val online: Boolean = false,
+    val sourcesOff: Set<String> = emptySet(),
+    /** Opt-in sources (OnlineSource.optIn) the user turned on. */
+    val sourcesOn: Set<String> = emptySet(),
+    val homePlace: String = "",
+    val fahrenheit: Boolean = java.util.Locale.getDefault().country in setOf("US", "LR", "MM"),
+    val modelsOnMobileData: Boolean = false,
+) {
+    fun allows(source: com.hiddenoutlier.launcher.platform.OnlineSource) =
+        online && if (source.optIn) source.name in sourcesOn else source.name !in sourcesOff
+}
+
 
 class SettingsStore(private val context: Context) {
     private object K {
@@ -43,6 +58,14 @@ class SettingsStore(private val context: Context) {
         val slideshowMinutes = intPreferencesKey("slideshow_minutes")
         val homePromptDismissed = booleanPreferencesKey("home_prompt_dismissed")
         val homeGrid = stringPreferencesKey("home_grid")
+        val assistant = booleanPreferencesKey("assistant")
+        val modelId = stringPreferencesKey("model_id")
+        val online = booleanPreferencesKey("online")
+        val sourcesOff = androidx.datastore.preferences.core.stringSetPreferencesKey("sources_off")
+        val sourcesOn = androidx.datastore.preferences.core.stringSetPreferencesKey("sources_on")
+        val homePlace = stringPreferencesKey("home_place")
+        val fahrenheit = booleanPreferencesKey("fahrenheit")
+        val modelsOnMobileData = booleanPreferencesKey("models_on_mobile_data")
     }
 
     val settings: Flow<Settings> = context.dataStore.data.map { p ->
@@ -55,6 +78,14 @@ class SettingsStore(private val context: Context) {
             slideshow = p[K.slideshow] ?: false,
             slideshowMinutes = p[K.slideshowMinutes] ?: 15,
             homePromptDismissed = p[K.homePromptDismissed] ?: false,
+            assistant = p[K.assistant] ?: false,
+            modelId = p[K.modelId],
+            online = p[K.online] ?: false,
+            sourcesOff = p[K.sourcesOff] ?: emptySet(),
+            sourcesOn = p[K.sourcesOn] ?: emptySet(),
+            homePlace = p[K.homePlace] ?: "",
+            fahrenheit = p[K.fahrenheit] ?: Settings().fahrenheit,
+            modelsOnMobileData = p[K.modelsOnMobileData] ?: false,
         )
     }
 
@@ -74,4 +105,14 @@ class SettingsStore(private val context: Context) {
     suspend fun setSlideshow(v: Boolean) = set { it[K.slideshow] = v }
     suspend fun setSlideshowMinutes(v: Int) = set { it[K.slideshowMinutes] = v }
     suspend fun setHomePromptDismissed(v: Boolean) = set { it[K.homePromptDismissed] = v }
+    suspend fun setAssistant(v: Boolean) = set { it[K.assistant] = v }
+    suspend fun setModelId(v: String?) = set { if (v == null) it.remove(K.modelId) else it[K.modelId] = v }
+    suspend fun setOnline(v: Boolean) = set { it[K.online] = v }
+    suspend fun setSource(source: com.hiddenoutlier.launcher.platform.OnlineSource, on: Boolean) = set {
+        if (source.optIn) it[K.sourcesOn] = (it[K.sourcesOn] ?: emptySet()).let { s -> if (on) s + source.name else s - source.name }
+        else it[K.sourcesOff] = (it[K.sourcesOff] ?: emptySet()).let { s -> if (on) s - source.name else s + source.name }
+    }
+    suspend fun setHomePlace(v: String) = set { it[K.homePlace] = v.trim() }
+    suspend fun setFahrenheit(v: Boolean) = set { it[K.fahrenheit] = v }
+    suspend fun setModelsOnMobileData(v: Boolean) = set { it[K.modelsOnMobileData] = v }
 }

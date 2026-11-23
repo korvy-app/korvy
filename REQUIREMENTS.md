@@ -34,11 +34,38 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   connects. GrapheneOS users can also block network for the app at the OS level. Settings and the tour say so.
 - The assistant runs on **llama.cpp** (owner's choice), so it works in the F-Droid build too.
 
+## Assistant implementation (0.3.0)
+- **Engine:** llama.cpp as a git submodule at `app/src/main/cpp/llama.cpp`, pinned to release **b12634**; our JNI
+  bridge is `app/src/main/cpp/assistant_jni.cpp` (load, complete with optional GBNF grammar, stop, unload).
+  arm64 only; ggml picks the best CPU variant at runtime (`GGML_BACKEND_DL` + `GGML_CPU_ALL_VARIANTS`, so
+  `jniLibs.useLegacyPackaging = true`). NDK 30.0.16248370, CMake 4.1.2. The APK grew from ~2 MB to ~11 MB.
+- **Separate process:** `AssistantService` runs in `:assistant`; `AssistantClient` binds on use and unbinds after
+  2 min idle; the service frees the model and kills its process on unbind. The launcher never holds a model.
+- **Order of handling a request (less LLM):** `Calc` (maths, always code: small models get arithmetic wrong) →
+  `AgentCore.quickParse` (open app, timer, weather, news, stock, dial, search) → the model, which may only output
+  `{"action": …, "arg": …}` (grammar-constrained; few-shot examples; `enable_thinking=false`). Tools format results
+  in code (`assistant/Tools.kt`); no second model pass. Hidden apps are never offered to it.
+- **Models:** `assistant/Models.kt` catalog (Qwen 2.5 0.5B/1.5B/3B, Llama 3.2 1B/3B, Gemma 3 1B/4B, SmolLM2 1.7B,
+  Phi 3.5 mini; Q4_K_M GGUF from Hugging Face, sizes and SHA-256 recorded). Private storage, resumable downloads,
+  checksum verified, Wi-Fi only unless allowed, RAM warning per model.
+- **Personality:** `agent.md` in private storage (`assistant/Personality.kt`), presets, size meter; rules come
+  after it in the system prompt so it can't override them.
+- **Online sources** (`platform/Net.kt`, https only, host allow-list per source, redirects re-checked):
+  Model downloads (huggingface.co, hf.co), Weather (Open-Meteo), News (NPR, BBC RSS), Stocks (Yahoo Finance
+  public chart API: the only keyless quote source that worked; Stooq and Nasdaq failed), Quick answers
+  (DuckDuckGo instant answers), Web search suggestions (DuckDuckGo autocomplete, **opt-in** even when online is on).
+- Android's ICU regex differs from the desktop JVM (e.g. a bare `}` is an error on Android): regexes in `core/`
+  must be checked on a device, not only by unit tests.
+
 ## Search
 - Ranking (`core/AppSearch.kt`): exact > starts with > a word starts with > initials ("gm" → Google Maps) >
   contains > **typo match** > letters in order. Accents and case are ignored.
 - Typos: Damerau–Levenshtein distance (a swap of neighbouring letters counts as one) against the start of the
   name and of each word. Allowed mistakes: 0 for queries under 4 letters, 1 for 4–6, 2 for 7+.
+
+- **Autocomplete:** the rest of the top app's name shows greyed after the cursor (`core/Completion`, only when the
+  name starts with the typed text); the → button accepts it. Maths typed in search shows its result (`core/Calc`).
+  With the opt-in "Web search suggestions" source, DuckDuckGo suggestions appear under the apps (debounced 250 ms).
 
 ## Device stats (Settings → Device stats)
 - This app: CPU share, memory, frames drawn per second and dropped frames (FrameMetrics; a frame is dropped
@@ -151,6 +178,17 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
   next). Debug build: 1.7 s.
 
 ## Status / log
+- 2026-11-22 (later): **0.3.0** – On-device assistant (see "Assistant implementation"), Online features with
+  per-source switches, autocomplete in search, calculator, picture crop step, and fixes:
+  - Fixed: scrolling search results could start a drag (a scroll was mistaken for a long press). Now a drag
+    needs a still long-press; moving first = scrolling.
+  - New: pictures that aren't screen-shaped open a crop screen (drag the screen-shaped frame, pinch to zoom);
+    only that part is saved (`core/CropFrame`).
+  - Privacy: the app is excluded from autofill services (Google's autofill had offered to save typed text).
+  - Fixed: Enter in the assistant box added a new line instead of sending; the search bar label wrapped.
+  - Checked on the Pixel 4a release build: scrolling results, hold-and-drag from results, crop of a wide picture
+    (exact part shown on home), weather and stock answers, Qwen 0.5B download (checksum OK) and a model answer.
+    The 0.5B model answered "18% of 64" wrongly (115.2), which is why maths now always goes to `Calc`.
 - 2026-11-22 (later): **0.2.0** – Home-screen grid with drag and drop (see "Home-screen grid"). Fixed: slideshow
   never advanced for people who leave the home screen often (the countdown restarted on every return); the
   picture now follows the clock (`core/slideshowIndex`). Checked on the Pixel 4a: drag from list to grid, move,

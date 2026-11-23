@@ -122,7 +122,7 @@ fun SettingsScreen(
             }
             item {
                 Section("Web search")
-                Note("Searches open in your browser. This app has no internet access of its own.")
+                Note("Searches open in your browser.")
                 SearchEngine.entries.forEach { e ->
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.setEngine(e) }.padding(horizontal = 12.dp).testTag("engine_${e.name}"),
@@ -132,6 +132,38 @@ fun SettingsScreen(
                         Text(e.title)
                     }
                 }
+            }
+            item {
+                Section("Assistant")
+                Toggle("Assistant", "Ask it to open apps, set timers, get the weather, news and more. Runs on this phone; off by default.",
+                    s.assistant, "toggle_assistant") { vm.setAssistant(it) }
+                if (s.assistant) {
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.open(Screen.MODELS) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_models"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Model")
+                            Text("Choose and download the on-device model.", style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(com.hiddenoutlier.launcher.assistant.ModelCatalog.byId(s.modelId)?.name ?: "None")
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.open(Screen.PERSONALITY) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_personality"),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Personality")
+                            Text("Edit agent.md to change how it talks.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+            item {
+                Section("Online features")
+                OnlineSection(
+                    s, onMaster = vm::setOnline, onSource = vm::setSource, onHomePlace = vm::setHomePlace,
+                    onFahrenheit = vm::setFahrenheit, onMobileData = vm::setModelsOnMobileData,
+                ) { title, detail, checked, tag, enabled, onChange -> Toggle(title, detail, checked, tag, enabled, onChange) }
             }
             item {
                 Section("Privacy")
@@ -171,7 +203,7 @@ fun SettingsScreen(
                     TextButton(onClick = { vm.open(Screen.TUTORIAL) }, modifier = Modifier.testTag("show_tutorial")) { Text("Show the tour again") }
                 }
                 Section("About")
-                Note("Version ${BuildConfig.VERSION_NAME}. No accounts, no analytics, no crash reporting, no internet permission. Everything stays on this phone.")
+                Note("Version ${BuildConfig.VERSION_NAME}. No accounts, no analytics, no crash reporting. " + if (s.online) "Online features are on: only the sources you allowed above connect." else "Online features are off: nothing leaves this phone.")
                 Note("Phone class: ${tier.name.lowercase()} (${Device.specs(LocalContext.current).let { "%.1f GB, %d cores, Android API %d".format(it.totalRamMb / 1024.0, it.cores, it.sdk) }}).")
             }
         }

@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
+import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import kotlinx.coroutines.Dispatchers
@@ -24,20 +26,62 @@ class Backgrounds(private val context: Context) {
 
     private fun list() = dir.listFiles { f -> f.extension == "webp" || f.extension == "jpg" }?.sortedBy { it.name } ?: emptyList()
 
-    suspend fun import(uris: List<Uri>) = withContext(Dispatchers.IO) {
+    /** The screen's shape (width / height), used for the crop frame. */
+    fun screenAspect(): Float {
         val dm = context.resources.displayMetrics
-        val target = max(dm.widthPixels, dm.heightPixels)
-        for ((i, uri) in uris.withIndex()) {
-            val bmp = runCatching { decodeScaled(uri, target) }.getOrNull() ?: continue
-            val out = File(dir, "bg-${System.currentTimeMillis()}-$i.webp")
-            out.outputStream().use { s ->
-                @Suppress("DEPRECATION")
-                val fmt = if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
-                bmp.compress(fmt, 88, s)
-            }
-            bmp.recycle()
+        return minOf(dm.widthPixels, dm.heightPixels).toFloat() / maxOf(dm.widthPixels, dm.heightPixels)
+    }
+
+    /** A small copy of a picked photo for the crop screen (long side ~1600 px). */
+    suspend fun preview(uri: Uri): Bitmap? = withContext(Dispatchers.IO) { runCatching { decodeScaled(uri, 1600) }.getOrNull() }
+
+    /** Pictures that aren't roughly screen-shaped get a crop step; these don't need one. */
+    fun needsCrop(width: Int, height: Int): Boolean {
+        val a = width.toFloat() / height
+        return a > screenAspect() * 1.08f || a < screenAspect() * 0.85f
+    }
+
+    /** Imports pictures as they are (centre-cropped when shown). */
+    suspend fun import(uris: List<Uri>) = withContext(Dispatchers.IO) {
+        for ((i, uri) in uris.withIndex()) importOne(uri, null, i)
+    }
+
+    /**
+     * Imports one picture, keeping only [crop] (fractions of the width and height, from the crop screen).
+     * The saved copy is the crop itself, scaled to the screen, so it is shown exactly as framed.
+     */
+    suspend fun importOne(uri: Uri, crop: RectF?, n: Int = 0) = withContext(Dispatchers.IO) {
+        val dm = context.resources.displayMetrics
+        val longSide = max(dm.widthPixels, dm.heightPixels)
+        val bmp = runCatching { if (crop == null) decodeScaled(uri, longSide) else decodeCropped(uri, crop, longSide) }.getOrNull() ?: return@withContext
+        val out = File(dir, "bg-${System.currentTimeMillis()}-$n.webp")
+        out.outputStream().use { s ->
+            @Suppress("DEPRECATION")
+            val fmt = if (Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else Bitmap.CompressFormat.WEBP
+            bmp.compress(fmt, 88, s)
         }
+        bmp.recycle()
         _files.value = list()
+    }
+
+    private fun decodeCropped(uri: Uri, crop: RectF, longSide: Int): Bitmap {
+        if (Build.VERSION.SDK_INT >= 28) {
+            val src = ImageDecoder.createSource(context.contentResolver, uri)
+            return ImageDecoder.decodeBitmap(src) { d, info, _ ->
+                val w = info.size.width; val h = info.size.height
+                val cropH = crop.height() * h
+                val scale = minOf(1f, longSide / cropH)
+                val tw = (w * scale).toInt().coerceAtLeast(1); val th = (h * scale).toInt().coerceAtLeast(1)
+                d.setTargetSize(tw, th)
+                d.crop = Rect((crop.left * tw).toInt(), (crop.top * th).toInt(), (crop.right * tw).toInt().coerceAtMost(tw), (crop.bottom * th).toInt().coerceAtMost(th))
+                d.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+        }
+        val full = decodeScaled(uri, longSide * 2)
+        val r = Rect((crop.left * full.width).toInt(), (crop.top * full.height).toInt(), (crop.right * full.width).toInt(), (crop.bottom * full.height).toInt())
+        val cut = Bitmap.createBitmap(full, r.left, r.top, r.width().coerceAtLeast(1), r.height().coerceAtLeast(1))
+        val scale = minOf(1f, longSide.toFloat() / cut.height)
+        return if (scale < 1f) Bitmap.createScaledBitmap(cut, (cut.width * scale).toInt(), (cut.height * scale).toInt(), true) else cut
     }
 
     fun remove(f: File) {

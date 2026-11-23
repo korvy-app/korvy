@@ -35,6 +35,10 @@ class MainActivity : FragmentActivity() {
             stats = StatsSampler(this),
         )
         setContent { Root(vm, host) }
+        // Privacy: keep autofill services (e.g. Google's) out of everything typed here: searches, questions.
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            window.decorView.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
+        }
     }
 
     /** Pressing Home while the launcher is showing: close whatever is open and go back to the home screen. */

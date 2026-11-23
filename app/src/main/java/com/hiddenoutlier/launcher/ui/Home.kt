@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
@@ -85,6 +86,7 @@ fun HomeScreen(
     onDismissHomePrompt: () -> Unit = {},
     drag: DragController? = null,
     grid: @Composable (Modifier) -> Unit = { Spacer(it) },
+    onOpenAssistant: (() -> Unit)? = null,
 ) {
     val threshold = with(LocalDensity.current) { 60.dp.toPx() }
     Box(
@@ -144,7 +146,11 @@ fun HomeScreen(
                 ) {
                     Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(12.dp))
-                    Text("Search apps and the web", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyLarge)
+                    Text(if (onOpenAssistant != null) "Search" else "Search apps and the web", color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (onOpenAssistant != null) IconButton(onClick = onOpenAssistant, modifier = Modifier.testTag("open_assistant")) {
+                    Icon(Icons.Outlined.AutoAwesome, contentDescription = "Assistant", tint = Color.White)
                 }
                 IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("open_settings")) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White)
