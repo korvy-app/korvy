@@ -22,6 +22,13 @@ APK="app/build/outputs/apk/$FLAVOR/release/app-$FLAVOR-release.apk"
 VERSION=$(grep -E 'versionName = ' app/build.gradle.kts | head -1 | sed -E 's/.*"(.*)".*/\1/')
 NAME="launcher-$FLAVOR-$VERSION-$(date +%Y%m%d-%H%M).apk"
 ssh "$SSH_TARGET" "mkdir -p '$DEST'"
-scp -q "$APK" "$SSH_TARGET:$DEST/$NAME"
-ssh "$SSH_TARGET" "cp '$DEST/$NAME' '$DEST/launcher-$FLAVOR-latest.apk'; ls -t '$DEST' | head -8 | sed 's/^/  /'"
+# Upload under a hidden temporary name, check it arrived whole, then rename into place. Renaming is atomic, so a
+# phone never sees a half-copied APK, and "latest" is a fresh file rather than one overwritten in place (an SMB
+# client that cached the old file's size could otherwise read a mix of both: "package appears to be invalid").
+SUM=$(shasum -a 256 "$APK" | cut -d' ' -f1)
+scp -q "$APK" "$SSH_TARGET:$DEST/.$NAME.part"
+ssh "$SSH_TARGET" "set -e; cd '$DEST'
+  [ \"\$(sha256sum '.$NAME.part' | cut -d' ' -f1)\" = '$SUM' ] || { echo 'Upload corrupted, try again'; rm -f '.$NAME.part'; exit 1; }
+  cp '.$NAME.part' '.latest.part' && mv -f '.$NAME.part' '$NAME' && mv -f '.latest.part' 'launcher-$FLAVOR-latest.apk'
+  ls -t | grep -v '^\.' | head -8 | sed 's/^/  /'"
 echo "Copied $NAME (and launcher-$FLAVOR-latest.apk) to ${SMB:-$DEST}"
