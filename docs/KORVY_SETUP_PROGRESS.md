@@ -48,12 +48,17 @@ reinstalled (settings and downloads don't carry over).
 - [ ] Spoken prompts/TTS with the old name updated
 
 ## Phase 3: GitHub
-- [ ] Org created
-- [ ] Repo created in the org and pushed
+- [x] Org created (korvy-app, free)
+- [x] Repo created in the org and pushed (korvy-app/korvy, private; site: korvy-app/korvy.app, public, Pages on)
 - [ ] korvy.app verified (TXT record)
 - [ ] Links updated
 
 ## Phase 4: korvy.app website
+- 2026-11-23: site built (~/claude/korvy-site → korvy-app/korvy.app), Pages enabled with CNAME korvy.app.
+  Owner added Namecheap records (4×A 185.199.108-111.153, 4×AAAA 2606:50c0:800x::153, www CNAME
+  korvy-app.github.io) and the GitHub Pages TXT challenge; at 23:5x they weren't live on dns1.registrar-servers.com yet.
+  Next: confirm records with dig, owner clicks Verify (org Settings → Pages), enable HTTPS (`gh api -X PUT
+  repos/korvy-app/korvy.app/pages -F https_enforced=true` once the certificate exists).
 - [ ] Static site on GitHub Pages with CNAME
 - [ ] DNS records added and checked
 - [ ] Privacy policy matching the code
