@@ -64,4 +64,23 @@ class NotebookTest {
         assertEquals(1, n); assertEquals(listOf("Vegetarian."), after.notes)
         assertEquals(0, nb.forget("goodnight").first.phrases.size)
     }
+
+    @Test fun rememberWhenISayIsAPhrase() {
+        assertEquals(Lesson.NewPhrase("Do the thing", listOf("send a message to Lukas that says \"Turn off the lights\"")),
+            Lesson.parse("Remember when I say \"Do the thing\" send a message to Lukas that says \"Turn off the lights\""))
+        assertEquals(Lesson.NewPhrase("lights out", listOf("play white noise")), Lesson.parse("remember that when I say lights out, play white noise"))
+        // A note stays a note.
+        assertEquals(Lesson.Note("I like tea"), Lesson.parse("remember I like tea"))
+    }
+
+    @Test fun repairsPhrasesSavedAsNotes() {
+        // Exactly what 0.11.3 saved for the owner's request.
+        val nb = Notebook().addNote("when I say \"Do the thing\" send a message to Lukas that says \"Turn off the lights\"").addNote("I like tea")
+        val fixed = nb.repaired()
+        assertEquals(listOf("I like tea."), fixed.notes)
+        assertEquals(listOf("send a message to Lukas that says \"Turn off the lights\""), fixed.phraseFor("do the thing")?.steps)
+        // Notes written by "when I say X I mean Y" (not a phrase) are left alone.
+        val alias = Notebook().addNote("When I say “boss”, I mean my manager")
+        assertEquals(alias, alias.repaired())
+    }
 }

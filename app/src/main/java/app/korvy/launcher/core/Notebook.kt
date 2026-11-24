@@ -62,6 +62,17 @@ data class Notebook(val notes: List<String> = emptyList(), val phrases: List<Phr
         return out
     }
 
+    /** Notes that are really phrases ("When I say “x”, do y", saved as notes before 0.11.4) turned into phrases. */
+    fun repaired(): Notebook {
+        var out = this
+        for (n in notes) {
+            val lesson = Lesson.parse(n)
+            if (lesson is Lesson.NewPhrase && n.trimStart().startsWith("when", ignoreCase = true))
+                out = out.copy(notes = out.notes - n).addPhrase(lesson.trigger, lesson.steps)
+        }
+        return out
+    }
+
     /** Drops duplicate notes and phrases (same words, different case or punctuation). */
     fun tidy(): Notebook = copy(notes = notes.distinctBy(::key), phrases = phrases.reversed().distinctBy { key(it.trigger) }.reversed())
 
@@ -114,8 +125,11 @@ sealed interface Lesson {
         private val VERB = "(?:open|launch|start|play|put\\s+on|set|text|message|call|phone|ring|navigate|directions|take\\s+me|get\\s+me|search|look\\s+up|show|tell|what|turn|weather|news|timer|remind)"
         private val SPLIT = Regex("\\s*;\\s*|,?\\s+(?:and\\s+)?then\\s+|,\\s+(?=$VERB\\b)|\\s+and\\s+(?:also\\s+)?(?=$VERB\\b)", RegexOption.IGNORE_CASE)
 
+        /** "Remember (that) when I say …" is a phrase, not a note. */
+        private val REMEMBER_WHEN = Regex("^(?:please\\s+)?(?:remember|note|keep\\s+in\\s+mind)(?:\\s+that)?[:,]?\\s+(?=(?:from\\s+now\\s+on,?\\s+)?when(?:ever)?\\s+i\\s+say\\b)", RegexOption.IGNORE_CASE)
+
         fun parse(input: String): Lesson? {
-            val t = input.trim().trimEnd('.', '!')
+            val t = input.trim().trimEnd('.', '!').replace(REMEMBER_WHEN, "")
             if (SHOW.matches(t)) return Show
             ALIAS.matchEntire(t)?.let { return Alias(it.groupValues[1].trim(), it.groupValues[2].trim()) }
             SAY.matchEntire(t)?.let { m ->

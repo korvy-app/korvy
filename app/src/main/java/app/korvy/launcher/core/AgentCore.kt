@@ -78,7 +78,7 @@ object AgentCore {
     private val TIMER = Regex("^(?:set\\s+(?:a\\s+)?)?timer\\s+(?:for\\s+)?(.+)$|^(.+?)\\s+timer$", RegexOption.IGNORE_CASE)
     private val RIDE = Regex("^(?:(?:please\\s+)?(?:get|call|book|order|find)\\s+(?:me\\s+)?)?(?:an?\\s+)?(uber|lyft|ride|taxi|cab)\\s+(?:to|for)\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val CALL = Regex("^(?:please\\s+)?(?:call|dial|phone|ring)\\s+(.+)$", RegexOption.IGNORE_CASE)
-    private val TEXT_SPLIT = Regex("^(?:please\\s+)?(?:text|message|sms|send\\s+(?:a\\s+)?(?:text|message)\\s+to)\\s+(.+?)\\s*(?::|\\bsaying\\b|\\bthat\\b)\\s*(.+)$", RegexOption.IGNORE_CASE)
+    private val TEXT_SPLIT = Regex("^(?:please\\s+)?(?:text|message|sms|send\\s+(?:a\\s+|an?\\s+sms\\s+)?(?:text|message|sms)?\\s*to)\\s+(.+?)\\s*(?::|\\bthat\\s+says\\b|\\bsaying\\b|\\bthat\\s+reads\\b|\\bthat\\b|\\bsays\\b)\\s*(.+)$", RegexOption.IGNORE_CASE)
     private val TEXT_PLAIN = Regex("^(?:please\\s+)?(?:text|message|sms)\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val PLAY = Regex("^(?:please\\s+)?(?:play|put\\s+on|listen\\s+to)\\s+(?:some\\s+)?(.+)$", RegexOption.IGNORE_CASE)
     private val HELP = Regex("^(?:help|what\\s+can\\s+you\\s+do|what\\s+are\\s+you\\s+able\\s+to\\s+do|what\\s+do\\s+you\\s+do)\\??$", RegexOption.IGNORE_CASE)
@@ -137,7 +137,11 @@ object AgentCore {
             val app = m.groupValues[1].lowercase().let { if (it == "lyft") "lyft" else "uber" }
             return Action(ActionType.RIDE, "$app: ${m.groupValues[2].trim()}")
         }
-        TEXT_SPLIT.matchEntire(t)?.let { return Action(ActionType.TEXT, "${it.groupValues[1].trim()}: ${it.groupValues[2].trim()}") }
+        TEXT_SPLIT.matchEntire(t)?.let {
+            // The message without wrapping quotes: send a message to Lukas that says "Turn off the lights".
+            val msg = it.groupValues[2].trim().trim('"', '“', '”', '\'').trim()
+            return Action(ActionType.TEXT, "${it.groupValues[1].trim()}: $msg")
+        }
         // "text mom I'm late": where the name ends is decided later against the contacts (TextArgs.split).
         TEXT_PLAIN.matchEntire(t)?.let { return Action(ActionType.TEXT, it.groupValues[1].trim()) }
         NAVIGATE.matchEntire(t)?.let { return Action(ActionType.NAVIGATE, it.groupValues[1].trim()) }

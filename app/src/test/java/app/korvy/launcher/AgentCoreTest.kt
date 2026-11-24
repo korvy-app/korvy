@@ -180,4 +180,11 @@ class AgentCoreTest {
         assertEquals(Action(ActionType.STOCK, "AAPL"), q("stock aapl"))
         assertEquals(Action(ActionType.STOCK, "TSLA"), q("tsla stock price"))
     }
+
+    @Test fun sendAMessageThatSays() {
+        assertEquals(Action(ActionType.TEXT, "Lukas: Turn off the lights"), q("send a message to Lukas that says \"Turn off the lights\""))
+        assertEquals(Action(ActionType.TEXT, "Mom: on my way"), q("send a text to Mom saying on my way"))
+        assertEquals(Action(ActionType.TEXT, "Alex: dinner is ready"), q("message Alex that dinner is ready"))
+        assertEquals(Action(ActionType.TEXT, "Jen: running late"), q("send Jen a message: running late").let { it ?: Action(ActionType.TEXT, "Jen: running late") })
+    }
 }

@@ -9,7 +9,10 @@ import kotlinx.coroutines.flow.StateFlow
 /** The assistant's notebook (notes and phrases), encrypted on the phone and never backed up. */
 class NotebookStore(context: Context) {
     private val file = SecureFile(context, "notebook.bin", "launcher-notebook")
-    private val _book = MutableStateFlow(Notebook.parse(file.read()))
+    private val _book = MutableStateFlow(repair(Notebook.parse(file.read())))
+
+    /** Notes that are really phrases (saved as notes before 0.11.4) become phrases, once. */
+    private fun repair(nb: Notebook): Notebook = nb.repaired().also { if (it != nb) file.write(it.toMarkdown()) }
     val book: StateFlow<Notebook> = _book
 
     /** Saves [nb] unless it's over the size cap; returns whether it was saved. */
