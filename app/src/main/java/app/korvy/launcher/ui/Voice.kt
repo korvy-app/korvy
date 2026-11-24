@@ -372,6 +372,13 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
         modifier = Modifier.fillMaxWidth().testTag("wake_phrase"),
     )
     if (phrase != s.wakePhrase) TextButton(onClick = { vm.setWake(phrase = phrase.trim()) }, enabled = usable) { Text("Use “${phrase.trim()}”") }
+    val models by vm.models.installed.collectAsStateWithLifecycle()
+    if (models.none { it.startsWith("whisper") }) {
+        val tiny = app.korvy.launcher.assistant.ModelCatalog.byId("whisper-tiny.en")!!
+        Text("For fewer false wakes and better accent coverage, a Whisper model double-checks what was said. " +
+            "Whisper tiny is enough (${tiny.sizeText}).", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
+        OutlinedButton(onClick = { vm.downloadModel(tiny); vm.setWake() }, modifier = Modifier.testTag("wake_get_whisper")) { Text("Download Whisper tiny") }
+    } else Text("Each wake is double-checked by Whisper on this phone.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     Text("Sensitivity", modifier = Modifier.padding(top = 6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("Fewer false wakes", "Balanced", "Hears me better").forEachIndexed { i, label ->

@@ -38,7 +38,13 @@ reinstalled (settings and downloads don't carry over).
     every threshold; spellings that catch the other 3 voices fire on "hey curvy"/"hey coffee".
     Over the air (Mac speaker → 4a) "Hey Korvy" didn't wake; control "Hey Siri" did.
     Fixed: wake service crashed on a keyword label with a space ("@Hey Korvy").
-  - Next: two-step check (permissive keyword match, then Whisper tiny confirms the words).
+  - Built: two-step check. Step 1 (keyword model) listens for 12 permissive spellings; step 2 sends the last
+    ~3 s to Whisper (base.en, else tiny.en, downloaded by the user) and wakes only if the transcript has the name
+    (`core/WakeCheck`: sound key, exact match). Whisper tiny on the bench voices writes "Hey Corvie" for Hey Korvy
+    (5/6 voices) and never for a near-miss; all 15 near-miss transcripts are unit tests.
+  - Phone tests with synthetic speech are inconclusive: Mac speaker across the desk reaches the mic at ~1% level;
+    the 4a's own speaker into its mic: step 1 fired on 2/3 "Hey Korvy" and 0/2 near-misses, but Whisper heard
+    distorted audio ("K-core V.", "Hey Tori V") and rejected. **Needs a real voice test by the owner.**
 - [ ] Spoken prompts/TTS with the old name updated
 
 ## Phase 3: GitHub

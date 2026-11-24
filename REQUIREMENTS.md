@@ -245,6 +245,10 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.11.1** – "Hey Korvy" wake word: two-step check (keyword model with sounds-alike spellings, then
+  Whisper confirms the words), crash fix for multi-word labels, Whisper check reads model files directly (the wake
+  process's list was stale), Settings offers Whisper tiny when none is installed. Bench in `scripts/kws-bench`.
+  Not yet verified with a human voice (see docs/KORVY_SETUP_PROGRESS.md, Phase 2).
 - 2026-11-23: **0.11.0 – renamed to Korvy.** Package `app.korvy.launcher` (was the placeholder
   `com.hiddenoutlier.launcher`, never published), label "Korvy", About screen, "Hey Korvy" default wake word, the
   assistant introduces itself as Korvy, tour and README updated. Also: stock prices by company name ("nvidia stock

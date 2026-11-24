@@ -93,8 +93,13 @@ class WakeWordService : Service() {
     private fun listen(phrase: String) {
         val dir = (application as LauncherApp).voices.folderFor(NeuralVoiceCatalog.wakeWord)
         val wp = WordPieces.parse(assets.open("kws-pieces.tsv").bufferedReader().readText())
-        // Several sounds-alike spellings, one keyword line each, all meaning the same wake word.
-        val variants = wp.spellings(phrase).mapNotNull { wp.encode(it) }.distinct()
+        // Second step: a downloaded Whisper model double-checks each wake (smallest English one preferred).
+        val verifier = verifierModel()
+        // Several sounds-alike spellings, one keyword line each, all meaning the same wake word. With the second step,
+        // the first can be permissive (catches more accents; Whisper throws out "hey curvy" and the like).
+        val spellings = wp.spellings(phrase).let { if (verifier != null) app.korvy.launcher.core.WakeCheck.looseSpellings(it) else it }
+        val variants = spellings.mapNotNull { wp.encode(it) }.distinct()
+        Log.i(TAG, "listening for ${variants.size} spellings; second step: ${verifier?.name ?: "none"}")
         if (variants.isEmpty() || !File(dir, NeuralVoiceCatalog.wakeWord.modelFile).exists()) { Log.w(TAG, "no model or bad phrase"); stopSelf(); return }
         val threshold = prefs.getFloat(EXTRA_THRESHOLD, 0.25f)
         // The "@label" must be a single token: sherpa-onnx splits the line on spaces (and aborts on unknown pieces).
@@ -112,6 +117,9 @@ class WakeWordService : Service() {
         val stream = kws.createStream("")
         val rate = 16_000
         val buf = FloatArray(rate / 10)
+        // The last 3 seconds of audio, for the second step.
+        val ring = FloatArray(rate * 3)
+        var ringPos = 0
         var rec: AudioRecord? = null
         var lastHit = 0L
         try {
@@ -128,14 +136,29 @@ class WakeWordService : Service() {
                 }
                 val n = rec.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
                 if (n <= 0) { Thread.sleep(100); continue }
-                stream.acceptWaveform(if (n == buf.size) buf else buf.copyOf(n), rate)
+                val chunk = if (n == buf.size) buf else buf.copyOf(n)
+                for (i in 0 until n) { ring[ringPos] = chunk[i]; ringPos = (ringPos + 1) % ring.size }
+                stream.acceptWaveform(chunk, rate)
+                var hit = false
                 while (kws.isReady(stream)) {
                     kws.decode(stream)
-                    if (kws.getResult(stream).keyword.isNotBlank()) {
-                        kws.reset(stream)
-                        val now = SystemClock.elapsedRealtime()
-                        if (now - lastHit > 3000) { lastHit = now; wake() }
+                    if (kws.getResult(stream).keyword.isNotBlank()) { kws.reset(stream); hit = true }
+                }
+                val now = SystemClock.elapsedRealtime()
+                if (hit && now - lastHit > 3000) {
+                    lastHit = now
+                    if (verifier == null) { wake(); continue }
+                    // Let the name finish (0.5 s more), then ask Whisper what was said.
+                    repeat(5) {
+                        val k = rec.read(buf, 0, buf.size, AudioRecord.READ_BLOCKING)
+                        for (i in 0 until maxOf(k, 0)) { ring[ringPos] = buf[i]; ringPos = (ringPos + 1) % ring.size }
                     }
+                    val clip = FloatArray(ring.size) { ring[(ringPos + it) % ring.size] }
+                    val heard = transcribe(verifier, clip)
+                    val ok = heard != null && app.korvy.launcher.core.WakeCheck.matches(heard, phrase)
+                    Log.i(TAG, "candidate: heard “${heard ?: "?"}” → ${if (ok) "wake" else "ignored"}")
+                    if (ok) wake()
+                    kws.reset(stream)
                 }
             }
         } catch (e: Exception) {
@@ -145,6 +168,29 @@ class WakeWordService : Service() {
             stream.release(); kws.release()
         }
     }
+
+    private val clientScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+    private val client by lazy { AssistantClient(this, clientScope) }
+
+    private fun verifierModel(): ModelInfo? {
+        // Check the files themselves: this process's model list may predate a download made in the launcher.
+        val store = (application as LauncherApp).models
+        // Base copes better with real-room audio; tiny is the minimum (and the quickest).
+        return listOf("whisper-base.en", "whisper-tiny.en", "whisper-base", "whisper-small.en", "whisper-small")
+            .firstNotNullOfOrNull { id -> ModelCatalog.byId(id)?.takeIf { store.fileFor(it).length() == it.bytes } }
+    }
+
+    /** Whisper on [clip] (16 kHz mono) in the assistant process; null if it fails or takes too long. */
+    private fun transcribe(model: ModelInfo, clip: FloatArray): String? = runCatching {
+        val f = File(cacheDir, "wake-${System.nanoTime()}.f32")
+        val bb = java.nio.ByteBuffer.allocate(clip.size * 4).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        clip.forEach { bb.putFloat(it) }
+        f.writeBytes(bb.array())
+        val path = (application as LauncherApp).models.fileFor(model).path
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(8_000) { client.transcribe(path, f, if (model.englishOnly) "en" else "auto", "") }
+        }.also { f.delete() }
+    }.onFailure { Log.w(TAG, "second step failed", it) }.getOrNull()
 
     /** Opens the assistant panel, listening. */
     private fun wake() {
@@ -169,6 +215,7 @@ class WakeWordService : Service() {
 
     override fun onDestroy() {
         running = false
+        runCatching { client.release() }
         runCatching { unregisterReceiver(stateReceiver) }
         super.onDestroy()
         // Free the model's memory right away.
