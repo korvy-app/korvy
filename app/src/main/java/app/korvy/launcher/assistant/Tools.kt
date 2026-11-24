@@ -1,5 +1,7 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.platform.titleRes
+import app.korvy.launcher.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -97,25 +99,25 @@ class Tools(
             ActionType.REMEMBER -> remember(a.arg)
         }
     } catch (e: OfflineException) {
-        ToolResult("${e.source.title} is turned off. You can turn it on in Settings → Online features.")
+        ToolResult(t(R.string.r_source_off, t(e.source.titleRes)))
     } catch (e: Exception) {
-        ToolResult("Sorry, that didn't work: ${e.message ?: "unknown error"}")
+        ToolResult(t(R.string.r_failed, e.message ?: t(R.string.r_unknown_error)))
     }
 
     private fun openApp(name: String): ToolResult {
-        val app = AppSearch.rank(name, apps()) { it.label }.firstOrNull() ?: return ToolResult("I couldn't find an app called “$name”.")
+        val app = AppSearch.rank(name, apps()) { it.label }.firstOrNull() ?: return ToolResult(t(R.string.r_no_app, name))
         launch(app)
-        return ToolResult("Opening ${app.label}.")
+        return ToolResult(t(R.string.r_opening, app.label))
     }
 
     private suspend fun search(q: String): ToolResult {
-        if (!allowed(OnlineSource.ANSWERS)) { webSearch(q); return ToolResult("Searching the web for “$q” in your browser.") }
+        if (!allowed(OnlineSource.ANSWERS)) { webSearch(q); return ToolResult(t(R.string.r_searching_web, q)) }
         val json = JSONObject(Net.getText(OnlineSource.ANSWERS,
             "https://api.duckduckgo.com/?format=json&no_html=1&skip_disambig=1&q=" + enc(q), allowed))
         val abstract = json.optString("AbstractText").ifBlank { json.optString("Answer") }.ifBlank { json.optString("Definition") }
-        if (abstract.isBlank()) { webSearch(q); return ToolResult("No quick answer, so I opened a web search for “$q”.") }
+        if (abstract.isBlank()) { webSearch(q); return ToolResult(t(R.string.r_no_quick_answer, q)) }
         val src = json.optString("AbstractSource").ifBlank { "DuckDuckGo" }
-        return ToolResult(abstract, listOf("Source: $src"), json.optString("AbstractURL").ifBlank { null })
+        return ToolResult(abstract, listOf(t(R.string.r_source, src)), json.optString("AbstractURL").ifBlank { null })
     }
 
     private suspend fun weather(rawPlace: String): ToolResult {
@@ -129,11 +131,11 @@ class Tools(
         }
         if (coords != null) { name = "your area"; city = "your area" } else {
             val place = placeArg.ifBlank { homePlace() }
-            if (place.isBlank()) return ToolResult("Which place?", card = Card(Card.Kind.NEED_LOCATION, "Weather for where you are?",
-                "Allow approximate location (only rounded coordinates go to Open-Meteo), or set a home town in Settings → Online features. You can also ask “weather in Paris”."))
+            if (place.isBlank()) return ToolResult(t(R.string.r_which_place), card = Card(Card.Kind.NEED_LOCATION, t(R.string.r_weather_here_title),
+                t(R.string.r_weather_here_body)))
             val geo = JSONObject(Net.getText(OnlineSource.WEATHER,
                 "https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=" + enc(place), allowed))
-            val hit = geo.optJSONArray("results")?.optJSONObject(0) ?: return ToolResult("I couldn't find a place called “$place”.")
+            val hit = geo.optJSONArray("results")?.optJSONObject(0) ?: return ToolResult(t(R.string.r_no_place, place))
             coords = hit.getDouble("latitude") to hit.getDouble("longitude")
             city = hit.optString("name").ifBlank { place }
             name = Speech.placeName(city, hit.optString("admin1"))
@@ -148,14 +150,14 @@ class Tools(
         val unit = if (f) "°F" else "°C"
         val sky = describe(cur.optInt("weather_code")); val temp = cur.getDouble("temperature_2m").toInt()
         val lines = listOf(
-                "High ${daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()}$unit · low ${daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()}$unit",
-                "Chance of rain ${daily.getJSONArray("precipitation_probability_max").optInt(0)}%",
-                "Wind ${cur.getDouble("wind_speed_10m").toInt()} ${if (f) "mph" else "km/h"}",
-                "Source: Open-Meteo",
+                t(R.string.r_high_low, daily.getJSONArray("temperature_2m_max").getDouble(0).toInt(), daily.getJSONArray("temperature_2m_min").getDouble(0).toInt(), unit),
+                t(R.string.r_rain_chance, daily.getJSONArray("precipitation_probability_max").optInt(0)),
+                t(R.string.r_wind, cur.getDouble("wind_speed_10m").toInt(), if (f) "mph" else "km/h"),
+                t(R.string.r_source, "Open-Meteo"),
             )
         // Spoken: just the city (no region), then the forecast lines.
-        return ToolResult("$sky, $temp$unit in $name.", lines,
-            spoken = Speech.forSpeech("$sky, $temp$unit in $city.", lines.take(2)))
+        return ToolResult(t(R.string.r_weather, sky, temp, unit, name), lines,
+            spoken = Speech.forSpeech(t(R.string.r_weather, sky, temp, unit, city), lines.take(2)))
     }
 
     private suspend fun news(topic: String): ToolResult {
@@ -164,10 +166,10 @@ class Tools(
         val words = topic.lowercase(Locale.US).split(' ').filter { it.length > 2 }
         val picked = (if (words.isEmpty()) items else items.filter { (t, _) -> words.any { t.lowercase(Locale.US).contains(it) } })
             .distinctBy { it.first }.take(6)
-        if (picked.isEmpty()) return ToolResult(if (topic.isBlank()) "I couldn't get the news right now." else "No headlines about “$topic” right now.")
-        val title = if (topic.isBlank()) "Top headlines:" else "Headlines about $topic:"
+        if (picked.isEmpty()) return ToolResult(if (topic.isBlank()) t(R.string.r_no_news) else t(R.string.r_no_news_topic, topic))
+        val title = if (topic.isBlank()) t(R.string.r_top_headlines) else t(R.string.r_headlines_topic, topic)
         // Each headline links to its article (tap to open it in the browser).
-        return ToolResult(title, picked.map { "• ${it.first}" } + "Source: NPR, BBC", lineLinks = picked.map { it.second } + null,
+        return ToolResult(title, picked.map { "• ${it.first}" } + t(R.string.r_source, "NPR, BBC"), lineLinks = picked.map { it.second } + null,
             spoken = Speech.forSpeech(title, picked.take(3).map { it.first }))
     }
 
@@ -189,7 +191,7 @@ class Tools(
 
     private suspend fun stock(symbolArg: String): ToolResult {
         val asked = symbolArg.trim().trim('?', '.', '!')
-        if (asked.isEmpty()) return ToolResult("Which stock? Try a company or a ticker like AAPL.")
+        if (asked.isEmpty()) return ToolResult(t(R.string.r_which_stock))
         // A ticker ("NVDA") is looked up directly; a company name ("nvidia", "Apple") is searched first.
         // If the direct lookup fails (Yahoo answers 404 for unknown tickers), search too.
         var name: String? = null
@@ -197,16 +199,16 @@ class Tools(
         val looksLikeTicker = asked.length <= 5 && !asked.contains(' ') && (asked == asked.uppercase(Locale.US) || asked.length <= 4)
         var meta: JSONObject? = if (looksLikeTicker) runCatching { chartMeta(symbol) }.getOrNull() else null
         if (meta == null) {
-            val hit = findSymbol(asked) ?: return ToolResult("I couldn't find a stock called “$asked”.")
+            val hit = findSymbol(asked) ?: return ToolResult(t(R.string.r_no_stock, asked))
             symbol = hit.first; name = hit.second
-            meta = chartMeta(symbol) ?: return ToolResult("I couldn't get a price for $symbol.")
+            meta = chartMeta(symbol) ?: return ToolResult(t(R.string.r_no_price, symbol))
         }
         val price = meta.getDouble("regularMarketPrice")
         val prev = meta.optDouble("chartPreviousClose", meta.optDouble("previousClose", Double.NaN))
         val change = if (prev.isNaN()) "" else " (%+.2f%% today)".format((price - prev) / prev * 100)
         val who = name?.let { "$it ($symbol)" } ?: symbol
         return ToolResult("$who is %.2f %s%s.".format(price, meta.optString("currency", "USD"), change),
-            listOf(meta.optString("fullExchangeName"), "Source: Yahoo Finance").filter { it.isNotBlank() },
+            listOf(meta.optString("fullExchangeName"), t(R.string.r_source, "Yahoo Finance")).filter { it.isNotBlank() },
             spoken = "${name ?: symbol} is %.2f %s%s.".format(price, if (meta.optString("currency", "USD") == "USD") "dollars" else meta.optString("currency"),
                 if (prev.isNaN()) "" else ", %s %.1f percent today".format(if (price >= prev) "up" else "down", kotlin.math.abs((price - prev) / prev * 100))))
     }
@@ -225,23 +227,23 @@ class Tools(
     }
 
     private fun timer(arg: String): ToolResult {
-        val seconds = arg.toIntOrNull() ?: AgentCore.parseDuration(arg) ?: return ToolResult("How long should the timer be?")
+        val seconds = arg.toIntOrNull() ?: AgentCore.parseDuration(arg) ?: return ToolResult(t(R.string.r_timer_how_long))
         val i = Intent(AlarmClock.ACTION_SET_TIMER).putExtra(AlarmClock.EXTRA_LENGTH, seconds)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(i)
-        val text = when { seconds % 3600 == 0 -> "${seconds / 3600} hour"; seconds % 60 == 0 -> "${seconds / 60} minute"; else -> "$seconds second" }
-        return ToolResult("Timer set for ${text}${if (text.startsWith("1 ")) "" else "s"}.")
+        val (id, n) = when { seconds % 3600 == 0 -> R.plurals.r_timer_hours to seconds / 3600; seconds % 60 == 0 -> R.plurals.r_timer_minutes to seconds / 60; else -> R.plurals.r_timer_seconds to seconds }
+        return ToolResult(context.resources.getQuantityString(id, n, n))
     }
 
     private fun alarm(arg: String): ToolResult {
         val now = java.time.LocalTime.now()
         val (h, m) = AgentCore.parseClock(arg, now.hour * 60 + now.minute)
-            ?: return ToolResult("What time should the alarm be?")
+            ?: return ToolResult(t(R.string.r_alarm_when))
         val i = Intent(AlarmClock.ACTION_SET_ALARM).putExtra(AlarmClock.EXTRA_HOUR, h).putExtra(AlarmClock.EXTRA_MINUTES, m)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (runCatching { context.startActivity(i) }.isFailure) return ToolResult("No clock app can set alarms.")
+        if (runCatching { context.startActivity(i) }.isFailure) return ToolResult(t(R.string.r_no_clock))
         val time = java.time.LocalTime.of(h, m).format(java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT))
-        return ToolResult("Alarm set for $time.")
+        return ToolResult(t(R.string.r_alarm_set, time))
     }
 
     // ---- Actions in other apps: always confirmed first, then handed to the user's own app ----------------------
@@ -249,22 +251,22 @@ class Tools(
     private fun start(i: Intent): Boolean = runCatching { context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); opened() }.isSuccess
 
     /** Finds who [who] is: a number as typed, a contact, or a card asking for contacts access / a pick. */
-    private fun resolve(who: String, verb: String, then: (Person) -> ToolResult): ToolResult {
+    private fun resolve(who: String, texting: Boolean, then: (Person) -> ToolResult): ToolResult {
         if (TextArgs.isNumber(who)) return then(Person(who, who, ""))
         val needContact = { why: String ->
-            ToolResult(why, card = Card(Card.Kind.NEED_CONTACT, "Who should I $verb?",
-                "Allow contacts (they stay on this phone and are never shown to the AI model), or pick one person.",
+            ToolResult(why, card = Card(Card.Kind.NEED_CONTACT, t(if (texting) R.string.r_who_text else R.string.r_who_call),
+                t(R.string.r_allow_contacts),
                 withContact = then))
         }
         // A saved shortcut ("Jen" → this Jennifer, "wife" → …) wins, with or without contacts access.
         shortcuts?.find(who)?.let { return then(it) }
-        if (!contacts.granted()) return needContact("To $verb $who I need to know who that is.")
+        if (!contacts.granted()) return needContact(t(if (texting) R.string.r_need_who_text else R.string.r_need_who_call, who))
         val people = contacts.candidates(who)
         return when (people.size) {
-            0 -> needContact("I couldn't find “$who” in your contacts.")
+            0 -> needContact(t(R.string.r_no_contact, who))
             1 -> then(people.first())
-            else -> ToolResult("Which $who?", card = Card(Card.Kind.CHOOSE_CONTACT, "Which $who should I $verb?",
-                "Tick the box to always use that person for “$who”.", options = people, alias = who, withContact = then))
+            else -> ToolResult(t(R.string.r_which_who, who), card = Card(Card.Kind.CHOOSE_CONTACT, t(if (texting) R.string.r_which_text else R.string.r_which_call, who),
+                t(R.string.r_always_use_hint, who), options = people, alias = who, withContact = then))
         }
     }
 
@@ -272,7 +274,7 @@ class Tools(
         // "text Jen on WhatsApp …" picks that app for this message.
         val (via, rest) = Messenger.strip(arg)
         val parts = TextArgs.split(rest) { shortcuts?.find(it) != null || (contacts.granted() && contacts.nameExists(it)) }
-        return resolve(parts.recipient, "text") { p -> textCard(p, parts.message, via) }
+        return resolve(parts.recipient, texting = true) { p -> textCard(p, parts.message, via) }
     }
 
     private fun textCard(p: Person, message: String, via: Messenger? = null): ToolResult {
@@ -282,13 +284,13 @@ class Tools(
         val pkg = messenger?.let { if (chosen in it.packages) chosen else installed[it] }
         if (via != null && pkg == null) return ToolResult("${via.label} isn't installed on this phone.")
         return ToolResult(
-            "Ready to text ${p.name}.",
-            card = Card(Card.Kind.CONFIRM, "Text ${p.name}", listOf(p.number, p.label, messenger?.label.orEmpty()).filter { it.isNotBlank() }.joinToString(" · "),
-                if (messenger != null) "Open ${messenger.label}" else "Send", message, person = p,
+            t(R.string.r_ready_text, p.name),
+            card = Card(Card.Kind.CONFIRM, t(R.string.r_text_title, p.name), listOf(p.number, p.label, messenger?.label.orEmpty()).filter { it.isNotBlank() }.joinToString(" · "),
+                if (messenger != null) t(R.string.r_open_app, messenger.label) else t(R.string.r_send), message, person = p,
                 run = { m ->
                     if (messenger != null && pkg != null) messengerText(messenger, pkg, p, m.orEmpty()) else {
                         val ok = start(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(p.number))).putExtra("sms_body", m.orEmpty()).via(AppTask.MESSAGES))
-                        if (ok) "Opened your messaging app with the text to ${p.name}. Tap send there." else "No messaging app found."
+                        if (ok) t(R.string.r_opened_sms, p.name) else t(R.string.r_no_sms)
                     }
                 }),
         )
@@ -305,12 +307,12 @@ class Tools(
         val e164 = e164(p.number)
         if (e164 != null && start(app.chat(e164, message).setPackage(pkg)))
             return when {
-                message.isBlank() || app.prefills -> "Opened $name with ${p.name}." + if (message.isNotBlank()) " Tap send there." else ""
-                else -> "Opened $name with ${p.name}. Your message is copied: paste it and tap send."
+                message.isBlank() || app.prefills -> if (message.isNotBlank()) t(R.string.r_opened_with_send, name, p.name) else t(R.string.r_opened_with, name, p.name)
+                else -> t(R.string.r_opened_with_copied, name, p.name)
             }
         if (message.isNotBlank() && start(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, message).setPackage(pkg)))
-            return "Opened $name with your message. Pick ${p.name} and tap send."
-        return "Couldn't open $name for ${p.name}."
+            return t(R.string.r_opened_pick, name, p.name)
+        return t(R.string.r_couldnt_open_for, name, p.name)
     }
 
     /** The number in international form (+15551234567), using the phone's country for local numbers. */
@@ -320,10 +322,10 @@ class Tools(
         return android.telephony.PhoneNumberUtils.formatNumberToE164(number, iso)
     }
 
-    private fun call(who: String) = resolve(who, "call") { p ->
-        ToolResult("Ready to call ${p.name}.", card = Card(Card.Kind.CONFIRM, "Call ${p.name}",
+    private fun call(who: String) = resolve(who, texting = false) { p ->
+        ToolResult(t(R.string.r_ready_call, p.name), card = Card(Card.Kind.CONFIRM, t(R.string.r_call_title, p.name),
             listOf(p.number, p.label).filter { it.isNotBlank() }.joinToString(" · "), "Call", person = p,
-            run = { if (start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))).via(AppTask.PHONE))) "Opening the dialer for ${p.name}." else "No phone app found." }))
+            run = { if (start(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(p.number))).via(AppTask.PHONE))) t(R.string.r_opening_dialer, p.name) else t(R.string.r_no_phone) }))
     }
 
     private fun installed(pkg: String) = runCatching { context.packageManager.getPackageInfo(pkg, 0) }.isSuccess
@@ -332,76 +334,78 @@ class Tools(
         val colon = arg.indexOf(':')
         var app = if (colon > 0) arg.substring(0, colon).trim().lowercase() else "uber"
         val dest = (if (colon > 0) arg.substring(colon + 1) else arg).trim()
-        if (dest.isBlank()) return ToolResult("Where to?")
+        if (dest.isBlank()) return ToolResult(t(R.string.r_where_to))
         if (colon <= 0) appFor(AppTask.RIDES)?.let { if (it == LYFT) app = "lyft" }
         if (app != "lyft" && !installed(UBER) && installed(LYFT)) app = "lyft"
-        return if (app == "lyft") ToolResult("Ready to open Lyft.", card = Card(Card.Kind.CONFIRM, "Lyft to $dest",
-            "Opens Lyft and copies the destination so you can paste it. You confirm the ride in Lyft.", "Open Lyft",
+        return if (app == "lyft") ToolResult(t(R.string.r_ready_lyft), card = Card(Card.Kind.CONFIRM, t(R.string.r_lyft_title, dest),
+            t(R.string.r_lyft_body), t(R.string.r_open_lyft),
             run = {
                 val cm = context.getSystemService(android.content.ClipboardManager::class.java)
                 cm.setPrimaryClip(android.content.ClipData.newPlainText("Destination", dest))
                 val i = context.packageManager.getLaunchIntentForPackage(LYFT) ?: Intent(Intent.ACTION_VIEW, Uri.parse("https://ride.lyft.com"))
-                if (start(i)) "Opened Lyft. “$dest” is copied; paste it as the destination." else "Couldn't open Lyft."
+                if (start(i)) t(R.string.r_opened_lyft, dest) else t(R.string.r_couldnt_lyft)
             }))
-        else ToolResult("Ready to open Uber.", card = Card(Card.Kind.CONFIRM, "Uber to $dest",
-            "Opens Uber with the destination filled in. You choose and confirm the ride in Uber.", "Open Uber",
+        else ToolResult(t(R.string.r_ready_uber), card = Card(Card.Kind.CONFIRM, t(R.string.r_uber_title, dest),
+            t(R.string.r_uber_body), t(R.string.r_open_uber),
             run = {
                 // Uber's universal link: opens the app if installed, otherwise m.uber.com.
                 val url = "https://m.uber.com/ul/?action=setPickup&pickup=my_location" +
                     "&dropoff[formatted_address]=" + Uri.encode(dest) + "&dropoff[nickname]=" + Uri.encode(dest)
-                if (start(Intent(Intent.ACTION_VIEW, Uri.parse(url)))) "Opened Uber with “$dest” as the destination." else "Couldn't open Uber."
+                if (start(Intent(Intent.ACTION_VIEW, Uri.parse(url)))) t(R.string.r_opened_uber, dest) else t(R.string.r_couldnt_uber)
             }))
     }
 
     private fun navigate(dest: String): ToolResult {
-        if (dest.isBlank()) return ToolResult("Where to?")
+        if (dest.isBlank()) return ToolResult(t(R.string.r_where_to))
         // geo: works with any maps app the user has (Google Maps, Organic Maps, OsmAnd…).
-        return if (start(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))).via(AppTask.MAPS))) ToolResult("Opening directions to $dest.")
-        else ToolResult("No maps app found.")
+        return if (start(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(dest))).via(AppTask.MAPS))) ToolResult(t(R.string.r_directions, dest))
+        else ToolResult(t(R.string.r_no_maps))
     }
 
     private fun play(what: String): ToolResult {
-        if (what.isBlank()) return ToolResult("What should I play?")
+        if (what.isBlank()) return ToolResult(t(R.string.r_what_play))
         val i = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
             .putExtra(android.app.SearchManager.QUERY, what).putExtra(android.provider.MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
             .via(AppTask.MUSIC)
-        return if (start(i)) ToolResult("Playing $what.") else ToolResult("No music app can play “$what”. Pick one in Settings → Assistant → Apps.")
+        return if (start(i)) ToolResult(t(R.string.r_playing, what)) else ToolResult(t(R.string.r_no_music, what))
     }
 
     /** The model wants to save a note: always ask first, and let the user edit it. */
     private fun remember(note: String): ToolResult {
-        val nb = notebook ?: return ToolResult("I can't keep notes here.")
-        if (note.isBlank()) return ToolResult("What should I remember?")
+        val nb = notebook ?: return ToolResult(t(R.string.r_no_notes))
+        if (note.isBlank()) return ToolResult(t(R.string.r_what_remember))
         if (!nb.book.value.hasRoomFor(note.length + 4))
-            return ToolResult("My notebook is full. Tidy it in Settings → Assistant → Notebook, then ask again.")
-        return ToolResult("Save this to my notebook?", card = Card(Card.Kind.CONFIRM, "Remember this?",
-            "Kept on this phone only. You can edit it in Settings → Assistant → Notebook.", "Save", note,
-            run = { m -> if (nb.save(nb.book.value.addNote(m ?: note))) "Saved. I'll keep that in mind." else "My notebook is full." }))
+            return ToolResult(t(R.string.r_notebook_full_tidy))
+        return ToolResult(t(R.string.r_save_note), card = Card(Card.Kind.CONFIRM, t(R.string.r_remember_title),
+            t(R.string.r_remember_body), t(R.string.r_save), note,
+            run = { m -> if (nb.save(nb.book.value.addNote(m ?: note))) t(R.string.r_saved_note) else t(R.string.r_notebook_full) }))
     }
 
     private fun help(): ToolResult {
         fun app(t: AppTask) = appFor(t)?.let { " (${AppChoices.label(context, it)})" }.orEmpty()
-        return ToolResult("Here's what I can do:", listOf(
-            "• Open apps: “open camera”",
-            "• Text and call people${app(AppTask.MESSAGES)}: “text Jen on my way”, “call Jen”",
-            "• Rides${app(AppTask.RIDES)}: “get me an Uber to the airport”",
-            "• Directions${app(AppTask.MAPS)}: “directions to Costco”",
-            "• Music${app(AppTask.MUSIC)}: “play some jazz”",
-            "• Timers and maths: “timer 10 minutes”, “18% of 64”",
-            "• Weather, news, stocks, quick answers (when allowed online)",
-            "• Anything else: I'll answer with the model you picked",
-            "• Teach me: “remember I'm vegetarian”, “when I say goodnight, set a timer for 8 hours and play rain sounds”, “when I say Jen I mean Jennifer Lopez”, “what do you remember?”",
-            "I always ask before sending, calling or booking.",
-        ), spoken = "I can open apps, text and call people, get rides and directions, play music, set timers, do maths, and get the weather, news and stock prices. I always ask before sending, calling or booking.")
+        return ToolResult(t(R.string.r_help_title), listOf(
+            t(R.string.r_help_apps),
+            t(R.string.r_help_text, app(AppTask.MESSAGES)),
+            t(R.string.r_help_rides, app(AppTask.RIDES)),
+            t(R.string.r_help_maps, app(AppTask.MAPS)),
+            t(R.string.r_help_music, app(AppTask.MUSIC)),
+            t(R.string.r_help_timers),
+            t(R.string.r_help_online),
+            t(R.string.r_help_model),
+            t(R.string.r_help_teach),
+            t(R.string.r_help_ask),
+        ), spoken = t(R.string.r_help_spoken))
     }
+
+    private fun t(id: Int, vararg a: Any): String = if (a.isEmpty()) context.getString(id) else context.getString(id, *a)
 
     companion object { private const val UBER = "com.ubercab"; private const val LYFT = "me.lyft.android" }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
     private fun describe(code: Int) = when (code) {
-        0 -> "Clear"; 1 -> "Mostly clear"; 2 -> "Partly cloudy"; 3 -> "Overcast"; 45, 48 -> "Foggy"
-        51, 53, 55, 56, 57 -> "Drizzle"; 61, 63, 65, 66, 67 -> "Rain"; 71, 73, 75, 77 -> "Snow"
-        80, 81, 82 -> "Rain showers"; 85, 86 -> "Snow showers"; 95, 96, 99 -> "Thunderstorms"; else -> "Weather"
+        0 -> t(R.string.w_clear); 1 -> t(R.string.w_mostly_clear); 2 -> t(R.string.w_partly_cloudy); 3 -> t(R.string.w_overcast); 45, 48 -> t(R.string.w_fog)
+        51, 53, 55, 56, 57 -> t(R.string.w_drizzle); 61, 63, 65, 66, 67 -> t(R.string.w_rain); 71, 73, 75, 77 -> t(R.string.w_snow)
+        80, 81, 82 -> t(R.string.w_rain_showers); 85, 86 -> t(R.string.w_snow_showers); 95, 96, 99 -> t(R.string.w_storms); else -> t(R.string.w_weather)
     }
 }

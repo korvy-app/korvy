@@ -245,6 +245,8 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-24: Background pictures easier to remove (owner request): a dark round ✕ badge that shows on any photo,
+  and tapping a picture asks "Remove this picture?". Verified on the 4a.
 - 2026-11-24: **0.13.0 – Pro redefined (owner decision).** Free: launcher, search, folders, widgets, hide, and the
   assistant's plain-code quick commands (apps, alarms, timers, maths, calls, texts, rides, directions, music,
   weather/news/stocks, power button with the phone's voice). Pro ($4.99): the on-device AI model (open questions,

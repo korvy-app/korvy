@@ -1,5 +1,8 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.Color
 import app.korvy.launcher.data.titleRes
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
@@ -111,7 +114,8 @@ fun SettingsScreen(
                     animationsOn, "toggle_animations",
                 ) { vm.setAnimations(it) }
                 Text(stringResource(R.string.background), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 20.dp, top = 12.dp))
-                Note(when { backgrounds.isEmpty() -> stringResource(R.string.bg_wallpaper); backgrounds.size == 1 -> stringResource(R.string.bg_pictures_one); else -> stringResource(R.string.bg_pictures_many, backgrounds.size) })
+                Note(when { backgrounds.isEmpty() -> stringResource(R.string.bg_wallpaper); backgrounds.size == 1 -> stringResource(R.string.bg_pictures_one); else -> stringResource(R.string.bg_pictures_many, backgrounds.size) } +
+                    if (backgrounds.isNotEmpty()) " " + stringResource(R.string.bg_tap_to_remove) else "")
                 if (backgrounds.isNotEmpty()) LazyRow(
                     Modifier.padding(vertical = 6.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
@@ -281,12 +285,26 @@ private fun Thumb(f: File, onRemove: () -> Unit) {
     val bmp by produceState<ImageBitmap?>(null, f) {
         value = withContext(Dispatchers.IO) { Backgrounds.load(f)?.let { android.graphics.Bitmap.createScaledBitmap(it, it.width / 8, it.height / 8, true).asImageBitmap() } }
     }
-    androidx.compose.foundation.layout.Box(Modifier.size(width = 64.dp, height = 112.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+    var ask by remember { mutableStateOf(false) }
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(width = 64.dp, height = 112.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable { ask = true }.testTag("bg_thumb"),
+    ) {
         bmp?.let { Image(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
-        IconButton(onClick = onRemove, modifier = Modifier.align(Alignment.TopEnd).size(28.dp)) {
-            Icon(Icons.Outlined.Close, stringResource(R.string.remove_picture), modifier = Modifier.size(16.dp))
+        // A dark round badge so the ✕ shows on any photo (light or dark).
+        IconButton(onClick = onRemove, modifier = Modifier.align(Alignment.TopEnd).size(36.dp).testTag("bg_remove")) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.size(24.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.Black.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.Close, stringResource(R.string.remove_picture), tint = Color.White, modifier = Modifier.size(16.dp)) }
         }
     }
+    if (ask) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { ask = false },
+        title = { Text(stringResource(R.string.remove_picture_q)) },
+        confirmButton = { TextButton(onClick = { ask = false; onRemove() }) { Text(stringResource(R.string.remove)) } },
+        dismissButton = { TextButton(onClick = { ask = false }) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
