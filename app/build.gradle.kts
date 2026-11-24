@@ -14,19 +14,19 @@ baselineProfile {
 }
 
 android {
-    namespace = "com.hiddenoutlier.launcher"
+    namespace = "app.korvy.launcher"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
         // Placeholder ID until the final name is chosen. It can't change after the first Play upload.
-        applicationId = "com.hiddenoutlier.launcher"
+        applicationId = "app.korvy.launcher"
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 23
-        versionName = "0.10.1"
+        versionCode = 24
+        versionName = "0.11.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.

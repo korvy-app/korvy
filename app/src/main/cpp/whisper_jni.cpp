@@ -25,7 +25,7 @@ static void wlog(ggml_log_level level, const char * text, void *) {
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_whisperLoad(JNIEnv * env, jobject, jstring jpath) {
+Java_app_korvy_launcher_assistant_Native_whisperLoad(JNIEnv * env, jobject, jstring jpath) {
     std::lock_guard<std::mutex> lock(g_wmu);
     std::string path = wstr(env, jpath);
     if (g_wctx && g_wpath == path) return 0;
@@ -41,7 +41,7 @@ Java_com_hiddenoutlier_launcher_assistant_Native_whisperLoad(JNIEnv * env, jobje
 
 /** 16 kHz mono float samples → text. [lang] is "en", "auto", … [prompt] biases spelling (app and contact names). */
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_whisperTranscribe(JNIEnv * env, jobject, jfloatArray jpcm, jstring jlang, jint threads, jstring jprompt) {
+Java_app_korvy_launcher_assistant_Native_whisperTranscribe(JNIEnv * env, jobject, jfloatArray jpcm, jstring jlang, jint threads, jstring jprompt) {
     std::lock_guard<std::mutex> lock(g_wmu);
     if (!g_wctx) return nullptr;
     g_wabort = false;
@@ -70,10 +70,10 @@ Java_com_hiddenoutlier_launcher_assistant_Native_whisperTranscribe(JNIEnv * env,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_whisperStop(JNIEnv *, jobject) { g_wabort = true; }
+Java_app_korvy_launcher_assistant_Native_whisperStop(JNIEnv *, jobject) { g_wabort = true; }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_whisperUnload(JNIEnv *, jobject) {
+Java_app_korvy_launcher_assistant_Native_whisperUnload(JNIEnv *, jobject) {
     g_wabort = true;
     std::lock_guard<std::mutex> lock(g_wmu);
     if (g_wctx) { whisper_free(g_wctx); g_wctx = nullptr; g_wpath.clear(); }

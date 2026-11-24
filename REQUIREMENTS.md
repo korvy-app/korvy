@@ -1,7 +1,7 @@
-# Launcher – requirements (source of truth)
+# Korvy – requirements (source of truth)
 
-Working name: **Launcher**. Name candidates (invented words, 3 syllables, good as wake words; not yet checked
-against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivora is taken (an iOS app). Owner decisions are recorded here; read this first.
+Name: **Korvy** ("KOR-vee"), chosen 2026-11-23; store and About name "Korvy Launcher". Wake word "Hey Korvy".
+Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORVY_SETUP_PROGRESS.md`. Owner decisions are recorded here; read this first.
 
 ## Values, in priority order
 1. **Privacy**: nothing leaves the phone unless the user asks (a web search). No accounts.
@@ -215,7 +215,7 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 ## Engineering (same choices as Piano Notes)
 - Kotlin + Jetpack Compose, Material 3; minSdk 26, targetSdk/compileSdk 37; AGP 9.5, Gradle 9.8, JDK 17 target
   (build with `JAVA_HOME=$(/usr/libexec/java_home -v 20)`).
-- Package `com.hiddenoutlier.launcher` (placeholder until the name is chosen; it can't change after the first
+- Package `app.korvy.launcher` (renamed from the placeholder `com.hiddenoutlier.launcher` before any release; it can't change after the first
   Play upload). Flavours: `play` and `foss` (`.foss` suffix). Debug builds add `.debug`, so all can coexist.
 - No Google Play services, Firebase, analytics or network libraries. The app has **no INTERNET permission**.
 - Storage: DataStore (settings), plain SQLite (`usage.db`, launch history), Keystore-encrypted file
@@ -245,6 +245,11 @@ against USPTO, Play and domains): **Okuvi** (recommended), Vantiko, Orlune. Kivo
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.11.0 – renamed to Korvy.** Package `app.korvy.launcher` (was the placeholder
+  `com.hiddenoutlier.launcher`, never published), label "Korvy", About screen, "Hey Korvy" default wake word, the
+  assistant introduces itself as Korvy, tour and README updated. Also: stock prices by company name ("nvidia stock
+  price" → NVDA via Yahoo's symbol search on the same host; a 404 for an unknown ticker falls back to search).
+  Verified on the 4a: installs and launches as home; NVDA, MSFT and AAPL looked up by name.
 - 2026-11-23: **0.10.1** – Alarm action ("set alarm at 8pm", "wake me up at 6:30", `core/AgentCore.parseClock`; an
   hour without am/pm means its next occurrence) via AlarmClock.ACTION_SET_ALARM. Grounding guard: a model's text or
   call is refused unless the person's name (or number) is in the request (a model had turned "set alarm at 8pm"

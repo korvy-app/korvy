@@ -71,7 +71,7 @@
             android:name=".AssistActivity"
             android:exported="true"
             android:theme="@style/Theme.Launcher.Panel"
-            android:taskAffinity="com.hiddenoutlier.launcher.assist"
+            android:taskAffinity="app.korvy.launcher.assist"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:windowSoftInputMode="adjustResize|stateHidden">

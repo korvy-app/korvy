@@ -1,7 +1,8 @@
 # Notes for Claude sessions
 
-A privacy-first, fast Android launcher. Working name "Launcher"; the final name is still to be chosen and
-trademarked (candidates and checks in REQUIREMENTS.md).
+**Korvy Launcher** ("KOR-vee"): a privacy-first, fast Android launcher with an optional on-device assistant
+("Hey Korvy"). Package `app.korvy.launcher`, domain korvy.app, GitHub org `korvy-app`. Rename and launch steps are
+tracked in `docs/KORVY_SETUP_PROGRESS.md`.
 
 ## Read first
 - **`REQUIREMENTS.md` is the source of truth**: the owner's decisions, priorities, engineering choices, test
@@ -10,8 +11,9 @@ trademarked (candidates and checks in REQUIREMENTS.md).
   anything from it into committed files: this repo is meant to become public.
 
 ## Non-negotiables (from the owner)
-- **Privacy:** no analytics, no crash reporting, no accounts, no ads, no network calls from the app. The app has
-  no INTERNET permission; adding one needs the owner's explicit approval. No Google Play services or Firebase.
+- **Privacy:** no analytics, no crash reporting, no accounts, no ads, and never anything sent to a server of ours
+  (there is none). INTERNET is only for opt-in online features, each behind its own switch and host allow-list in
+  `platform/Net.kt`. No Google Play services or Firebase.
   Google *code* may appear only in the `play` flavour (e.g. Play Billing for the Pro unlock), never in `foss`.
 - **Performance is a top value alongside privacy.** Nothing heavy at startup; models and voice load on demand
   in a separate process. Judge speed only on release builds (debug Compose is several times slower).

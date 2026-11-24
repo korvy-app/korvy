@@ -56,7 +56,7 @@ static void free_all() {
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_init(JNIEnv *env, jobject, jstring libDir) {
+Java_app_korvy_launcher_assistant_Native_init(JNIEnv *env, jobject, jstring libDir) {
     llama_log_set(log_cb, nullptr);
     ggml_backend_load_all_from_path(jstr(env, libDir).c_str());
     llama_backend_init();
@@ -64,7 +64,7 @@ Java_com_hiddenoutlier_launcher_assistant_Native_init(JNIEnv *env, jobject, jstr
 
 /** Loads a GGUF model. Returns 0 on success. */
 extern "C" JNIEXPORT jint JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_load(JNIEnv *env, jobject, jstring path, jint nCtx, jint threads) {
+Java_app_korvy_launcher_assistant_Native_load(JNIEnv *env, jobject, jstring path, jint nCtx, jint threads) {
     free_all();
     auto mp = llama_model_default_params();
     g_model = llama_model_load_from_file(jstr(env, path).c_str(), mp);
@@ -84,10 +84,10 @@ Java_com_hiddenoutlier_launcher_assistant_Native_load(JNIEnv *env, jobject, jstr
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_stop(JNIEnv *, jobject) { g_stop = true; }
+Java_app_korvy_launcher_assistant_Native_stop(JNIEnv *, jobject) { g_stop = true; }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_unload(JNIEnv *, jobject) { free_all(); }
+Java_app_korvy_launcher_assistant_Native_unload(JNIEnv *, jobject) { free_all(); }
 
 /**
  * Generates a reply to a chat (parallel arrays of roles and contents). [grammar] (GBNF) constrains the output,
@@ -95,7 +95,7 @@ Java_com_hiddenoutlier_launcher_assistant_Native_unload(JNIEnv *, jobject) { fre
  * listener.onToken(String) -> boolean (false stops). Returns the whole reply, or null on error.
  */
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_hiddenoutlier_launcher_assistant_Native_complete(
+Java_app_korvy_launcher_assistant_Native_complete(
         JNIEnv *env, jobject, jobjectArray roles, jobjectArray contents, jstring jgrammar,
         jint maxTokens, jfloat temp, jobject listener) {
     if (!g_ctx || !g_model) return nullptr;

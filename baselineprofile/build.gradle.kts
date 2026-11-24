@@ -6,7 +6,7 @@ plugins {
 // Records which code the launcher runs at startup (on a real phone, Android 13+), for the app's baseline and
 // startup profiles, and measures cold start. See REQUIREMENTS.md → Startup profile.
 android {
-    namespace = "com.hiddenoutlier.launcher.baselineprofile"
+    namespace = "app.korvy.launcher.baselineprofile"
     compileSdk { version = release(37) }
     defaultConfig {
         minSdk = 28
