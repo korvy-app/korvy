@@ -34,6 +34,7 @@
 
     <!-- allowBackup=false: hidden apps, usage patterns and settings never leave the phone. -->
     <application
+        android:localeConfig="@xml/locales_config"
         android:name=".LauncherApp"
         android:allowBackup="false"
         android:fullBackupContent="false"

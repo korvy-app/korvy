@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">Korvy</string>
+    <string name="app_name" translatable="false">Korvy</string>
     <string name="ask_me_to_do_something">Ask me to do something.</string>
-    <string name="text">“%1$s”</string>
+    <string name="text" translatable="false">“%1$s”</string>
     <string name="everything_runs_on_this_phone">Everything runs on this phone. Weather, news, stocks and quick answers only go online if you allow them in Settings → Online features.</string>
     <string name="ask_or_tell_me_to">Ask or tell me to do something</string>
     <string name="read_more">Read more</string>
@@ -9,7 +9,7 @@
     <string name="downloading_needs_online_features_model">Downloading needs Online features → Model downloads.</string>
     <string name="open_online_features">Open Online features</string>
     <string name="you_re_on_mobile_data">You\'re on mobile data. Downloads wait for Wi-Fi (change this in Online features).</string>
-    <string name="text_2">%1$s · %2$s · %3$s</string>
+    <string name="text_2" translatable="false">%1$s · %2$s · %3$s</string>
     <string name="may_be_too_big_for">May be too big for this phone (best with %.0f GB+ memory).</string>
     <string name="n0f_of_0f_mb">%.0f of %.0f MB</string>
     <string name="pause">Pause</string>
@@ -32,7 +32,7 @@
     <string name="name_or_nickname">Name or nickname</string>
     <string name="choose_who">Choose who</string>
     <string name="no_shortcuts_yet">No shortcuts yet.</string>
-    <string name="text_3">“%1$s” → %2$s</string>
+    <string name="text_3" translatable="false">“%1$s” → %2$s</string>
     <string name="pick_which_app_handles_each">Pick which app handles each kind of request. “Android decides” uses your phone\'s default (or asks).</string>
     <string name="no_installed_app_can_do">No installed app can do this.</string>
     <string name="android_decides">Android decides</string>
@@ -40,14 +40,14 @@
     <string name="tidy">Tidy</string>
     <string name="what_the_assistant_has_learned">What the assistant has learned. Teach it by saying “remember …”, “when I say goodnight, set a timer for 8 hours and play rain sounds”, or “forget …”. Phrases run instantly without a model. The model only sees the few notes that matter for each question. Kept encrypted on this phone, never backed up. People nicknames live in People shortcuts.</string>
     <string name="of_characters_notes_phrases">%1$s of %2$s characters · %3$s notes · %4$s phrases</string>
-    <string name="korvy_launcher">Korvy Launcher™</string>
+    <string name="korvy_launcher" translatable="false">Korvy Launcher™</string>
     <string name="version">Version %1$s</string>
     <string name="a_private_fast_home_screen">A private, fast home screen with an optional assistant that runs on your phone.</string>
     <string name="your_privacy">Your privacy</string>
     <string name="no_accounts_ads_analytics_or">No accounts, ads, analytics or crash reporting, and no server of ours: there is nothing for this app to send your data to. Online features (weather, news, downloads…) are off until you turn each one on, and they talk only to the services named in Settings → Online features.</string>
     <string name="open_source">Open source</string>
     <string name="free_software_under_the_gnu">Free software under the GNU GPL version 3 or later. Built with llama.cpp, whisper.cpp and sherpa-onnx (MIT/Apache 2.0). “Korvy” is a trademark of the project; forks are welcome under another name.</string>
-    <string name="korvy_app">korvy.app</string>
+    <string name="korvy_app" translatable="false">korvy.app</string>
     <string name="source_code_on_github">Source code on GitHub</string>
     <string name="report_a_problem">Report a problem</string>
     <string name="developer_options">Developer options</string>
@@ -159,7 +159,7 @@
     <string name="natural_voices">Natural voices</string>
     <string name="human_sounding_voices_that_run">Human-sounding voices that run entirely on this phone (open source, via sherpa-onnx). Nothing you hear is sent anywhere.</string>
     <string name="downloading_needs_settings_online_featur">Downloading needs Settings → Online features → Voice downloads.</string>
-    <string name="text_4">%1$s · %2$s</string>
+    <string name="text_4" translatable="false">%1$s · %2$s</string>
     <string name="checking_and_unpacking">Checking and unpacking…</string>
     <string name="speaker">Speaker</string>
     <string name="speech_recognition">Speech recognition</string>
@@ -221,26 +221,26 @@
     <string name="wake_hears_better">Hears me better</string>
     <string name="stats_this_app">This app</string>
     <string name="stats_memory">Memory</string>
-    <string name="stats_mb">%1$.0f MB</string>
+    <string name="stats_mb" translatable="false">%1$.0f MB</string>
     <string name="stats_frames_drawn">Frames drawn</string>
     <string name="stats_fps">%1$.0f fps (screen runs at %2$.0f Hz)</string>
     <string name="stats_dropped">Dropped frames</string>
-    <string name="stats_percent">%1$.0f%%</string>
+    <string name="stats_percent" translatable="false">%1$.0f%%</string>
     <string name="stats_needs_motion">needs motion to measure</string>
     <string name="stats_smoothness_hint">Turn on the smoothness test to measure animation.</string>
     <string name="stats_memory_phone">Memory (whole phone)</string>
     <string name="stats_core">Core %1$d</string>
-    <string name="stats_mhz">%1$d MHz</string>
+    <string name="stats_mhz" translatable="false">%1$d MHz</string>
     <string name="stats_core_asleep">asleep or not readable</string>
     <string name="stats_battery">Battery</string>
     <string name="stats_charging_current">Charging current</string>
     <string name="stats_drain">Drain</string>
-    <string name="stats_ma">%1$d mA</string>
+    <string name="stats_ma" translatable="false">%1$d mA</string>
     <string name="stats_not_reported">not reported</string>
     <string name="stats_voltage">Voltage</string>
-    <string name="stats_volts">%1$.2f V</string>
+    <string name="stats_volts" translatable="false">%1$.2f V</string>
     <string name="stats_temperature">Temperature</string>
-    <string name="stats_celsius">%1$.1f °C</string>
+    <string name="stats_celsius" translatable="false">%1$.1f °C</string>
     <string name="stats_thermal">Thermal state</string>
     <string name="stats_headroom">Headroom</string>
     <string name="stats_headroom_value">%1$.0f%% of the way to slowing down</string>
