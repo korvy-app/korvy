@@ -70,7 +70,7 @@ data class DragInfo(val app: AppEntry, val fromCell: Int?, val pos: Offset)
  */
 class DragController(
     private val grid: () -> HomeGrid,
-    private val onDrop: (AppEntry, target: Int, from: Int?) -> Unit,
+    private val onDrop: (AppEntry, target: Int, from: Int?, combine: Boolean) -> Unit,
     private val onRemove: (AppEntry) -> Unit,
     private val onStart: (DragInfo) -> Unit,
 ) {
@@ -91,11 +91,29 @@ class DragController(
         return grid().cellAt(d.pos.x - b.left, d.pos.y - b.top, b.width, b.height)
     }
 
+    /**
+     * Over the middle of an occupied cell (not its edges): dropping there makes a folder (or adds to one).
+     * Folders themselves never go into folders.
+     */
+    fun hoverCombine(): Boolean {
+        val d = drag ?: return false
+        if (HomeGrid.isFolder(d.app.key)) return false
+        val b = gridBounds ?: return false
+        val g = grid()
+        val cell = hoverCell() ?: return false
+        val occupant = g.cells[cell] ?: return false
+        if (occupant == d.app.key) return false
+        val cw = b.width / g.cols; val ch = b.height / g.rows
+        val cx = b.left + cw * (cell % g.cols + 0.5f); val cy = b.top + ch * (cell / g.cols + 0.5f)
+        val dx = d.pos.x - cx; val dy = d.pos.y - cy
+        return kotlin.math.sqrt(dx * dx + dy * dy) < 0.32f * minOf(cw, ch)
+    }
+
     fun overRemove(): Boolean = drag?.let { d -> d.fromCell != null && removeBounds?.contains(d.pos) == true } ?: false
 
     fun drop() {
         val d = drag ?: return
-        if (overRemove()) onRemove(d.app) else hoverCell()?.let { onDrop(d.app, it, d.fromCell) }
+        if (overRemove()) onRemove(d.app) else hoverCell()?.let { onDrop(d.app, it, d.fromCell, hoverCombine()) }
         drag = null
     }
 
@@ -200,9 +218,12 @@ fun HomeGridView(
     onLaunch: (AppEntry) -> Unit,
     menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    onOpenFolder: (String) -> Unit = {},
+    onUngroup: (String) -> Unit = {},
 ) {
     val dragging = drag.drag != null
     val hover by remember(drag) { derivedStateOf { drag.hoverCell() } }
+    val combine by remember(drag) { derivedStateOf { drag.hoverCombine() } }
     val animations = LocalAnimations.current
     BoxWithConstraints(modifier.onGloballyPositioned { drag.gridBounds = it.boundsInRoot() }.testTag("home_grid")) {
         val cw = maxWidth / grid.cols
@@ -219,11 +240,27 @@ fun HomeGridView(
             ) {
                 if (dragging) {
                     val target = hover == cell
+                    val folding = target && combine
                     Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = if (target) 0.22f else 0.05f))
-                            .border(1.dp, Color.White.copy(alpha = if (target) 0.7f else 0.15f), RoundedCornerShape(16.dp))
+                            .background(Color.White.copy(alpha = if (folding) 0.4f else if (target) 0.22f else 0.05f))
+                            .border(if (folding) 2.dp else 1.dp, Color.White.copy(alpha = if (target) 0.8f else 0.15f), RoundedCornerShape(16.dp))
                     )
+                }
+                val folder = grid.folder(grid.cells[cell])
+                if (folder != null) {
+                    val value = grid.cells.getValue(cell)
+                    val entry = remember(value, folder.name) { folderEntry(value, folder) }
+                    var showMenu by remember(value) { mutableStateOf(false) }
+                    val alpha by animateFloatAsState(if (isSource) 0f else 1f, Motion.fade(animations, 120), label = "source")
+                    Box(contentAlignment = Alignment.Center) {
+                        FolderTile(folder, apps, repo, minOf(52.dp, ch - 30.dp),
+                            Modifier.width(cw).graphicsLayer { this.alpha = alpha }.clip(RoundedCornerShape(14.dp))
+                                .appGestures(entry, cell, drag, onTap = { onOpenFolder(value.removePrefix(HomeGrid.FOLDER)) }, onMenu = { showMenu = it })
+                                .testTag("home_folder_${folder.name}"))
+                        FolderMenu(showMenu, { showMenu = false }, onOpen = { onOpenFolder(value.removePrefix(HomeGrid.FOLDER)) },
+                            onUngroup = { onUngroup(value) })
+                    }
                 }
                 if (app != null) {
                     var showMenu by remember(app.key) { mutableStateOf(false) }
@@ -249,7 +286,7 @@ fun HomeGridView(
 
 /** The icon following the finger, plus the "Remove" target while a home-screen icon is being dragged. */
 @Composable
-fun DragOverlay(drag: DragController, repo: AppRepository) {
+fun DragOverlay(drag: DragController, repo: AppRepository, grid: HomeGrid? = null, apps: Map<String, AppEntry> = emptyMap()) {
     val d = drag.drag ?: return
     val size = 60.dp
     val half = with(LocalDensity.current) { (size / 2).toPx() }
@@ -277,6 +314,9 @@ fun DragOverlay(drag: DragController, repo: AppRepository) {
             Modifier
                 .offset { IntOffset((d.pos.x - half).roundToInt(), (d.pos.y - half).roundToInt()) }
                 .graphicsLayer { scaleX = 1.12f; scaleY = 1.12f; shadowElevation = 16f }
-        ) { AppIcon(d.app, repo, size) }
+        ) {
+            val f = grid?.folder(d.app.key)
+            if (f != null) FolderIcon(f, apps, repo, size) else AppIcon(d.app, repo, size)
+        }
     }
 }

@@ -121,14 +121,24 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private fun updateGrid(f: (HomeGrid) -> HomeGrid) {
         viewModelScope.launch { la.settings.setHomeGrid(f(homeGridStored.value)) }
     }
-    fun placeOnHome(app: AppEntry, target: Int, from: Int?) = updateGrid { it.place(app.key, target, from) }
+    fun placeOnHome(app: AppEntry, target: Int, from: Int?, combine: Boolean = false) = updateGrid { it.place(app.key, target, from, combine) }
+
+    /** The folder open on the home screen (its id), or null. */
+    val openFolder = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    fun renameFolder(id: String, name: String) = updateGrid { it.renameFolder(id, name) }
+    /** Ungroup: every app goes back on the grid where there's room (the rest stay in the folder). */
+    fun ungroup(folderKey: String) = updateGrid { g ->
+        var out = g
+        g.folder(folderKey)?.keys?.forEach { k -> out = out.takeOutOfFolder(k) }
+        out
+    }
     fun addToHome(app: AppEntry): Boolean {
         val g = homeGridStored.value
         if (g.cellOf(app.key) == null && g.firstEmpty() == null) return false
         updateGrid { it.add(app.key) }; return true
     }
     fun removeFromHome(app: AppEntry) = updateGrid { it.remove(app.key) }
-    fun isOnHome(app: AppEntry) = homeGridStored.value.cellOf(app.key) != null
+    fun isOnHome(app: AppEntry) = homeGridStored.value.contains(app.key)
 
     /** A drag that started in the app list: show the home screen underneath, keep the list (and the
      *  gesture) alive until the drop. */
@@ -200,7 +210,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         // Only a close the user can see (from the list itself) animates. If the home screen is already the target
         // (e.g. coming back from an app), keep an earlier "instant" request: no frames have been drawn since.
         if (instant) closeInstantly.value = true else if (_screen.value != Screen.HOME) closeInstantly.value = false
-        _screen.value = Screen.HOME; query.value = ""; lockedListOpen.value = false; refreshSuggestions()
+        _screen.value = Screen.HOME; query.value = ""; lockedListOpen.value = false; openFolder.value = null; refreshSuggestions()
     }
 
     private var leftForApp = false

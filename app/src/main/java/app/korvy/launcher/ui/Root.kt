@@ -37,6 +37,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val screen by vm.screen.collectAsStateWithLifecycle()
     val apps by vm.apps.collectAsStateWithLifecycle()
     val visible by vm.visibleApps.collectAsStateWithLifecycle()
+    val visibleByKey = remember(visible) { visible.associateBy { it.key } }
     val privacy by vm.privacy.collectAsStateWithLifecycle()
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val results by vm.results.collectAsStateWithLifecycle()
@@ -47,6 +48,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
     val closeInstantly by vm.closeInstantly.collectAsStateWithLifecycle()
     val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
+    val openFolder by vm.openFolder.collectAsStateWithLifecycle()
     val chat by vm.chat.collectAsStateWithLifecycle()
     val busy by vm.assistantBusy.collectAsStateWithLifecycle()
     val installedModels by vm.models.installed.collectAsStateWithLifecycle()
@@ -59,8 +61,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val drag = remember(vm) {
         DragController(
             grid = { vm.homeGrid.value },
-            onDrop = { app, target, from -> vm.placeOnHome(app, target, from); vm.endDrag() },
-            onRemove = { app -> vm.removeFromHome(app); vm.endDrag() },
+            onDrop = { app, target, from, combine -> vm.placeOnHome(app, target, from, combine); vm.endDrag() },
+            onRemove = { app -> vm.removeFromHome(app); vm.endDrag() }, // apps and whole folders
             onStart = { d -> if (d.fromCell == null) vm.startDragFromList() },
         )
     }
@@ -83,7 +85,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             onToggleSuggest = { vm.setNeverSuggest(app.key, app.key !in privacy.neverSuggest) },
             onInfo = { vm.appInfo(app) },
             onUninstall = { vm.uninstall(app) },
-            onHome = app.key in homeGrid.cells.values,
+            onHome = homeGrid.contains(app.key),
             onAddHome = { if (!vm.addToHome(app)) host.toast("The home screen is full. Remove an app first.") },
             onRemoveHome = { vm.removeFromHome(app) },
         )
@@ -106,7 +108,8 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 onSetDefaultHome = host.setDefaultHome,
                 onDismissHomePrompt = vm::dismissHomePrompt,
                 drag = drag,
-                grid = { m -> HomeGridView(homeGrid, visible.associateBy { it.key }, vm.repo, drag, vm::launch, menu, m) },
+                grid = { m -> HomeGridView(homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu, m,
+                    onOpenFolder = { vm.openFolder.value = it }, onUngroup = vm::ungroup) },
                 onOpenAssistant = if (settings.assistant) ({ vm.openAssistant() }) else null,
                 widgets = { WidgetStack(vm) },
             ) }
@@ -204,11 +207,16 @@ fun Root(vm: LauncherViewModel, host: Host) {
             AnimatedVisibility(screen == Screen.WIDGETS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 WidgetPickerScreen(vm, onBack = { vm.open(Screen.HOME) })
             }
-            DragOverlay(drag, vm.repo)
+            if (openFolder != null && screen == Screen.HOME) FolderView(
+                openFolder!!, homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu,
+                onRename = { vm.renameFolder(openFolder!!, it) }, onClose = { vm.openFolder.value = null },
+            )
+            DragOverlay(drag, vm.repo, homeGrid, visibleByKey)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
             }
         }
+        BackHandler(enabled = openFolder != null) { vm.openFolder.value = null }
         BackHandler(enabled = screen != Screen.HOME) {
             when (screen) {
                 Screen.HIDDEN, Screen.STATS, Screen.MODELS, Screen.PERSONALITY, Screen.VOICE, Screen.PEOPLE, Screen.APPS, Screen.NOTEBOOK, Screen.ABOUT, Screen.DEVELOPER -> vm.open(Screen.SETTINGS)

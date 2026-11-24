@@ -245,6 +245,12 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-23: **0.12.0** – Home-screen folders (`core/HomeGrid`: folders map, "folder:<id>" cells, saved with the
+  grid). Drop an icon on the middle of another (within ~1/3 of the cell centre) → folder; on a folder → added;
+  near the edge → swap as before. Tap opens the folder (tap the name to rename, whole name selected); hold an app
+  to drag it out; a folder left with one app becomes that app; hold a folder → Open and rename / Ungroup; folders
+  drag like apps but never nest; hidden/uninstalled apps drop out of folders. Verified on the 4a: Calendar onto
+  Clock → folder, Camera onto folder → 3 apps, renamed "Daily", Camera dragged back out, Back closes it.
 - 2026-11-23: **0.11.4** – "Remember (that) when I say X, do Y" is a phrase, not a note (old notes like that are
   converted on load); "send a message to Lukas that says \"…\"" understood (message without "says"/quotes).
   0.11.3: mic/stuck-assistant fixes (see git log). Verified on the 4a with a temporary contact: taught the owner's
