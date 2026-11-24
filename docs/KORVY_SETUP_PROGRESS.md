@@ -71,6 +71,9 @@ reinstalled (settings and downloads don't carry over).
   given testing-track access, upload key created (`~/.config/play/korvy-upload.jks`, password in
   `~/.config/play/korvy-upload.txt` and local.properties; back it up), Play build drops the wake-word mic
   service. **0.12.0 (code 29) uploaded to internal testing as a draft.** `app.korvy.launcher` is now permanent.
+  Store assets ready (fastlane/metadata/android/en-US: icon, featureGraphic, 6 phoneScreenshots; also on the
+  share in apps/launcher/play-store). Drafts: docs/play/listing.md, docs/play/app-content.md, docs/privacy.md.
+  Upload key backed up off this Mac (location in CLAUDE.local.md).
   Build: `./scripts/build-upload.sh`; upload: `./scripts/play-upload.sh upload … --track internal --notes … --draft`.
 - [ ] Play listing / F-Droid metadata
 - [ ] Release checklist
