@@ -92,6 +92,6 @@ class MainActivity : FragmentActivity() {
         vm.refreshSuggestions() // the time of day has probably changed
         vm.refreshDefaultHome()
         vm.refreshContactsGranted()
-        window.decorView.post { (application as LauncherApp).syncWakeWord() } // after the first frame
+        window.decorView.post { (application as LauncherApp).run { repairSettings(); syncWakeWord() } } // after the first frame
     }
 }

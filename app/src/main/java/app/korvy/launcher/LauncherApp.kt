@@ -37,6 +37,16 @@ class LauncherApp : Application() {
     val widgets by lazy { Widgets(this) }
     val voices by lazy { VoiceStore(this) }
     val personality by lazy { Personality(this) }
+    /** Repairs a speaking voice set to something that can't speak (0.11.0–0.11.2 could pick the wake-word model). */
+    fun repairSettings() {
+        scope.launch {
+            val e = settings.settings.first().ttsEngine ?: return@launch
+            if (e.startsWith(app.korvy.launcher.assistant.Speaker.NEURAL_PREFIX) &&
+                app.korvy.launcher.assistant.NeuralVoiceCatalog.voiceById(e.removePrefix(app.korvy.launcher.assistant.Speaker.NEURAL_PREFIX)) == null)
+                settings.setTtsEngine(null)
+        }
+    }
+
     /** Starts or stops wake-word listening to match the settings (Pro, model downloaded). Call while on screen. */
     fun syncWakeWord() {
         scope.launch {

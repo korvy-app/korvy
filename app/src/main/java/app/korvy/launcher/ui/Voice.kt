@@ -90,7 +90,8 @@ fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = 
     fun begin() {
         state.error = null; state.partial = ""; state.listening = true
         voice.start(
-            onPartial = { state.partial = it },
+            // "…" = recording finished, now transcribing: the mic is off, so stop showing it as listening.
+            onPartial = { if (it == "…") state.listening = false; state.partial = it },
             onFinal = { state.listening = false; state.partial = ""; if (it.isNotBlank()) onResult(it) },
             onError = { state.listening = false; state.error = it },
             onLevel = { state.level = it },

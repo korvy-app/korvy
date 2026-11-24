@@ -27,13 +27,20 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
     private var connection: ServiceConnection? = null
     private var idleJob: Job? = null
     private val mutex = Mutex()
+    /** Requests waiting for an answer; failed at once if the assistant process dies (they used to wait forever). */
+    private val pending = java.util.Collections.synchronizedSet(HashSet<CompletableDeferred<String>>())
+    private fun failPending() {
+        val all = synchronized(pending) { pending.toList().also { pending.clear() } }
+        all.forEach { it.completeExceptionally(IllegalStateException("The assistant stopped. Try again.")) }
+    }
 
     private suspend fun bind(): Messenger = service ?: suspendCancellableCoroutine { cont ->
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) {
                 service = Messenger(binder); if (cont.isActive) cont.resume(service!!)
             }
-            override fun onServiceDisconnected(name: ComponentName) { service = null }
+            override fun onServiceDisconnected(name: ComponentName) { service = null; failPending() }
+            override fun onBindingDied(name: ComponentName) { service = null; failPending(); release() }
         }
         connection = conn
         context.bindService(Intent(context, AssistantService::class.java), conn, Context.BIND_AUTO_CREATE)
@@ -49,7 +56,7 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
     ): String = mutex.withLock {
         idleJob?.cancel()
         val svc = bind()
-        val result = CompletableDeferred<String>()
+        val result = CompletableDeferred<String>().also { pending += it }
         val replyTo = Messenger(Handler(Looper.getMainLooper()) { m ->
             val text = m.data.getString(AssistantService.K_TEXT).orEmpty()
             when (m.what) {
@@ -71,14 +78,14 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
                 putFloat(AssistantService.K_TEMP, temp)
             }
         })
-        try { result.await() } finally { scheduleIdle() }
+        try { result.await() } finally { pending -= result; scheduleIdle() }
     }
 
     /** Speech to text with whisper.cpp: [audio] holds 16 kHz mono little-endian floats (deleted afterwards). */
     suspend fun transcribe(modelPath: String, audio: java.io.File, lang: String, prompt: String): String = mutex.withLock {
         idleJob?.cancel()
         val svc = bind()
-        val result = CompletableDeferred<String>()
+        val result = CompletableDeferred<String>().also { pending += it }
         val replyTo = Messenger(Handler(Looper.getMainLooper()) { m ->
             val text = m.data.getString(AssistantService.K_TEXT).orEmpty()
             when (m.what) {
@@ -94,7 +101,7 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
                 putString(AssistantService.K_LANG, lang); putString(AssistantService.K_PROMPT, prompt)
             }
         })
-        try { result.await() } finally { scheduleIdle() }
+        try { result.await() } finally { pending -= result; scheduleIdle() }
     }
 
     /** Loads the model in the background (e.g. when the assistant opens) so the first answer starts sooner. */

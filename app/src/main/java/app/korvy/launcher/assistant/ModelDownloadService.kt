@@ -91,7 +91,8 @@ class ModelDownloadService : Service() {
             app.voices.download(p) { app.settingsState.value.allows(it) }
             progress.cancel()
             val ok = p.id in app.voices.installed.value
-            if (ok && !app.settingsState.value.ttsEngine.orEmpty().startsWith(Speaker.NEURAL_PREFIX)) {
+            // Only a real voice becomes the speaking voice (the wake-word model is downloaded the same way).
+            if (ok && p.kind != NeuralVoicePack.Kind.KWS && !app.settingsState.value.ttsEngine.orEmpty().startsWith(Speaker.NEURAL_PREFIX)) {
                 app.settings.setTtsEngine(Speaker.NEURAL_PREFIX + p.id) // first natural voice: switch to it
             }
             finished(p.name, ok, (app.voices.download.value as? DownloadState.Failed)?.message)

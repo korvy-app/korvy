@@ -34,10 +34,12 @@ class VoiceInput(private val context: Context) : SpeechInput {
                 partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.let(onPartial)
             }
             override fun onResults(results: Bundle?) {
-                onFinal(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty())
-                stop()
+                val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                stop() // release the mic before anything else can fail
+                onFinal(text)
             }
             override fun onError(error: Int) {
+                stop()
                 onError(when (error) {
                     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "I didn't catch that."
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed for voice."
@@ -45,7 +47,6 @@ class VoiceInput(private val context: Context) : SpeechInput {
                         "Your language isn't downloaded for offline speech recognition."
                     else -> "Voice input stopped (error $error)."
                 })
-                stop()
             }
         })
         r.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)

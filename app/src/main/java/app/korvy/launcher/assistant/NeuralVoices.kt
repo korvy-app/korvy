@@ -81,6 +81,8 @@ object NeuralVoiceCatalog {
     )
     val packs get() = all + wakeWord
     fun byId(id: String?) = packs.firstOrNull { it.id == id }
+    /** Only voices (never the wake-word model): what can actually speak. */
+    fun voiceById(id: String?) = all.firstOrNull { it.id == id }
 }
 
 /** Downloaded voice packs, unpacked in private storage. Downloads resume and are checksum-verified. */

@@ -86,9 +86,9 @@ class AssistantController(
         speaker.neural = object : Speaker.Neural {
             override fun say(engine: String, voice: String?, speed: Float, text: String, onStart: () -> Unit, onDone: () -> Unit): Boolean {
                 if (!pro.unlocked.value) return false // natural voices are Pro: fall back to the phone's voice
-                val pack = NeuralVoiceCatalog.byId(engine.removePrefix(Speaker.NEURAL_PREFIX)) ?: return false
+                val pack = NeuralVoiceCatalog.voiceById(engine.removePrefix(Speaker.NEURAL_PREFIX)) ?: return false
                 if (pack.id !in voices.installed.value) return false
-                val speakerId = voice?.toIntOrNull() ?: pack.speakers.first().id
+                val speakerId = voice?.toIntOrNull() ?: pack.speakers.firstOrNull()?.id ?: return false
                 client.speak(voices.folderFor(pack).path, pack.kind.name, pack.modelFile, speakerId, speed, text, onStart, onDone)
                 return true
             }
@@ -174,6 +174,12 @@ class AssistantController(
                         runOne(step, id, speak)
                     }
                 } else runOne(q, replyId, speak)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A failing lesson or phrase must not leave the assistant stuck.
+                android.util.Log.w("Assistant", "request failed", e)
+                update(replyId) { it.copy(text = "Sorry: ${e.message ?: "that didn't work"}", pending = false) }
             } finally {
                 busy.value = false
             }
