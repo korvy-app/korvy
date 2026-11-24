@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.os.Process
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -143,7 +145,7 @@ fun FolderView(
 @Composable
 fun FolderMenu(expanded: Boolean, onDismiss: () -> Unit, onOpen: () -> Unit, onUngroup: () -> Unit) {
     DropdownMenu(expanded, onDismiss) {
-        DropdownMenuItem(text = { Text("Open and rename") }, onClick = { onDismiss(); onOpen() })
-        DropdownMenuItem(text = { Text("Ungroup") }, onClick = { onDismiss(); onUngroup() }, modifier = Modifier.testTag("folder_ungroup"))
+        DropdownMenuItem(text = { Text(stringResource(R.string.open_and_rename)) }, onClick = { onDismiss(); onOpen() })
+        DropdownMenuItem(text = { Text(stringResource(R.string.ungroup)) }, onClick = { onDismiss(); onUngroup() }, modifier = Modifier.testTag("folder_ungroup"))
     }
 }

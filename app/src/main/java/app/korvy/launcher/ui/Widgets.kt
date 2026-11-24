@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -95,10 +97,10 @@ private fun WidgetCell(vm: LauncherViewModel, w: PlacedWidget, first: Boolean, l
             listOf("Small", "Medium", "Large").forEachIndexed { i, label ->
                 if (i != w.size) DropdownMenuItem(text = { Text(label) }, onClick = { menu = false; store.resize(w.id, i) })
             }
-            if (!first) DropdownMenuItem(text = { Text("Move up") }, onClick = { menu = false; store.move(w.id, -1) })
-            if (!last) DropdownMenuItem(text = { Text("Move down") }, onClick = { menu = false; store.move(w.id, 1) })
-            DropdownMenuItem(text = { Text("Add another widget") }, onClick = { menu = false; vm.open(Screen.WIDGETS) })
-            DropdownMenuItem(text = { Text("Remove") }, onClick = { menu = false; store.remove(w.id) }, modifier = Modifier.testTag("widget_remove"))
+            if (!first) DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, onClick = { menu = false; store.move(w.id, -1) })
+            if (!last) DropdownMenuItem(text = { Text(stringResource(R.string.move_down)) }, onClick = { menu = false; store.move(w.id, 1) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.add_another_widget)) }, onClick = { menu = false; vm.open(Screen.WIDGETS) })
+            DropdownMenuItem(text = { Text(stringResource(R.string.remove)) }, onClick = { menu = false; store.remove(w.id) }, modifier = Modifier.testTag("widget_remove"))
         }
     }
 }
@@ -151,11 +153,11 @@ fun WidgetPickerScreen(vm: LauncherViewModel, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("widget_picker")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-            Text("Add a widget", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.add_a_widget), style = MaterialTheme.typography.titleLarge)
         }
-        OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text("Search widgets") },
+        OutlinedTextField(query, { query = it }, singleLine = true, placeholder = { Text(stringResource(R.string.search_widgets)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("widget_search"))
-        if (providers.isEmpty()) Text("Loading…", modifier = Modifier.padding(20.dp))
+        if (providers.isEmpty()) Text(stringResource(R.string.loading), modifier = Modifier.padding(20.dp))
         LazyColumn(contentPadding = PaddingValues(16.dp)) {
             var lastApp: String? = null
             shown.forEach { info ->

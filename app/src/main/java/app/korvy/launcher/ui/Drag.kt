@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -307,7 +309,7 @@ fun DragOverlay(drag: DragController, repo: AppRepository, grid: HomeGrid? = nul
             ) {
                 Icon(Icons.Outlined.Close, null, tint = Color.White)
                 Spacer(Modifier.width(8.dp))
-                Text("Remove from home", color = Color.White)
+                Text(stringResource(R.string.remove_from_home), color = Color.White)
             }
         }
         Box(

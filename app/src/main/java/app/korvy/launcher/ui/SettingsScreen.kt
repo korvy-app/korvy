@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,25 +79,25 @@ fun SettingsScreen(
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-            Text("Settings", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleLarge)
         }
         LazyColumn(Modifier.fillMaxSize().testTag("settings"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
             item {
-                Section("Pro")
+                Section(stringResource(R.string.pro))
                 ProSection(vm)
-                Section("Home screen")
-                if (isDefaultHome) Note("This is your home screen app.")
+                Section(stringResource(R.string.home_screen))
+                if (isDefaultHome) Note(stringResource(R.string.this_is_your_home_screen))
                 else Row(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                    Button(onClick = onSetDefaultHome, modifier = Modifier.testTag("set_default_home")) { Text("Make this my home screen") }
+                    Button(onClick = onSetDefaultHome, modifier = Modifier.testTag("set_default_home")) { Text(stringResource(R.string.make_this_my_home_screen)) }
                 }
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
-                    OutlinedButton(onClick = { vm.open(Screen.WIDGETS) }, modifier = Modifier.testTag("add_widget")) { Text("Add a widget") }
+                    OutlinedButton(onClick = { vm.open(Screen.WIDGETS) }, modifier = Modifier.testTag("add_widget")) { Text(stringResource(R.string.add_a_widget)) }
                 }
-                Note("Hold a widget on the home screen to resize, move or remove it.")
+                Note(stringResource(R.string.hold_a_widget_on_the))
             }
             item {
-                Section("Look and feel")
-                Text("Screen rotation", modifier = Modifier.padding(start = 20.dp, top = 8.dp))
+                Section(stringResource(R.string.look_and_feel))
+                Text(stringResource(R.string.screen_rotation), modifier = Modifier.padding(start = 20.dp, top = 8.dp))
                 Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Follow phone", "Portrait", "Landscape").forEachIndexed { i, label ->
                         FilterChip(selected = s.orientation == i, onClick = { vm.setOrientation(i) }, label = { Text(label) },
@@ -107,7 +109,7 @@ fun SettingsScreen(
                     "Default for this phone: ${if (tier == Tier.LOW) "off (keeps it fast)" else "on"}.",
                     animationsOn, "toggle_animations",
                 ) { vm.setAnimations(it) }
-                Text("Background", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 20.dp, top = 12.dp))
+                Text(stringResource(R.string.background), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 20.dp, top = 12.dp))
                 Note(if (backgrounds.isEmpty()) "Using your phone's wallpaper." else "${backgrounds.size} picture${if (backgrounds.size == 1) "" else "s"}. Photos are copied in, resized for the screen, and stay on this phone.")
                 if (backgrounds.isNotEmpty()) LazyRow(
                     Modifier.padding(vertical = 6.dp),
@@ -120,8 +122,8 @@ fun SettingsScreen(
                     OutlinedButton(
                         onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         modifier = Modifier.testTag("add_backgrounds"),
-                    ) { Text("Add pictures") }
-                    if (backgrounds.isNotEmpty()) TextButton(onClick = { vm.backgrounds.clear() }) { Text("Use phone wallpaper") }
+                    ) { Text(stringResource(R.string.add_pictures)) }
+                    if (backgrounds.isNotEmpty()) TextButton(onClick = { vm.backgrounds.clear() }) { Text(stringResource(R.string.use_phone_wallpaper)) }
                 }
                 val pro = proUnlocked(vm)
                 Toggle(
@@ -133,7 +135,7 @@ fun SettingsScreen(
                     },
                     s.slideshow && pro, "toggle_slideshow", enabled = backgrounds.size >= 2 && pro,
                 ) { vm.setSlideshow(it) }
-                if (!pro) ProUnlock(vm, "Slideshows", Modifier.padding(horizontal = 20.dp))
+                if (!pro) ProUnlock(vm, stringResource(R.string.slideshows), Modifier.padding(horizontal = 20.dp))
                 if (s.slideshow) Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(1, 5, 15, 60).forEach { m ->
                         FilterChip(selected = s.slideshowMinutes == m, onClick = { vm.setSlideshowMinutes(m) },
@@ -142,8 +144,8 @@ fun SettingsScreen(
                 }
             }
             item {
-                Section("Web search")
-                Note("Searches open in your browser.")
+                Section(stringResource(R.string.web_search))
+                Note(stringResource(R.string.searches_open_in_your_browser))
                 SearchEngine.entries.forEach { e ->
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.setEngine(e) }.padding(horizontal = 12.dp).testTag("engine_${e.name}"),
@@ -155,8 +157,8 @@ fun SettingsScreen(
                 }
             }
             item {
-                Section("Assistant")
-                Toggle("Assistant", "Ask it to open apps, set timers, get the weather, news and more. Runs on this phone; off by default.",
+                Section(stringResource(R.string.assistant))
+                Toggle(stringResource(R.string.assistant), stringResource(R.string.ask_it_to_open_apps),
                     s.assistant, "toggle_assistant") { vm.setAssistant(it) }
                 if (s.assistant) {
                     Row(
@@ -164,8 +166,8 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Model")
-                            Text("Choose and download the on-device model.", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.model))
+                            Text(stringResource(R.string.choose_and_download_the_on), style = MaterialTheme.typography.bodySmall)
                         }
                         Text(ModelCatalog.chatById(s.modelId)?.name ?: "None")
                     }
@@ -173,99 +175,99 @@ fun SettingsScreen(
                         Modifier.fillMaxWidth().clickable { vm.open(Screen.VOICE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_voice"),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Voice")
-                            Text("Spoken replies, speech engine and voice, speed.", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.voice))
+                            Text(stringResource(R.string.spoken_replies_speech_engine_and), style = MaterialTheme.typography.bodySmall)
                         }
                         Text(s.speak.title)
                     }
                     val ctx = androidx.compose.ui.platform.LocalContext.current
                     val isAssistant = remember { Device.isDefaultAssistant(ctx) }
                     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).testTag("power_button")) {
-                        Text("Hold the power button for the assistant")
+                        Text(stringResource(R.string.hold_the_power_button_for))
                         Text(if (isAssistant) "This is your digital assistant app. On Pixels, also check Settings → System → Gestures → Press & hold power button → Digital assistant."
                             else "1. Choose Korvy as the digital assistant app. 2. On Pixels: Settings → System → Gestures → Press & hold power button → Digital assistant.",
                             style = MaterialTheme.typography.bodySmall)
                         if (!isAssistant) OutlinedButton(onClick = { Device.openAssistantSettings(ctx) }, modifier = Modifier.padding(top = 6.dp)) {
-                            Text("Choose digital assistant app")
+                            Text(stringResource(R.string.choose_digital_assistant_app))
                         }
                     }
                     Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.NOTEBOOK) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_notebook")) {
                         Column(Modifier.weight(1f)) {
-                            Text("Notebook")
-                            Text("What it has learned: your preferences and phrases. Teach it by talking to it.", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.notebook))
+                            Text(stringResource(R.string.what_it_has_learned_your), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.PEOPLE) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_people")) {
                         Column(Modifier.weight(1f)) {
-                            Text("People shortcuts")
-                            Text("“Jen” always means this Jennifer; nicknames like “wife”.", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.people_shortcuts))
+                            Text(stringResource(R.string.jen_always_means_this_jennifer), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Row(Modifier.fillMaxWidth().clickable { vm.open(Screen.APPS) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_apps")) {
                         Column(Modifier.weight(1f)) {
-                            Text("Apps the assistant uses")
-                            Text("Which app texts, navigates, plays music, books rides…", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.apps_the_assistant_uses))
+                            Text(stringResource(R.string.which_app_texts_navigates_plays), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Row(
                         Modifier.fillMaxWidth().clickable { vm.open(Screen.PERSONALITY) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_personality"),
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text("Personality")
-                            Text("Edit agent.md to change how it talks.", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.personality))
+                            Text(stringResource(R.string.edit_agent_md_to_change), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
             item {
-                Section("Online features")
+                Section(stringResource(R.string.online_features))
                 OnlineSection(
                     s, onMaster = vm::setOnline, onSource = vm::setSource, onHomePlace = vm::setHomePlace,
                     onFahrenheit = vm::setFahrenheit, onMobileData = vm::setModelsOnMobileData, onUseLocation = vm::setUseLocation,
                 ) { title, detail, checked, tag, enabled, onChange -> Toggle(title, detail, checked, tag, enabled, onChange) }
             }
             item {
-                Section("Privacy")
+                Section(stringResource(R.string.privacy))
                 Row(
                     Modifier.fillMaxWidth().clickable { vm.open(Screen.HIDDEN) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_hidden"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Hidden apps")
-                        Text("Long-press any app to hide or lock it.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.hidden_apps))
+                        Text(stringResource(R.string.long_press_any_app_to), style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                Toggle("Find hidden apps by full name", "Typing a hidden app's whole name shows it in search. Locked apps still ask for your fingerprint or PIN.",
+                Toggle(stringResource(R.string.find_hidden_apps_by_full), stringResource(R.string.typing_a_hidden_app_s),
                     s.revealHiddenByName, "toggle_reveal") { vm.setRevealHiddenByName(it) }
-                Toggle("Suggested apps", "Learns which apps you open at which times, on this phone only. Hidden apps are never recorded.",
+                Toggle(stringResource(R.string.suggested_apps), stringResource(R.string.learns_which_apps_you_open),
                     s.suggestions, "toggle_suggestions") { vm.setSuggestions(it) }
                 ContactsSetting(s, vm)
                 Row(Modifier.padding(horizontal = 20.dp)) {
-                    TextButton(onClick = { vm.forgetHistory() }, modifier = Modifier.testTag("forget_history")) { Text("Forget app history") }
+                    TextButton(onClick = { vm.forgetHistory() }, modifier = Modifier.testTag("forget_history")) { Text(stringResource(R.string.forget_app_history)) }
                 }
             }
             item {
-                Section("Device")
+                Section(stringResource(R.string.device))
                 Row(
                     Modifier.fillMaxWidth().clickable { vm.open(Screen.STATS) }.padding(horizontal = 20.dp, vertical = 12.dp).testTag("open_stats"),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text("Device stats")
-                        Text("CPU, memory, frame rate, battery drain and heat, live.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.device_stats))
+                        Text(stringResource(R.string.cpu_memory_frame_rate_battery), style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
             item {
-                Section("Help")
+                Section(stringResource(R.string.help))
                 Row(Modifier.padding(horizontal = 20.dp)) {
-                    TextButton(onClick = { vm.open(Screen.TUTORIAL) }, modifier = Modifier.testTag("show_tutorial")) { Text("Show the tour again") }
+                    TextButton(onClick = { vm.open(Screen.TUTORIAL) }, modifier = Modifier.testTag("show_tutorial")) { Text(stringResource(R.string.show_the_tour_again)) }
                 }
-                Section("About")
+                Section(stringResource(R.string.about))
                 Row(Modifier.padding(horizontal = 20.dp)) {
-                    TextButton(onClick = { vm.open(Screen.ABOUT) }, modifier = Modifier.testTag("open_about")) { Text("About Korvy") }
+                    TextButton(onClick = { vm.open(Screen.ABOUT) }, modifier = Modifier.testTag("open_about")) { Text(stringResource(R.string.about_korvy)) }
                     // Only after tapping the version in About 7 times.
-                    if (s.developer) TextButton(onClick = { vm.open(Screen.DEVELOPER) }, modifier = Modifier.testTag("open_developer")) { Text("Developer options") }
+                    if (s.developer) TextButton(onClick = { vm.open(Screen.DEVELOPER) }, modifier = Modifier.testTag("open_developer")) { Text(stringResource(R.string.developer_options)) }
                 }
                 Note("Version ${BuildConfig.VERSION_NAME}. No accounts, no analytics, no crash reporting. " + if (s.online) "Online features are on: only the sources you allowed above connect." else "Online features are off: nothing leaves this phone.")
                 Note("Phone class: ${tier.name.lowercase()} (${Device.specs(LocalContext.current).let { "%.1f GB, %d cores, Android API %d".format(it.totalRamMb / 1024.0, it.cores, it.sdk) }}).")
@@ -320,12 +322,12 @@ private fun ContactsSetting(s: Settings, vm: LauncherViewModel) {
     val granted by vm.contactsGranted.collectAsStateWithLifecycle()
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshContactsGranted() }
     if (!granted) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
-        Text("Contacts")
-        Text("Optional. Lets search find people and the assistant text or call them by name. Contacts stay on this phone " +
+        Text(stringResource(R.string.contacts))
+        Text(stringResource(R.string.optional_lets_search_find_people) +
             "and are never shown to the AI model.", style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { ask.launch(android.Manifest.permission.READ_CONTACTS) }, modifier = Modifier.padding(top = 6.dp).testTag("allow_contacts")) {
-            Text("Allow contacts")
+            Text(stringResource(R.string.allow_contacts))
         }
-    } else Toggle("Contacts in search", "Show matching people when you search, with call and text buttons. (Turn off contacts access in Android settings.)",
+    } else Toggle(stringResource(R.string.contacts_in_search), stringResource(R.string.show_matching_people_when_you),
         s.contactsInSearch, "toggle_contacts_search") { vm.setContactsInSearch(it) }
 }

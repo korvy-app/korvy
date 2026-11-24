@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -58,12 +60,12 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("stats")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-            Text("Device stats", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.device_stats), style = MaterialTheme.typography.titleLarge)
         }
         val s = snap
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
             extra()
-            if (s == null) { Text("Measuring…", modifier = Modifier.padding(16.dp)); return@Column }
+            if (s == null) { Text(stringResource(R.string.measuring), modifier = Modifier.padding(16.dp)); return@Column }
 
             Card("This app") {
                 Stat("CPU", "%.1f%% of the phone".format(s.appCpuPercent))
@@ -76,7 +78,7 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                    Text("Smoothness test", modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.smoothness_test), modifier = Modifier.weight(1f))
                     Switch(stress, { stress = it }, modifier = Modifier.testTag("stats_stress"))
                 }
                 if (stress) Spinner()
@@ -86,7 +88,7 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
                 val used = s.ramTotalMb - s.ramAvailableMb
                 Stat("Used", "%.1f of %.1f GB".format(used / 1024.0, s.ramTotalMb / 1024.0))
                 LinearProgressIndicator(progress = { used.toFloat() / s.ramTotalMb }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-                if (s.lowMemory) Text("Android reports low memory: apps may be closed in the background.", color = MaterialTheme.colorScheme.error)
+                if (s.lowMemory) Text(stringResource(R.string.android_reports_low_memory_apps), color = MaterialTheme.colorScheme.error)
             }
 
             Card("CPU (${s.cores} cores)") {

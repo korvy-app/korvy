@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -152,10 +154,10 @@ fun HomeScreen(
                         style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (onOpenAssistant != null) IconButton(onClick = onOpenAssistant, modifier = Modifier.testTag("open_assistant")) {
-                    Icon(Icons.Outlined.AutoAwesome, contentDescription = "Assistant", tint = Color.White)
+                    Icon(Icons.Outlined.AutoAwesome, contentDescription = stringResource(R.string.assistant), tint = Color.White)
                 }
                 IconButton(onClick = onOpenSettings, modifier = Modifier.testTag("open_settings")) {
-                    Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Color.White)
+                    Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.settings), tint = Color.White)
                 }
             }
         }
@@ -200,15 +202,15 @@ private fun HomePrompt(onSet: () -> Unit, onDismiss: () -> Unit) {
             .padding(16.dp)
             .testTag("home_prompt"),
     ) {
-        Text("Make this your home screen?", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.make_this_your_home_screen), color = Color.White, style = MaterialTheme.typography.titleMedium)
         Text(
             "Then the Home button opens it. You can switch back any time in Android settings.",
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp),
         )
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDismiss, modifier = Modifier.testTag("home_prompt_dismiss")) { Text("Not now", color = Color.White) }
-            Button(onClick = onSet, modifier = Modifier.testTag("home_prompt_set")) { Text("Set as home") }
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("home_prompt_dismiss")) { Text(stringResource(R.string.not_now), color = Color.White) }
+            Button(onClick = onSet, modifier = Modifier.testTag("home_prompt_set")) { Text(stringResource(R.string.set_as_home)) }
         }
     }
 }

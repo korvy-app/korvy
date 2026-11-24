@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -115,7 +117,7 @@ fun AssistantScreen(
     LaunchedEffect(chat.size, chat.lastOrNull()?.text) { if (chat.isNotEmpty()) list.animateScrollToItem(chat.lastIndex) }
     LaunchedEffect(Unit) { if (chat.isEmpty()) runCatching { focus.requestFocus() } }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("assistant")) {
-        TopBar("Assistant", onBack) {
+        TopBar(stringResource(R.string.assistant), onBack) {
             SpeakToggle(speak, onSpeak, onSpeakOn)
             TextButton(onClick = onOpenModels) { Text(modelName ?: "No model", maxLines = 1) }
             if (chat.isNotEmpty() && !busy) IconButton(onClick = onClear) { Icon(Icons.Outlined.DeleteSweep, "Clear conversation") }
@@ -123,13 +125,13 @@ fun AssistantScreen(
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (chat.isEmpty()) item {
                 Column(Modifier.padding(8.dp)) {
-                    Text("Ask me to do something.", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.ask_me_to_do_something), style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
                     listOf("open camera", "timer 10 minutes", "weather", "news about science", "stock AAPL", "what's 18% of 64?")
-                        .forEach { ex -> Text("“$ex”", color = MaterialTheme.colorScheme.primary,
+                        .forEach { ex -> Text(stringResource(R.string.text, ex), color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.clickable { onSend(ex) }.padding(vertical = 4.dp)) }
                     Spacer(Modifier.height(8.dp))
-                    Text("Everything runs on this phone. Weather, news, stocks and quick answers only go online if you allow them in Settings → Online features.",
+                    Text(stringResource(R.string.everything_runs_on_this_phone),
                         style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -142,7 +144,7 @@ fun AssistantScreen(
                 value = input,
                 // Enter sends (hardware keyboards and keyboards without a Send key insert a newline otherwise).
                 onValueChange = { v -> if (v.contains('\n')) { val q = v.replace('\n', ' ').trim(); input = ""; if (!busy && q.isNotEmpty()) { mic.error = null; onSend(q) } } else input = v },
-                placeholder = { Text("Ask or tell me to do something") },
+                placeholder = { Text(stringResource(R.string.ask_or_tell_me_to)) },
                 modifier = Modifier.weight(1f).focusRequester(focus).testTag("assistant_input"), maxLines = 4,
                 shape = RoundedCornerShape(24.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -184,15 +186,16 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
                 }
             }
             if (!m.pending && m.text.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
-                m.link?.let { url -> Text("Read more", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall,
+                m.link?.let { url -> Text(stringResource(R.string.read_more), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(top = 4.dp, end = 12.dp).clickable { openLink(url) }) }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 // Read this reply aloud now, whatever the "speak replies" setting (tap again to stop).
                 if (!m.fromUser && onSpeak != null) IconButton(onClick = { onSpeak(m.id) }, modifier = Modifier.size(28.dp).testTag("speak_${m.id}")) {
+                    val readyLabel = stringResource(R.string.getting_ready_to_read_tap)
                     when (speech) {
                         // Getting the voice ready (first sentence can take a moment): spinner, tap to cancel.
                         Speaker.State.LOADING, Speaker.State.IDLE ->
-                            Box(contentAlignment = androidx.compose.ui.Alignment.Center, modifier = Modifier.semantics { contentDescription = "Getting ready to read, tap to cancel" }) {
+                            Box(contentAlignment = androidx.compose.ui.Alignment.Center, modifier = Modifier.semantics { contentDescription = readyLabel }) {
                                 androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                             }
                         Speaker.State.SPEAKING ->
@@ -259,19 +262,19 @@ fun ModelsScreen(
         onDownload(m)
     }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("models")) {
-        TopBar("Assistant model", onBack)
+        TopBar(stringResource(R.string.assistant_model), onBack)
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                Text("Models run entirely on this phone. Bigger models are smarter but slower and need more memory. " +
+                Text(stringResource(R.string.models_run_entirely_on_this) +
                     "This phone has %.1f GB of memory and %.1f GB free storage.".format(ramGb, freeBytes / 1e9),
                     style = MaterialTheme.typography.bodySmall)
                 if (!s.allows(OnlineSource.MODELS)) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Downloading needs Online features → Model downloads.", color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = onOpenOnline) { Text("Open Online features") }
+                    Text(stringResource(R.string.downloading_needs_online_features_model), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onOpenOnline) { Text(stringResource(R.string.open_online_features)) }
                 } else if (metered && !s.modelsOnMobileData) {
                     Spacer(Modifier.height(8.dp))
-                    Text("You're on mobile data. Downloads wait for Wi-Fi (change this in Online features).", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.you_re_on_mobile_data), color = MaterialTheme.colorScheme.error)
                 }
             }
             items(ModelCatalog.all, key = { it.id }) { m ->
@@ -286,39 +289,39 @@ fun ModelsScreen(
                         if (has) RadioButton(selected = selected, onClick = { onUse(m) })
                         Column(Modifier.weight(1f)) {
                             Text(m.name, style = MaterialTheme.typography.titleMedium)
-                            Text("${m.maker} · ${m.license} · ${m.sizeText}", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.text_2, m.maker, m.license, m.sizeText), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     Text(m.note, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
-                    if (tooBig) Text("May be too big for this phone (best with %.0f GB+ memory).".format(m.minRamGb),
+                    if (tooBig) Text(stringResource(R.string.may_be_too_big_for).format(m.minRamGb),
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     when {
                         download is DownloadState.Running && download.id == m.id -> {
                             LinearProgressIndicator(progress = { download.done.toFloat() / download.total }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("%.0f of %.0f MB".format(download.done / 1e6, download.total / 1e6), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                TextButton(onClick = onCancel) { Text("Pause") }
+                                Text(stringResource(R.string.n0f_of_0f_mb).format(download.done / 1e6, download.total / 1e6), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                TextButton(onClick = onCancel) { Text(stringResource(R.string.pause)) }
                             }
                         }
                         download is DownloadState.Retrying && download.id == m.id -> {
                             LinearProgressIndicator(progress = { download.done.toFloat() / download.total }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Connection dropped; retrying in ${download.inSeconds} s", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                TextButton(onClick = onCancel) { Text("Pause") }
+                                Text(stringResource(R.string.connection_dropped_retrying_in_s, download.inSeconds), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                TextButton(onClick = onCancel) { Text(stringResource(R.string.pause)) }
                             }
                         }
-                        download is DownloadState.Verifying && download.id == m.id -> Text("Checking the download…", modifier = Modifier.padding(top = 8.dp))
+                        download is DownloadState.Verifying && download.id == m.id -> Text(stringResource(R.string.checking_the_download), modifier = Modifier.padding(top = 8.dp))
                         has -> Row(Modifier.padding(top = 6.dp)) {
-                            if (!selected) Button(onClick = { onUse(m) }) { Text("Use") } else Text("In use", modifier = Modifier.padding(end = 12.dp, top = 10.dp))
+                            if (!selected) Button(onClick = { onUse(m) }) { Text(stringResource(R.string.use)) } else Text(stringResource(R.string.in_use), modifier = Modifier.padding(end = 12.dp, top = 10.dp))
                             Spacer(Modifier.size(8.dp))
-                            TextButton(onClick = { onDelete(m) }) { Text("Delete") }
+                            TextButton(onClick = { onDelete(m) }) { Text(stringResource(R.string.delete)) }
                         }
                         else -> {
                             if (download is DownloadState.Failed && download.id == m.id)
                                 Text(download.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                             val canDownload = s.allows(OnlineSource.MODELS) && (!metered || s.modelsOnMobileData) && download !is DownloadState.Running && download !is DownloadState.Retrying
                             OutlinedButton(onClick = { startDownload(m) }, enabled = canDownload, modifier = Modifier.padding(top = 6.dp).testTag("download_${m.id}")) {
-                                Text("Download ${m.sizeText}")
+                                Text(stringResource(R.string.download, m.sizeText))
                             }
                         }
                     }
@@ -335,12 +338,12 @@ fun PersonalityScreen(personality: Personality, onSave: (String) -> Unit, onBack
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { text = withContext(Dispatchers.IO) { personality.load() } }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("personality")) {
-        TopBar("Personality (agent.md)", onBack) {
-            TextButton(onClick = { text?.let { onSave(it); onBack() } }, modifier = Modifier.testTag("personality_save")) { Text("Save") }
+        TopBar(stringResource(R.string.personality_agent_md), onBack) {
+            TextButton(onClick = { text?.let { onSave(it); onBack() } }, modifier = Modifier.testTag("personality_save")) { Text(stringResource(R.string.save)) }
         }
         val t = text ?: return@Column
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("Shapes how the assistant words its answers. Its safety rules (ask before acting, never see hidden apps) always come first.",
+            Text(stringResource(R.string.shapes_how_the_assistant_words),
                 style = MaterialTheme.typography.bodySmall)
             Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Personality.PRESETS.forEach { (name, preset) -> FilterChip(selected = t == preset, onClick = { text = preset }, label = { Text(name) }) }
@@ -373,13 +376,13 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
     if (s.online) {
         var place by remember(s.homePlace) { mutableStateOf(s.homePlace) }
         OutlinedTextField(
-            value = place, onValueChange = { place = it }, singleLine = true, label = { Text("Home town for weather") },
+            value = place, onValueChange = { place = it }, singleLine = true, label = { Text(stringResource(R.string.home_town_for_weather)) },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp).testTag("home_place"),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onHomePlace(place) }),
-            supportingText = { Text("Typed by you; no location permission is used.") },
+            supportingText = { Text(stringResource(R.string.typed_by_you_no_location)) },
         )
-        if (place != s.homePlace) TextButton(onClick = { onHomePlace(place) }, modifier = Modifier.padding(start = 12.dp)) { Text("Save home town") }
+        if (place != s.homePlace) TextButton(onClick = { onHomePlace(place) }, modifier = Modifier.padding(start = 12.dp)) { Text(stringResource(R.string.save_home_town)) }
         toggle("Fahrenheit", "Show temperatures in °F (off: °C).", s.fahrenheit, "toggle_fahrenheit", true, onFahrenheit)
         onUseLocation?.let { toggle("Weather for where I am", "When you ask for the weather without a place, use your approximate location " +
             "(asked once; rounded to about 1 km before it goes to Open-Meteo). Off: use your home town.", s.useLocation, "toggle_location", true, it) }

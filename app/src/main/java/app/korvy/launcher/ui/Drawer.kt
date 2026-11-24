@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -126,7 +128,7 @@ fun AppDrawer(
             onValueChange = { field = it; if (it.text != query) onQuery(it.text) },
             singleLine = true,
             visualTransformation = ghost(completion),
-            placeholder = { Text("Search apps and the web") },
+            placeholder = { Text(stringResource(R.string.search_apps_and_the_web)) },
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
             trailingIcon = {
                 if (completion != null) IconButton(onClick = { onQuery(query + completion) }, modifier = Modifier.testTag("accept_completion")) {
@@ -188,7 +190,7 @@ fun AppDrawer(
                     ) {
                         Icon(Icons.Outlined.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(40.dp).padding(6.dp))
                         Spacer(Modifier.width(14.dp))
-                        Text("Ask the assistant “$query”", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.ask_the_assistant, query), color = Color.White, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
                 items(webSuggestions, key = { "sugg-$it" }) { s ->
@@ -213,7 +215,7 @@ fun AppDrawer(
                     ) {
                         Icon(Icons.Outlined.Language, null, tint = Color.White, modifier = Modifier.size(40.dp).padding(6.dp))
                         Spacer(Modifier.width(14.dp))
-                        Text("Search ${engine.title} for “$query”", color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.search_for, engine.title, query), color = Color.White, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -294,16 +296,16 @@ fun AppMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         Text(app.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-        if (onHome) DropdownMenuItem(text = { Text("Remove from home") }, onClick = { onDismiss(); onRemoveHome() }, modifier = Modifier.testTag("menu_remove_home"))
-        else DropdownMenuItem(text = { Text("Add to home") }, onClick = { onDismiss(); onAddHome() }, modifier = Modifier.testTag("menu_add_home"))
-        DropdownMenuItem(text = { Text("Hide") }, onClick = { onDismiss(); onHide() }, modifier = Modifier.testTag("menu_hide"))
-        DropdownMenuItem(text = { Text("Hide and lock") }, onClick = { onDismiss(); onLock() }, modifier = Modifier.testTag("menu_lock"))
+        if (onHome) DropdownMenuItem(text = { Text(stringResource(R.string.remove_from_home)) }, onClick = { onDismiss(); onRemoveHome() }, modifier = Modifier.testTag("menu_remove_home"))
+        else DropdownMenuItem(text = { Text(stringResource(R.string.add_to_home)) }, onClick = { onDismiss(); onAddHome() }, modifier = Modifier.testTag("menu_add_home"))
+        DropdownMenuItem(text = { Text(stringResource(R.string.hide)) }, onClick = { onDismiss(); onHide() }, modifier = Modifier.testTag("menu_hide"))
+        DropdownMenuItem(text = { Text(stringResource(R.string.hide_and_lock)) }, onClick = { onDismiss(); onLock() }, modifier = Modifier.testTag("menu_lock"))
         DropdownMenuItem(
             text = { Text(if (neverSuggest) "Allow in suggestions" else "Never suggest") },
             onClick = { onDismiss(); onToggleSuggest() },
         )
-        DropdownMenuItem(text = { Text("App info") }, onClick = { onDismiss(); onInfo() })
-        if (!app.isWorkProfile) DropdownMenuItem(text = { Text("Uninstall") }, onClick = { onDismiss(); onUninstall() })
+        DropdownMenuItem(text = { Text(stringResource(R.string.app_info)) }, onClick = { onDismiss(); onInfo() })
+        if (!app.isWorkProfile) DropdownMenuItem(text = { Text(stringResource(R.string.uninstall)) }, onClick = { onDismiss(); onUninstall() })
     }
 }
 

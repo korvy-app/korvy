@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.Intent
 import android.provider.ContactsContract
@@ -87,11 +89,11 @@ fun ActionCard(id: Long, card: Card, actions: CardActions) {
         when (card.kind) {
             Card.Kind.CONFIRM -> {
                 if (card.message != null) OutlinedTextField(
-                    value = message, onValueChange = { message = it }, label = { Text("Message") },
+                    value = message, onValueChange = { message = it }, label = { Text(stringResource(R.string.message)) },
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp).testTag("card_message"), maxLines = 4,
                 )
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { actions.cancel(id) }, modifier = Modifier.testTag("card_cancel")) { Text("Cancel") }
+                    TextButton(onClick = { actions.cancel(id) }, modifier = Modifier.testTag("card_cancel")) { Text(stringResource(R.string.cancel)) }
                     Button(onClick = { actions.confirm(id, if (card.message != null) message else null) },
                         modifier = Modifier.testTag("card_confirm")) { Text(card.confirmLabel) }
                 }
@@ -110,21 +112,21 @@ fun ActionCard(id: Long, card: Card, actions: CardActions) {
                 }
                 Row(Modifier.fillMaxWidth().clickable { rememberChoice = !rememberChoice }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(checked = rememberChoice, onCheckedChange = { rememberChoice = it }, modifier = Modifier.testTag("choose_remember"))
-                    Text("Always use this person for “${card.alias}”", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.always_use_this_person_for, card.alias.orEmpty()), style = MaterialTheme.typography.bodySmall)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { actions.cancel(id) }) { Text("Cancel") }
+                    TextButton(onClick = { actions.cancel(id) }) { Text(stringResource(R.string.cancel)) }
                 }
             }
             Card.Kind.NEED_LOCATION -> Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = { actions.cancel(id) }) { Text("Cancel") }
-                Button(onClick = { actions.allowLocation(id) }, modifier = Modifier.testTag("card_allow_location")) { Text("Allow location") }
+                TextButton(onClick = { actions.cancel(id) }) { Text(stringResource(R.string.cancel)) }
+                Button(onClick = { actions.allowLocation(id) }, modifier = Modifier.testTag("card_allow_location")) { Text(stringResource(R.string.allow_location)) }
             }
             Card.Kind.NEED_CONTACT -> androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(top = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = { actions.cancel(id) }) { Text("Cancel") }
-                OutlinedButton(onClick = { actions.pickContact(id) }, modifier = Modifier.testTag("card_pick")) { Text("Pick contact") }
-                Button(onClick = { actions.allowContacts(id) }, modifier = Modifier.testTag("card_allow")) { Text("Allow contacts") }
+                TextButton(onClick = { actions.cancel(id) }) { Text(stringResource(R.string.cancel)) }
+                OutlinedButton(onClick = { actions.pickContact(id) }, modifier = Modifier.testTag("card_pick")) { Text(stringResource(R.string.pick_contact)) }
+                Button(onClick = { actions.allowContacts(id) }, modifier = Modifier.testTag("card_allow")) { Text(stringResource(R.string.allow_contacts)) }
             }
         }
     }

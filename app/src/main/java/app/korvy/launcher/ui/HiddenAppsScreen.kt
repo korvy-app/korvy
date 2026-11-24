@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -51,7 +53,7 @@ fun HiddenAppsScreen(
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-            Text("Hidden apps", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.hidden_apps), style = MaterialTheme.typography.titleLarge)
         }
         Text(
             "Hidden apps are left out of this launcher's home screen, app list, search and suggestions. " +
@@ -59,27 +61,27 @@ fun HiddenAppsScreen(
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
         )
         LazyColumn(Modifier.fillMaxSize().testTag("hidden_list")) {
-            item { Header("Hidden") }
+            item { Header(stringResource(R.string.hidden)) }
             if (hidden.isEmpty()) item { Empty("No hidden apps. Long-press an app and choose Hide.") }
             items(hidden, key = { "h-" + it.key }) { app ->
                 AppRow(app, repo, onLaunch) {
-                    TextButton(onClick = { onLock(app) }) { Text("Lock") }
-                    TextButton(onClick = { onUnhide(app) }, modifier = Modifier.testTag("unhide_${app.label}")) { Text("Unhide") }
+                    TextButton(onClick = { onLock(app) }) { Text(stringResource(R.string.lock)) }
+                    TextButton(onClick = { onUnhide(app) }, modifier = Modifier.testTag("unhide_${app.label}")) { Text(stringResource(R.string.unhide)) }
                 }
             }
-            item { Header("Locked") }
+            item { Header(stringResource(R.string.locked)) }
             if (!lockedOpen) item {
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Lock, null)
                     Spacer(Modifier.width(12.dp))
-                    Button(onClick = onUnlockList, modifier = Modifier.testTag("unlock_locked")) { Text("Unlock to see locked apps") }
+                    Button(onClick = onUnlockList, modifier = Modifier.testTag("unlock_locked")) { Text(stringResource(R.string.unlock_to_see_locked_apps)) }
                 }
             } else {
                 if (locked.isEmpty()) item { Empty("No locked apps. Long-press an app and choose Hide and lock.") }
                 items(locked, key = { "l-" + it.key }) { app ->
                     AppRow(app, repo, onLaunch) {
-                        TextButton(onClick = { onUnlockApp(app) }) { Text("Don't lock") }
-                        TextButton(onClick = { onUnhide(app) }) { Text("Unhide") }
+                        TextButton(onClick = { onUnlockApp(app) }) { Text(stringResource(R.string.don_t_lock)) }
+                        TextButton(onClick = { onUnhide(app) }) { Text(stringResource(R.string.unhide)) }
                     }
                 }
             }

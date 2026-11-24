@@ -1,5 +1,6 @@
 package app.korvy.launcher
 
+import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.graphics.Color as AColor
 import android.os.Bundle
@@ -97,7 +98,7 @@ class AssistActivity : ComponentActivity() {
                             .testTag("assist_panel"),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Assistant", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                            Text(stringResource(R.string.assistant), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).padding(start = 8.dp))
                             SpeakToggle(settings.speak,
                                 { m -> app.scope.launch { app.settings.setSpeak(m) } }, { app.assistant.sayHello() })
                             IconButton(onClick = {
@@ -118,7 +119,7 @@ class AssistActivity : ComponentActivity() {
                             OutlinedTextField(
                                 value = input,
                                 onValueChange = { v -> if (v.contains('\n')) { val q = v.replace('\n', ' ').trim(); input = ""; if (q.isNotEmpty()) mic.error = null; app.assistant.ask(q) } else input = v },
-                                placeholder = { Text("Ask or say something") }, maxLines = 3, shape = RoundedCornerShape(24.dp),
+                                placeholder = { Text(stringResource(R.string.ask_or_say_something)) }, maxLines = 3, shape = RoundedCornerShape(24.dp),
                                 modifier = Modifier.weight(1f).testTag("assist_input"),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                                 keyboardActions = KeyboardActions(onSend = { if (input.isNotBlank()) { mic.error = null; app.assistant.ask(input); input = "" } }),

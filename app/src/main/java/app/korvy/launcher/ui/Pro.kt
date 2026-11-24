@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -37,7 +39,7 @@ fun ProUnlock(vm: LauncherViewModel, what: String, modifier: Modifier = Modifier
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.pro.refresh() }
     Row(modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("pro_unlock"), verticalAlignment = Alignment.CenterVertically) {
-        Text("$what are part of Pro, a one-time unlock that supports development.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.are_part_of_pro_a, what), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
         FilledTonalButton(onClick = { context.activity()?.let { vm.pro.buy(it) } }, enabled = vm.pro.canBuy, modifier = Modifier.padding(start = 8.dp)) {
             Text(price?.let { "Unlock · $it" } ?: "Unlock Pro")
         }
@@ -48,7 +50,7 @@ fun ProUnlock(vm: LauncherViewModel, what: String, modifier: Modifier = Modifier
 @Composable
 fun StatsOverlayToggle(vm: LauncherViewModel) {
     val context = LocalContext.current
-    if (!proUnlocked(vm)) { ProUnlock(vm, "Stats overlays"); return }
+    if (!proUnlocked(vm)) { ProUnlock(vm, stringResource(R.string.stats_overlays)); return }
     var on by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(StatsOverlayService.running(context)) }
     var asked by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     // Coming back from Android's permission screen: turn it on if allowed.
@@ -60,8 +62,8 @@ fun StatsOverlayToggle(vm: LauncherViewModel) {
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).testTag("overlay_toggle"), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Show over other apps")
-            Text("A small box with core speeds, memory, battery drain and temperature. Drag it anywhere.", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.show_over_other_apps))
+            Text(stringResource(R.string.a_small_box_with_core), style = MaterialTheme.typography.bodySmall)
         }
         androidx.compose.material3.Switch(on, { want ->
             val ov = StatsOverlayService
@@ -89,18 +91,18 @@ fun ProSection(vm: LauncherViewModel) {
     LaunchedEffect(Unit) { vm.pro.refresh() }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).testTag("pro_section")) {
         if (unlocked) {
-            Text("Pro is unlocked. Thank you!", style = MaterialTheme.typography.bodyMedium)
-            Text("Natural voices, Whisper speech recognition, " + (if (wake) "the wake word, " else "") + "the slideshow and the stats overlay.", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.pro_is_unlocked_thank_you), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.natural_voices_whisper_speech_recognitio) + (if (wake) "the wake word, " else "") + "the slideshow and the stats overlay.", style = MaterialTheme.typography.bodySmall)
         } else {
             Text("Pro: one-time ${price ?: "$4.99"}", style = MaterialTheme.typography.bodyMedium)
-            Text("Adds natural voices, Whisper speech recognition, " + (if (wake) "the wake word, " else "") + "the background slideshow and the stats overlay. " +
+            Text(stringResource(R.string.adds_natural_voices_whisper_speech) + (if (wake) "the wake word, " else "") + "the background slideshow and the stats overlay. " +
                 "Everything else stays free, with no ads and no tracking. Buying is handled by Google Play; this app never sees your payment details.",
                 style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 FilledTonalButton(onClick = { context.activity()?.let { vm.pro.buy(it) } }, enabled = vm.pro.canBuy, modifier = Modifier.testTag("pro_buy")) {
                     Text(price?.let { "Unlock · $it" } ?: "Unlock Pro")
                 }
-                TextButton(onClick = { vm.pro.refresh() }) { Text("Restore purchase") }
+                TextButton(onClick = { vm.pro.refresh() }) { Text(stringResource(R.string.restore_purchase)) }
             }
         }
     }

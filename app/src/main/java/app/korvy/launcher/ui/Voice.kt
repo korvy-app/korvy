@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.Manifest
 import android.content.pm.PackageManager
 import android.speech.tts.Voice
@@ -138,37 +140,37 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("voice_settings")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
-            Text("Voice", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.voice), style = MaterialTheme.typography.titleLarge)
         }
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             item {
-                Text("Speak replies", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.speak_replies), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SpeakMode.entries.forEach { m -> FilterChip(selected = s.speak == m, onClick = { vm.setSpeak(m) }, label = { Text(m.title) }) }
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Listen when opened with the power button")
-                        Text("Starts the microphone right away.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.listen_when_opened_with_the))
+                        Text(stringResource(R.string.starts_the_microphone_right_away), style = MaterialTheme.typography.bodySmall)
                     }
                     Switch(s.listenOnAssist, { vm.setListenOnAssist(it) })
                 }
                 SpeechRecognitionSection(s, vm)
                 if (app.korvy.launcher.core.Feature.WAKE_WORD.on(s.flagsOn, s.flagsOff)) WakeWordSection(s, vm)
-                Text("Speed %.1f×".format(s.ttsRate))
+                Text(stringResource(R.string.speed_1f).format(s.ttsRate))
                 Slider(s.ttsRate, { vm.setTtsRate((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
-                Text("Pitch %.1f".format(s.ttsPitch))
+                Text(stringResource(R.string.pitch_1f).format(s.ttsPitch))
                 Slider(s.ttsPitch, { vm.setTtsPitch((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
                 OutlinedButton(onClick = {
                     speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say("Hi! This is how I'll sound."); vm.assistant.warnIfQuiet()
-                }, modifier = Modifier.testTag("voice_test")) { Text("Test voice") }
+                }, modifier = Modifier.testTag("voice_test")) { Text(stringResource(R.string.test_voice)) }
                 NaturalVoices(s, vm)
-                Text("Speech engine", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-                Text("Any text-to-speech app you install appears here (e.g. RHVoice or eSpeak NG from F-Droid).", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.speech_engine), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+                Text(stringResource(R.string.any_text_to_speech_app), style = MaterialTheme.typography.bodySmall)
             }
             item {
                 Row(Modifier.fillMaxWidth().clickable { vm.setTtsEngine(null) }, verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = s.ttsEngine == null, onClick = { vm.setTtsEngine(null) }); Text("Phone default")
+                    RadioButton(selected = s.ttsEngine == null, onClick = { vm.setTtsEngine(null) }); Text(stringResource(R.string.phone_default))
                 }
             }
             items(engines, key = { it.name }) { e ->
@@ -177,19 +179,19 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 }
             }
             item {
-                Text("Voice", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+                Text(stringResource(R.string.voice), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Show voices that need internet", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.show_voices_that_need_internet), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                     Switch(showOnline, { showOnline = it })
                 }
                 androidx.compose.material3.OutlinedTextField(
                     value = voiceQuery, onValueChange = { voiceQuery = it }, singleLine = true,
-                    placeholder = { Text("Search voices (language, country, name)") },
+                    placeholder = { Text(stringResource(R.string.search_voices_language_country_name)) },
                     leadingIcon = { Icon(androidx.compose.material.icons.Icons.Outlined.Search, null) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("voice_search"),
                 )
                 Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(null) }, verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = s.ttsVoice == null, onClick = { vm.setTtsVoice(null) }); Text("Engine default for my language")
+                    RadioButton(selected = s.ttsVoice == null, onClick = { vm.setTtsVoice(null) }); Text(stringResource(R.string.engine_default_for_my_language))
                 }
             }
             val q = voiceQuery.trim().lowercase()
@@ -226,11 +228,11 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
     val installed by vm.voices.installed.collectAsStateWithLifecycle()
     val download by vm.voices.download.collectAsStateWithLifecycle()
     val allowed = s.allows(OnlineSource.VOICES)
-    Text("Natural voices", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-    Text("Human-sounding voices that run entirely on this phone (open source, via sherpa-onnx). Nothing you hear is sent anywhere.",
+    Text(stringResource(R.string.natural_voices), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text(stringResource(R.string.human_sounding_voices_that_run),
         style = MaterialTheme.typography.bodySmall)
-    if (!proUnlocked(vm)) { ProUnlock(vm, "Natural voices"); return }
-    if (!allowed) Text("Downloading needs Settings → Online features → Voice downloads.", color = MaterialTheme.colorScheme.error,
+    if (!proUnlocked(vm)) { ProUnlock(vm, stringResource(R.string.natural_voices)); return }
+    if (!allowed) Text(stringResource(R.string.downloading_needs_settings_online_featur), color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
     NeuralVoiceCatalog.all.forEach { p ->
         val engineId = Speaker.NEURAL_PREFIX + p.id
@@ -244,7 +246,7 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
                 if (has) RadioButton(selected = selected, onClick = { vm.setTtsEngine(engineId) })
                 Column(Modifier.weight(1f)) {
                     Text(p.name)
-                    Text("${p.license} · ${p.sizeText}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.text_4, p.license, p.sizeText), style = MaterialTheme.typography.bodySmall)
                 }
             }
             Text(p.note, style = MaterialTheme.typography.bodySmall)
@@ -252,28 +254,28 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
                 download is DownloadState.Running && (download as DownloadState.Running).id == p.id -> {
                     val d = download as DownloadState.Running
                     androidx.compose.material3.LinearProgressIndicator(progress = { d.done.toFloat() / d.total }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-                    Text("%.0f of %.0f MB".format(d.done / 1e6, d.total / 1e6), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.n0f_of_0f_mb).format(d.done / 1e6, d.total / 1e6), style = MaterialTheme.typography.bodySmall)
                 }
                 download is DownloadState.Verifying && (download as DownloadState.Verifying).id == p.id ->
-                    Text("Checking and unpacking…", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.checking_and_unpacking), style = MaterialTheme.typography.bodySmall)
                 has -> {
                     if (selected && p.speakers.size > 1) {
-                        Text("Speaker", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+                        Text(stringResource(R.string.speaker), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
                         p.speakers.forEach { sp ->
                             Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(sp.id.toString()) }, verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = (s.ttsVoice?.toIntOrNull() ?: p.speakers.first().id) == sp.id, onClick = { vm.setTtsVoice(sp.id.toString()) })
-                                Text("${sp.name} · ${sp.accent}")
+                                Text(stringResource(R.string.text_4, sp.name, sp.accent))
                             }
                         }
                     }
-                    androidx.compose.material3.TextButton(onClick = { vm.deleteVoice(p) }) { Text("Delete") }
+                    androidx.compose.material3.TextButton(onClick = { vm.deleteVoice(p) }) { Text(stringResource(R.string.delete)) }
                 }
                 else -> {
                     (download as? DownloadState.Failed)?.takeIf { it.id == p.id }?.let {
                         Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                     OutlinedButton(onClick = { vm.downloadVoice(p) }, enabled = allowed && download !is DownloadState.Running,
-                        modifier = Modifier.padding(top = 6.dp).testTag("download_voice_${p.id}")) { Text("Download ${p.sizeText}") }
+                        modifier = Modifier.padding(top = 6.dp).testTag("download_voice_${p.id}")) { Text(stringResource(R.string.download, p.sizeText)) }
                 }
             }
         }
@@ -287,17 +289,17 @@ internal fun SpeechRecognitionSection(s: Settings, vm: LauncherViewModel) {
     val download by vm.models.download.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val phoneHasOne = remember { VoiceInput(context).available() }
-    Text("Speech recognition", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-    Text("Turns what you say into text, entirely on this phone. Whisper (open source, whisper.cpp) works on any phone " +
+    Text(stringResource(R.string.speech_recognition), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text(stringResource(R.string.turns_what_you_say_into) +
         "and is often more accurate; the phone's recognizer starts a little faster.", style = MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth().clickable(enabled = phoneHasOne) { vm.setSttModel(null) }, verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = s.sttModel == null && phoneHasOne, enabled = phoneHasOne, onClick = { vm.setSttModel(null) })
         Column {
-            Text("Phone's on-device recognizer")
-            if (!phoneHasOne) Text("Not available on this phone", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.phone_s_on_device_recognizer))
+            if (!phoneHasOne) Text(stringResource(R.string.not_available_on_this_phone), style = MaterialTheme.typography.bodySmall)
         }
     }
-    if (!proUnlocked(vm)) { ProUnlock(vm, "Whisper models"); return }
+    if (!proUnlocked(vm)) { ProUnlock(vm, stringResource(R.string.whisper_models)); return }
     ModelCatalog.speech.forEach { m ->
         val have = m.id in installed
         val state = download
@@ -307,20 +309,20 @@ internal fun SpeechRecognitionSection(s: Settings, vm: LauncherViewModel) {
                 enabled = have, onClick = { vm.setSttModel(m.id) })
             Column(Modifier.weight(1f)) {
                 Text(m.name)
-                Text("${m.sizeText} · ${m.note}", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.text_4, m.sizeText, m.note), style = MaterialTheme.typography.bodySmall)
                 when {
                     state is DownloadState.Running && state.id == m.id ->
                         androidx.compose.material3.LinearProgressIndicator(progress = { state.done.toFloat() / state.total }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
-                    state is DownloadState.Verifying && state.id == m.id -> Text("Checking…", style = MaterialTheme.typography.bodySmall)
-                    state is DownloadState.Retrying && state.id == m.id -> Text("Connection dropped, retrying in ${state.inSeconds} s…", style = MaterialTheme.typography.bodySmall)
+                    state is DownloadState.Verifying && state.id == m.id -> Text(stringResource(R.string.checking), style = MaterialTheme.typography.bodySmall)
+                    state is DownloadState.Retrying && state.id == m.id -> Text(stringResource(R.string.connection_dropped_retrying_in_s_2, state.inSeconds), style = MaterialTheme.typography.bodySmall)
                     state is DownloadState.Failed && state.id == m.id -> Text(state.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
             when {
-                have -> TextButton(onClick = { vm.deleteModel(m) }) { Text("Delete") }
-                (state as? DownloadState.Running)?.id == m.id -> TextButton(onClick = { vm.cancelDownload() }) { Text("Cancel") }
+                have -> TextButton(onClick = { vm.deleteModel(m) }) { Text(stringResource(R.string.delete)) }
+                (state as? DownloadState.Running)?.id == m.id -> TextButton(onClick = { vm.cancelDownload() }) { Text(stringResource(R.string.cancel)) }
                 else -> TextButton(onClick = { vm.downloadModel(m) }, enabled = state is DownloadState.Idle ||
-                    state is DownloadState.Failed, modifier = Modifier.testTag("stt_get_${m.id}")) { Text("Download") }
+                    state is DownloadState.Failed, modifier = Modifier.testTag("stt_get_${m.id}")) { Text(stringResource(R.string.download_2)) }
             }
         }
     }
@@ -334,24 +336,24 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     val model = NeuralVoiceCatalog.wakeWord
     val have = model.id in installed
     val context = LocalContext.current
-    Text("Wake word", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-    Text("Say your wake word to open the assistant, hands-free. A tiny open-source model listens for that phrase only; " +
+    Text(stringResource(R.string.wake_word), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
+    Text(stringResource(R.string.say_your_wake_word_to) +
         "nothing else is recognised, kept or sent. Android shows a notification and the green mic dot while it listens. Uses some battery.",
         style = MaterialTheme.typography.bodySmall)
-    if (!proUnlocked(vm)) { ProUnlock(vm, "Wake words"); return }
+    if (!proUnlocked(vm)) { ProUnlock(vm, stringResource(R.string.wake_words)); return }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) vm.setWake(on = true) }
     if (!have) {
         val d = download
         when {
             d is DownloadState.Running && d.id == model.id ->
                 androidx.compose.material3.LinearProgressIndicator(progress = { d.done.toFloat() / d.total }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            d is DownloadState.Verifying && d.id == model.id -> Text("Checking and unpacking…", style = MaterialTheme.typography.bodySmall)
-            else -> OutlinedButton(onClick = { vm.downloadWakeModel() }, modifier = Modifier.padding(top = 6.dp).testTag("wake_download")) { Text("Download wake-word model (${model.sizeText})") }
+            d is DownloadState.Verifying && d.id == model.id -> Text(stringResource(R.string.checking_and_unpacking), style = MaterialTheme.typography.bodySmall)
+            else -> OutlinedButton(onClick = { vm.downloadWakeModel() }, modifier = Modifier.padding(top = 6.dp).testTag("wake_download")) { Text(stringResource(R.string.download_wake_word_model, model.sizeText)) }
         }
         return
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Listen for the wake word", modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.listen_for_the_wake_word), modifier = Modifier.weight(1f))
         Switch(s.wakeWord, { on ->
             if (on && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
                 micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -362,7 +364,7 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     val syllables = WordPieces.syllables(phrase)
     val usable = phrase.any { it.isLetter() } && phrase.all { it.isLetter() || it == ' ' || it == '\'' || it == ',' }
     androidx.compose.material3.OutlinedTextField(
-        value = phrase, onValueChange = { phrase = it.take(30) }, singleLine = true, label = { Text("Wake word") },
+        value = phrase, onValueChange = { phrase = it.take(30) }, singleLine = true, label = { Text(stringResource(R.string.wake_word)) },
         supportingText = {
             Text(when {
                 !usable -> "Letters only (English)."
@@ -372,15 +374,15 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
         },
         modifier = Modifier.fillMaxWidth().testTag("wake_phrase"),
     )
-    if (phrase != s.wakePhrase) TextButton(onClick = { vm.setWake(phrase = phrase.trim()) }, enabled = usable) { Text("Use “${phrase.trim()}”") }
+    if (phrase != s.wakePhrase) TextButton(onClick = { vm.setWake(phrase = phrase.trim()) }, enabled = usable) { Text(stringResource(R.string.use_2, phrase.trim())) }
     val models by vm.models.installed.collectAsStateWithLifecycle()
     if (models.none { it.startsWith("whisper") }) {
         val tiny = app.korvy.launcher.assistant.ModelCatalog.byId("whisper-tiny.en")!!
-        Text("For fewer false wakes and better accent coverage, a Whisper model double-checks what was said. " +
+        Text(stringResource(R.string.for_fewer_false_wakes_and) +
             "Whisper tiny is enough (${tiny.sizeText}).", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
-        OutlinedButton(onClick = { vm.downloadModel(tiny); vm.setWake() }, modifier = Modifier.testTag("wake_get_whisper")) { Text("Download Whisper tiny") }
-    } else Text("Each wake is double-checked by Whisper on this phone.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
-    Text("Sensitivity", modifier = Modifier.padding(top = 6.dp))
+        OutlinedButton(onClick = { vm.downloadModel(tiny); vm.setWake() }, modifier = Modifier.testTag("wake_get_whisper")) { Text(stringResource(R.string.download_whisper_tiny)) }
+    } else Text(stringResource(R.string.each_wake_is_double_checked), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
+    Text(stringResource(R.string.sensitivity), modifier = Modifier.padding(top = 6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("Fewer false wakes", "Balanced", "Hears me better").forEachIndexed { i, label ->
             FilterChip(selected = s.wakeSensitivity == i, onClick = { vm.setWake(sensitivity = i) }, label = { Text(label) })
@@ -388,8 +390,8 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Only while the screen is on")
-            Text("Saves battery. Always pauses in battery saver.", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.only_while_the_screen_is))
+            Text(stringResource(R.string.saves_battery_always_pauses_in), style = MaterialTheme.typography.bodySmall)
         }
         Switch(s.wakeScreenOnly, { vm.setWake(screenOnly = it) })
     }

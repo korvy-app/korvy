@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,7 +79,7 @@ fun Tutorial(isDefaultHome: Boolean, onSetDefaultHome: () -> Unit, onDone: () ->
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDone, modifier = Modifier.testTag("tutorial_skip")) { Text("Skip") }
+            TextButton(onClick = onDone, modifier = Modifier.testTag("tutorial_skip")) { Text(stringResource(R.string.skip)) }
         }
         HorizontalPager(pager, modifier = Modifier.weight(1f)) { i ->
             val p = pages[i]
@@ -91,8 +93,8 @@ fun Tutorial(isDefaultHome: Boolean, onSetDefaultHome: () -> Unit, onDone: () ->
                 Text(p.body, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
                 if (i == pages.lastIndex) {
                     Spacer(Modifier.height(24.dp))
-                    if (isDefaultHome) Text("✓ It's already your home screen.", color = MaterialTheme.colorScheme.primary)
-                    else OutlinedButton(onClick = onSetDefaultHome, modifier = Modifier.testTag("tutorial_set_home")) { Text("Make this my home screen") }
+                    if (isDefaultHome) Text(stringResource(R.string.it_s_already_your_home), color = MaterialTheme.colorScheme.primary)
+                    else OutlinedButton(onClick = onSetDefaultHome, modifier = Modifier.testTag("tutorial_set_home")) { Text(stringResource(R.string.make_this_my_home_screen)) }
                 }
             }
         }

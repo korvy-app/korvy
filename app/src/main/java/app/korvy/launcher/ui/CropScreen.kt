@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import android.graphics.Bitmap
 import android.graphics.RectF
 import android.net.Uri
@@ -76,13 +78,13 @@ fun CropScreen(
         val b = bmp
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             when {
-                failed -> Text("Couldn't open this picture.", color = Color.White)
+                failed -> Text(stringResource(R.string.couldn_t_open_this_picture), color = Color.White)
                 b == null -> CircularProgressIndicator()
                 else -> CropArea(b, aspect) { frame -> onUse(RectF(frame.left, frame.top, frame.right, frame.bottom)) }
             }
         }
         if (b == null || failed) Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onSkip) { Text("Skip") }
+            TextButton(onClick = onSkip) { Text(stringResource(R.string.skip)) }
         }
     }
 }
@@ -114,8 +116,8 @@ private fun CropArea(b: Bitmap, aspect: Float, onUse: (CropFrame) -> Unit) {
             }
         }
         Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { frame = CropFrame.of(b.width, b.height, aspect) }) { Text("Reset") }
-            Button(onClick = { onUse(frame) }, modifier = Modifier.testTag("crop_use")) { Text("Use this part") }
+            TextButton(onClick = { frame = CropFrame.of(b.width, b.height, aspect) }) { Text(stringResource(R.string.reset)) }
+            Button(onClick = { onUse(frame) }, modifier = Modifier.testTag("crop_use")) { Text(stringResource(R.string.use_this_part)) }
         }
     }
 }
