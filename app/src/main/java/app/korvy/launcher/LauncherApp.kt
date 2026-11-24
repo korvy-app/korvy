@@ -40,6 +40,10 @@ class LauncherApp : Application() {
     /** Repairs a speaking voice set to something that can't speak (0.11.0–0.11.2 could pick the wake-word model). */
     fun repairSettings() {
         scope.launch {
+            // The Piper "Lessac" voice was removed (research-only dataset licence): delete it if it was downloaded.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                java.io.File(filesDir, "voices/vits-piper-en_US-lessac-medium-int8").takeIf { it.exists() }?.deleteRecursively()
+            }
             val e = settings.settings.first().ttsEngine ?: return@launch
             if (e.startsWith(app.korvy.launcher.assistant.Speaker.NEURAL_PREFIX) &&
                 app.korvy.launcher.assistant.NeuralVoiceCatalog.voiceById(e.removePrefix(app.korvy.launcher.assistant.Speaker.NEURAL_PREFIX)) == null)

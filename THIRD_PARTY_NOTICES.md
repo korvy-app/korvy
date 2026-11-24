@@ -19,8 +19,9 @@ The app shows each item's maker and license before download.
 - Assistant models (Gemma, Qwen, Llama, Phi, SmolLM) from Hugging Face, each under its own license
   (Gemma Terms of Use, Apache 2.0, Llama Community License, MIT, ...).
 - Whisper speech models (ggml conversions from the whisper.cpp project), MIT.
-- Natural voices from the sherpa-onnx releases: Kokoro (Apache 2.0) and Piper (MIT; each voice has its own
-  dataset terms).
+- Natural voices from the sherpa-onnx releases: Kokoro (Apache 2.0); Piper (MIT) voices LJSpeech (LJ Speech
+  dataset, public domain) and Norman (LibriVox recordings, public domain). Only voices whose training data
+  allows commercial use are offered.
 - The wake-word model from the sherpa-onnx releases, Apache 2.0.
 
 Online data (weather from Open-Meteo, news feeds from NPR and BBC, Yahoo Finance quotes, DuckDuckGo answers) is

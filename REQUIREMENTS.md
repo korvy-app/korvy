@@ -245,6 +245,10 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-24: **0.12.1** – Piper "Lessac" voice removed: its dataset (Blizzard 2013 Lessac) is licensed for research
+  only, and natural voices are part of paid Pro. Replaced by Piper LJSpeech (female) and Norman (male), both trained
+  on public-domain recordings. A downloaded Lessac voice is deleted at startup and anyone using it falls back to
+  the phone's voice. Rule: only offer voices/models whose licences allow commercial use.
 - 2026-11-23: **0.12.0** – Home-screen folders (`core/HomeGrid`: folders map, "folder:<id>" cells, saved with the
   grid). Drop an icon on the middle of another (within ~1/3 of the cell centre) → folder; on a folder → added;
   near the edge → swap as before. Tap opens the folder (tap the name to rename, whole name selected); hold an app

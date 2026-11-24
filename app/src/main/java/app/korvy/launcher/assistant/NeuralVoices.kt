@@ -62,12 +62,21 @@ object NeuralVoiceCatalog {
             ),
             "Most natural. Best on newer phones.",
         ),
+        // Piper voices trained on public-domain recordings only, so they're fine in the paid Pro build.
+        // (Lessac was removed in 0.12.1: its Blizzard 2013 dataset licence is research-only.)
         NeuralVoicePack(
-            "piper-lessac", "Piper · Lessac (English)", NeuralVoicePack.Kind.VITS, "MIT (Piper) · voice: Blizzard 2013 Lessac",
-            "vits-piper-en_US-lessac-medium-int8.tar.bz2", 20_969_179, "f1c6d0295cf16087b05f80fdca5b44daca5cd78e2c425d419a42ba34929805f9",
-            "vits-piper-en_US-lessac-medium-int8", "en_US-lessac-medium.onnx",
-            listOf(NeuralSpeaker(0, "Lessac", "American, female")),
+            "piper-ljspeech", "Piper · LJSpeech (English)", NeuralVoicePack.Kind.VITS, "MIT (Piper) · voice: LJ Speech, public domain",
+            "vits-piper-en_US-ljspeech-medium-int8.tar.bz2", 21_090_429, "24dc3bd77dd48c291e52c297878d3437c9492f245d823d7f6a06c4bbb67f4b6b",
+            "vits-piper-en_US-ljspeech-medium-int8", "en_US-ljspeech-medium.onnx",
+            listOf(NeuralSpeaker(0, "Linda", "American, female")),
             "Small and fast. Good for older phones.",
+        ),
+        NeuralVoicePack(
+            "piper-norman", "Piper · Norman (English)", NeuralVoicePack.Kind.VITS, "MIT (Piper) · voice: LibriVox, public domain",
+            "vits-piper-en_US-norman-medium-int8.tar.bz2", 20_987_233, "cb481a514bc213ccf3899391c0f27fdcc4e4b814ec30496f28089a027b5aa01b",
+            "vits-piper-en_US-norman-medium-int8", "en_US-norman-medium.onnx",
+            listOf(NeuralSpeaker(0, "Norman", "American, male")),
+            "Small and fast, a male voice. Good for older phones.",
         ),
     )
 

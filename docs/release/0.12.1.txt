@@ -1,0 +1,3 @@
+- New natural voices: Piper LJSpeech (female) and Norman (male), trained on public-domain recordings.
+- The Piper Lessac voice was removed (its training data is licensed for research only).
+- Fixes: microphone could stay on after a failed request; spoken replies could fail after downloading the wake-word model; "remember when I say …" now saves a phrase.
