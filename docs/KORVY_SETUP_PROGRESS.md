@@ -59,6 +59,9 @@ reinstalled (settings and downloads don't carry over).
 - [ ] Privacy policy matching the code
 
 ## Phase 5: Trademark (owner files; tracked here)
+- Decision 2026-11-23: register the word **KORVY** alone (standard characters), not "Korvy Launcher": it covers
+  future Korvy products, and "launcher" is descriptive (it would have to be disclaimed anyway). Store/About
+  keep "Korvy Launcher" as the product name. Class 9 first; Class 42 only if a hosted service ever exists.
 - [ ] Searches done
 - [ ] Classes and basis decided
 - [ ] Filed
