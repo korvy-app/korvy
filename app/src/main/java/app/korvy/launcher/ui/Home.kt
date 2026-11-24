@@ -150,7 +150,7 @@ fun HomeScreen(
                 ) {
                     Icon(Icons.Outlined.Search, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(12.dp))
-                    Text(if (onOpenAssistant != null) "Search" else "Search apps and the web", color = Color.White.copy(alpha = 0.85f),
+                    Text(if (onOpenAssistant != null) stringResource(R.string.search) else stringResource(R.string.search_apps_and_web), color = Color.White.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 if (onOpenAssistant != null) IconButton(onClick = onOpenAssistant, modifier = Modifier.testTag("open_assistant")) {
@@ -204,7 +204,7 @@ private fun HomePrompt(onSet: () -> Unit, onDismiss: () -> Unit) {
     ) {
         Text(stringResource(R.string.make_this_your_home_screen), color = Color.White, style = MaterialTheme.typography.titleMedium)
         Text(
-            "Then the Home button opens it. You can switch back any time in Android settings.",
+            stringResource(R.string.home_prompt_detail),
             color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp),
         )

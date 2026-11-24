@@ -94,7 +94,7 @@ private fun WidgetCell(vm: LauncherViewModel, w: PlacedWidget, first: Boolean, l
             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
         )
         DropdownMenu(menu, { menu = false }) {
-            listOf("Small", "Medium", "Large").forEachIndexed { i, label ->
+            listOf(stringResource(R.string.widget_small), stringResource(R.string.widget_medium), stringResource(R.string.widget_large)).forEachIndexed { i, label ->
                 if (i != w.size) DropdownMenuItem(text = { Text(label) }, onClick = { menu = false; store.resize(w.id, i) })
             }
             if (!first) DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, onClick = { menu = false; store.move(w.id, -1) })

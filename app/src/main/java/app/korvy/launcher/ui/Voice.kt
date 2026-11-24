@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.data.titleRes
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.Manifest
@@ -147,7 +148,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
             item {
                 Text(stringResource(R.string.speak_replies), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SpeakMode.entries.forEach { m -> FilterChip(selected = s.speak == m, onClick = { vm.setSpeak(m) }, label = { Text(m.title) }) }
+                    SpeakMode.entries.forEach { m -> FilterChip(selected = s.speak == m, onClick = { vm.setSpeak(m) }, label = { Text(stringResource(m.titleRes)) }) }
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -291,8 +292,7 @@ internal fun SpeechRecognitionSection(s: Settings, vm: LauncherViewModel) {
     val context = LocalContext.current
     val phoneHasOne = remember { VoiceInput(context).available() }
     Text(stringResource(R.string.speech_recognition), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-    Text(stringResource(R.string.turns_what_you_say_into) +
-        "and is often more accurate; the phone's recognizer starts a little faster.", style = MaterialTheme.typography.bodySmall)
+    Text(stringResource(R.string.turns_what_you_say_into), style = MaterialTheme.typography.bodySmall)
     Row(Modifier.fillMaxWidth().clickable(enabled = phoneHasOne) { vm.setSttModel(null) }, verticalAlignment = Alignment.CenterVertically) {
         RadioButton(selected = s.sttModel == null && phoneHasOne, enabled = phoneHasOne, onClick = { vm.setSttModel(null) })
         Column {
@@ -338,8 +338,7 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     val have = model.id in installed
     val context = LocalContext.current
     Text(stringResource(R.string.wake_word), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-    Text(stringResource(R.string.say_your_wake_word_to) +
-        "nothing else is recognised, kept or sent. Android shows a notification and the green mic dot while it listens. Uses some battery.",
+    Text(stringResource(R.string.say_your_wake_word_to),
         style = MaterialTheme.typography.bodySmall)
     if (!proUnlocked(vm)) { ProUnlock(vm, stringResource(R.string.wake_words)); return }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) vm.setWake(on = true) }
@@ -379,8 +378,7 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     val models by vm.models.installed.collectAsStateWithLifecycle()
     if (models.none { it.startsWith("whisper") }) {
         val tiny = app.korvy.launcher.assistant.ModelCatalog.byId("whisper-tiny.en")!!
-        Text(stringResource(R.string.for_fewer_false_wakes_and) +
-            "Whisper tiny is enough (${tiny.sizeText}).", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
+        Text(stringResource(R.string.for_fewer_false_wakes_and, tiny.sizeText), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
         OutlinedButton(onClick = { vm.downloadModel(tiny); vm.setWake() }, modifier = Modifier.testTag("wake_get_whisper")) { Text(stringResource(R.string.download_whisper_tiny)) }
     } else Text(stringResource(R.string.each_wake_is_double_checked), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     Text(stringResource(R.string.sensitivity), modifier = Modifier.padding(top = 6.dp))

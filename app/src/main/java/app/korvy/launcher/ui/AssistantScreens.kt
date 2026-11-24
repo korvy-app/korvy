@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.platform.detailRes
+import app.korvy.launcher.platform.titleRes
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.content.Intent
@@ -109,6 +111,7 @@ fun AssistantScreen(
     readingAloud: Long? = null,
     speechState: Speaker.State = Speaker.State.IDLE,
 ) {
+    val listeningLabel = stringResource(R.string.listening)
     var input by remember { mutableStateOf("") }
     val mic = remember { MicState() }
     val list = rememberLazyListState()
@@ -119,8 +122,8 @@ fun AssistantScreen(
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().imePadding().testTag("assistant")) {
         TopBar(stringResource(R.string.assistant), onBack) {
             SpeakToggle(speak, onSpeak, onSpeakOn)
-            TextButton(onClick = onOpenModels) { Text(modelName ?: "No model", maxLines = 1) }
-            if (chat.isNotEmpty() && !busy) IconButton(onClick = onClear) { Icon(Icons.Outlined.DeleteSweep, "Clear conversation") }
+            TextButton(onClick = onOpenModels) { Text(modelName ?: stringResource(R.string.no_model), maxLines = 1) }
+            if (chat.isNotEmpty() && !busy) IconButton(onClick = onClear) { Icon(Icons.Outlined.DeleteSweep, stringResource(R.string.clear_conversation)) }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = list, contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (chat.isEmpty()) item {
@@ -137,7 +140,7 @@ fun AssistantScreen(
             }
             items(chat, key = { it.id }) { m -> Bubble(m, actions = cardActions, onSpeak = onReadAloud, speech = if (readingAloud == m.id) speechState else null, openLink = { url -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) }
         }
-        val status = mic.error ?: if (mic.listening) mic.partial.ifBlank { "Listening…" } else null
+        val status = mic.error ?: if (mic.listening) mic.partial.ifBlank { listeningLabel } else null
         status?.let { Text(it, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp)) }
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -163,6 +166,7 @@ fun AssistantScreen(
 internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardActions? = null, onSpeak: ((Long) -> Unit)? = null, speech: Speaker.State? = null) {
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val context = LocalContext.current
+    val thinkingLabel = stringResource(R.string.thinking)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
         Column(
             Modifier.widthIn(max = 320.dp).clip(RoundedCornerShape(18.dp))
@@ -172,7 +176,7 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
             // Long-press to select and copy any part of a message; web addresses open in the default browser.
             androidx.compose.foundation.text.selection.SelectionContainer {
                 Column {
-                    Text(linkify(m.text.ifBlank { if (m.pending) "Thinking…" else "" }, MaterialTheme.colorScheme.primary))
+                    Text(linkify(m.text.ifBlank { if (m.pending) thinkingLabel else "" }, MaterialTheme.colorScheme.primary))
                     m.lines.forEachIndexed { i, line ->
                         val url = m.lineLinks.getOrNull(i)
                         // A line with its own page (a headline) is a link to it; tapping opens the default browser.
@@ -199,15 +203,15 @@ internal fun Bubble(m: ChatItem, openLink: (String) -> Unit, actions: CardAction
                                 androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
                             }
                         Speaker.State.SPEAKING ->
-                            Icon(androidx.compose.material.icons.Icons.Outlined.Stop, "Stop reading", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-                        null -> Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.VolumeUp, "Read aloud", modifier = Modifier.size(16.dp),
+                            Icon(androidx.compose.material.icons.Icons.Outlined.Stop, stringResource(R.string.stop_reading), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        null -> Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.VolumeUp, stringResource(R.string.read_aloud), modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 IconButton(onClick = {
                     clipboard.setText(androidx.compose.ui.text.AnnotatedString((listOf(m.text) + m.lines.mapIndexed { i, l ->
                         m.lineLinks.getOrNull(i)?.let { "$l ($it)" } ?: l }).joinToString("\n")))
-                    android.widget.Toast.makeText(context, "Copied", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, context.getString(R.string.copied), android.widget.Toast.LENGTH_SHORT).show()
                 }, modifier = Modifier.size(28.dp).testTag("copy_${m.id}")) {
                     Icon(androidx.compose.material.icons.Icons.Outlined.ContentCopy, "Copy", modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -265,8 +269,7 @@ fun ModelsScreen(
         TopBar(stringResource(R.string.assistant_model), onBack)
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item {
-                Text(stringResource(R.string.models_run_entirely_on_this) +
-                    "This phone has %.1f GB of memory and %.1f GB free storage.".format(ramGb, freeBytes / 1e9),
+                Text(stringResource(R.string.models_run_entirely_on_this, ramGb, freeBytes / 1e9),
                     style = MaterialTheme.typography.bodySmall)
                 if (!s.allows(OnlineSource.MODELS)) {
                     Spacer(Modifier.height(8.dp))
@@ -357,7 +360,7 @@ fun PersonalityScreen(personality: Personality, onSave: (String) -> Unit, onBack
             LinearProgressIndicator(progress = { (t.length.toFloat() / Personality.MAX_CHARS).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-            Text("About ${t.length / 4} tokens." + if (over) " Long personalities make small models slower to start answering." else "",
+            Text(if (over) stringResource(R.string.about_tokens_long, t.length / 4) else stringResource(R.string.about_tokens_n, t.length / 4),
                 style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -369,9 +372,9 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
                   onHomePlace: (String) -> Unit, onFahrenheit: (Boolean) -> Unit, onMobileData: (Boolean) -> Unit,
                   onUseLocation: ((Boolean) -> Unit)? = null,
                   toggle: @Composable (String, String, Boolean, String, Boolean, (Boolean) -> Unit) -> Unit) {
-    toggle("Online features", "Off: the app never connects to the internet. On: only the sources below that you leave on.", s.online, "toggle_online", true, onMaster)
+    toggle(stringResource(R.string.online_title), stringResource(R.string.online_detail), s.online, "toggle_online", true, onMaster)
     OnlineSource.entries.forEach { src ->
-        toggle(src.title, src.detail + " (" + src.hosts.joinToString() + ")", s.allows(src), "toggle_src_${src.name}", s.online) { onSource(src, it) }
+        toggle(stringResource(src.titleRes), stringResource(src.detailRes) + " (" + src.hosts.joinToString() + ")", s.allows(src), "toggle_src_${src.name}", s.online) { onSource(src, it) }
     }
     if (s.online) {
         var place by remember(s.homePlace) { mutableStateOf(s.homePlace) }
@@ -383,9 +386,8 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
             supportingText = { Text(stringResource(R.string.typed_by_you_no_location)) },
         )
         if (place != s.homePlace) TextButton(onClick = { onHomePlace(place) }, modifier = Modifier.padding(start = 12.dp)) { Text(stringResource(R.string.save_home_town)) }
-        toggle("Fahrenheit", "Show temperatures in °F (off: °C).", s.fahrenheit, "toggle_fahrenheit", true, onFahrenheit)
-        onUseLocation?.let { toggle("Weather for where I am", "When you ask for the weather without a place, use your approximate location " +
-            "(asked once; rounded to about 1 km before it goes to Open-Meteo). Off: use your home town.", s.useLocation, "toggle_location", true, it) }
-        toggle("Download models on mobile data", "Models are 0.5–2.5 GB. Off: downloads wait for Wi-Fi.", s.modelsOnMobileData, "toggle_mobile_data", true, onMobileData)
+        toggle(stringResource(R.string.fahrenheit), stringResource(R.string.fahrenheit_detail), s.fahrenheit, "toggle_fahrenheit", true, onFahrenheit)
+        onUseLocation?.let { toggle(stringResource(R.string.use_location), stringResource(R.string.use_location_detail), s.useLocation, "toggle_location", true, it) }
+        toggle(stringResource(R.string.mobile_data), stringResource(R.string.mobile_data_detail), s.modelsOnMobileData, "toggle_mobile_data", true, onMobileData)
     }
 }

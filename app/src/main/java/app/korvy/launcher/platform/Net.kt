@@ -70,3 +70,23 @@ object Net {
         throw IOException("Too many redirects")
     }
 }
+
+/** On-screen names (translated); [OnlineSource.title] stays English for logs. */
+val OnlineSource.titleRes: Int get() = when (this) {
+    OnlineSource.MODELS -> app.korvy.launcher.R.string.src_models
+    OnlineSource.VOICES -> app.korvy.launcher.R.string.src_voices
+    OnlineSource.WEATHER -> app.korvy.launcher.R.string.src_weather
+    OnlineSource.NEWS -> app.korvy.launcher.R.string.src_news
+    OnlineSource.STOCKS -> app.korvy.launcher.R.string.src_stocks
+    OnlineSource.ANSWERS -> app.korvy.launcher.R.string.src_answers
+    OnlineSource.SUGGESTIONS -> app.korvy.launcher.R.string.src_suggestions
+}
+val OnlineSource.detailRes: Int get() = when (this) {
+    OnlineSource.MODELS -> app.korvy.launcher.R.string.src_models_detail
+    OnlineSource.VOICES -> app.korvy.launcher.R.string.src_voices_detail
+    OnlineSource.WEATHER -> app.korvy.launcher.R.string.src_weather_detail
+    OnlineSource.NEWS -> app.korvy.launcher.R.string.src_news_detail
+    OnlineSource.STOCKS -> app.korvy.launcher.R.string.src_stocks_detail
+    OnlineSource.ANSWERS -> app.korvy.launcher.R.string.src_answers_detail
+    OnlineSource.SUGGESTIONS -> app.korvy.launcher.R.string.src_suggestions_detail
+}

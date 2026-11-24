@@ -140,11 +140,13 @@ fun Modifier.appGestures(
     var origin by remember { mutableStateOf(Offset.Zero) }
     val slop = with(LocalDensity.current) { 10.dp.toPx() }
     val haptics = LocalHapticFeedback.current
+    val openLabel = stringResource(R.string.open)
+    val optionsLabel = stringResource(R.string.options)
     this
         .onGloballyPositioned { origin = it.positionInRoot() }
         .semantics(mergeDescendants = true) {
-            onClick(label = "Open") { onTap(); true }
-            onLongClick(label = "Options") { onMenu(true); true }
+            onClick(label = openLabel) { onTap(); true }
+            onLongClick(label = optionsLabel) { onMenu(true); true }
         }
         .pointerInput(app.key, fromCell) {
             awaitEachGesture {

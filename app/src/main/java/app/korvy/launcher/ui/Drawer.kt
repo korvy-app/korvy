@@ -132,7 +132,7 @@ fun AppDrawer(
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
             trailingIcon = {
                 if (completion != null) IconButton(onClick = { onQuery(query + completion) }, modifier = Modifier.testTag("accept_completion")) {
-                    Icon(Icons.AutoMirrored.Outlined.KeyboardTab, "Complete to ${query + completion}")
+                    Icon(Icons.AutoMirrored.Outlined.KeyboardTab, stringResource(R.string.complete_to, query + completion))
                 } else if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, "Clear") }
             },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
@@ -178,8 +178,8 @@ fun AppDrawer(
                             Text(p.name, color = Color.White, style = MaterialTheme.typography.bodyLarge)
                             Text(listOf(p.label, p.number).filter { it.isNotBlank() }.joinToString(" · "), color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
                         }
-                        IconButton(onClick = { leaving { onText(p) } }) { Icon(Icons.Outlined.Sms, "Text ${p.name}", tint = Color.White) }
-                        IconButton(onClick = { leaving { onCall(p) } }) { Icon(Icons.Outlined.Call, "Call ${p.name}", tint = Color.White) }
+                        IconButton(onClick = { leaving { onText(p) } }) { Icon(Icons.Outlined.Sms, stringResource(R.string.text_person, p.name), tint = Color.White) }
+                        IconButton(onClick = { leaving { onCall(p) } }) { Icon(Icons.Outlined.Call, stringResource(R.string.call_person, p.name), tint = Color.White) }
                     }
                 }
                 if (onAsk != null) item(key = "ask") {
@@ -201,7 +201,7 @@ fun AppDrawer(
                         Icon(Icons.Outlined.Search, null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(40.dp).padding(8.dp))
                         Spacer(Modifier.width(14.dp))
                         Text(s, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { onQuery(s) }) { Icon(Icons.Outlined.NorthWest, "Put “$s” in the search box", tint = Color.White.copy(alpha = 0.7f)) }
+                        IconButton(onClick = { onQuery(s) }) { Icon(Icons.Outlined.NorthWest, stringResource(R.string.put_in_search, s), tint = Color.White.copy(alpha = 0.7f)) }
                     }
                 }
                 item(key = "web") {
@@ -269,8 +269,8 @@ private fun ResultRow(app: AppEntry, repo: AppRepository, hidden: HideLevel?, on
             Spacer(Modifier.width(14.dp))
             Text(app.label, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             when (hidden) {
-                HideLevel.HIDDEN -> Icon(Icons.Outlined.VisibilityOff, "Hidden app", tint = Color.White.copy(alpha = 0.6f))
-                HideLevel.LOCKED -> Icon(Icons.Outlined.Lock, "Locked app", tint = Color.White.copy(alpha = 0.6f))
+                HideLevel.HIDDEN -> Icon(Icons.Outlined.VisibilityOff, stringResource(R.string.hidden_app), tint = Color.White.copy(alpha = 0.6f))
+                HideLevel.LOCKED -> Icon(Icons.Outlined.Lock, stringResource(R.string.locked_app), tint = Color.White.copy(alpha = 0.6f))
                 null -> {}
             }
         }
@@ -301,7 +301,7 @@ fun AppMenu(
         DropdownMenuItem(text = { Text(stringResource(R.string.hide)) }, onClick = { onDismiss(); onHide() }, modifier = Modifier.testTag("menu_hide"))
         DropdownMenuItem(text = { Text(stringResource(R.string.hide_and_lock)) }, onClick = { onDismiss(); onLock() }, modifier = Modifier.testTag("menu_lock"))
         DropdownMenuItem(
-            text = { Text(if (neverSuggest) "Allow in suggestions" else "Never suggest") },
+            text = { Text(if (neverSuggest) stringResource(R.string.allow_in_suggestions) else stringResource(R.string.never_suggest)) },
             onClick = { onDismiss(); onToggleSuggest() },
         )
         DropdownMenuItem(text = { Text(stringResource(R.string.app_info)) }, onClick = { onDismiss(); onInfo() })

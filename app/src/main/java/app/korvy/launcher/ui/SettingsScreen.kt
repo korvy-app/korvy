@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.data.titleRes
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,18 +100,18 @@ fun SettingsScreen(
                 Section(stringResource(R.string.look_and_feel))
                 Text(stringResource(R.string.screen_rotation), modifier = Modifier.padding(start = 20.dp, top = 8.dp))
                 Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Follow phone", "Portrait", "Landscape").forEachIndexed { i, label ->
+                    listOf(stringResource(R.string.rotation_follow), stringResource(R.string.rotation_portrait), stringResource(R.string.rotation_landscape)).forEachIndexed { i, label ->
                         FilterChip(selected = s.orientation == i, onClick = { vm.setOrientation(i) }, label = { Text(label) },
                             modifier = Modifier.testTag("orientation_$i"))
                     }
                 }
                 Toggle(
-                    "Animations",
-                    "Default for this phone: ${if (tier == Tier.LOW) "off (keeps it fast)" else "on"}.",
+                    stringResource(R.string.animations),
+                    if (tier == Tier.LOW) stringResource(R.string.animations_default_low) else stringResource(R.string.animations_default_on),
                     animationsOn, "toggle_animations",
                 ) { vm.setAnimations(it) }
                 Text(stringResource(R.string.background), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 20.dp, top = 12.dp))
-                Note(if (backgrounds.isEmpty()) "Using your phone's wallpaper." else "${backgrounds.size} picture${if (backgrounds.size == 1) "" else "s"}. Photos are copied in, resized for the screen, and stay on this phone.")
+                Note(when { backgrounds.isEmpty() -> stringResource(R.string.bg_wallpaper); backgrounds.size == 1 -> stringResource(R.string.bg_pictures_one); else -> stringResource(R.string.bg_pictures_many, backgrounds.size) })
                 if (backgrounds.isNotEmpty()) LazyRow(
                     Modifier.padding(vertical = 6.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
@@ -127,11 +128,11 @@ fun SettingsScreen(
                 }
                 val pro = proUnlocked(vm)
                 Toggle(
-                    "Slideshow",
+                    stringResource(R.string.slideshow),
                     when {
-                        !pro -> "Rotate your pictures (Pro)."
-                        backgrounds.size < 2 -> "Add two or more pictures to rotate them."
-                        else -> "Crossfades between your pictures. Pauses in battery saver."
+                        !pro -> stringResource(R.string.slideshow_pro)
+                        backgrounds.size < 2 -> stringResource(R.string.slideshow_need_two)
+                        else -> stringResource(R.string.slideshow_on)
                     },
                     s.slideshow && pro, "toggle_slideshow", enabled = backgrounds.size >= 2 && pro,
                 ) { vm.setSlideshow(it) }
@@ -178,14 +179,13 @@ fun SettingsScreen(
                             Text(stringResource(R.string.voice))
                             Text(stringResource(R.string.spoken_replies_speech_engine_and), style = MaterialTheme.typography.bodySmall)
                         }
-                        Text(s.speak.title)
+                        Text(stringResource(s.speak.titleRes))
                     }
                     val ctx = androidx.compose.ui.platform.LocalContext.current
                     val isAssistant = remember { Device.isDefaultAssistant(ctx) }
                     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).testTag("power_button")) {
                         Text(stringResource(R.string.hold_the_power_button_for))
-                        Text(if (isAssistant) "This is your digital assistant app. On Pixels, also check Settings → System → Gestures → Press & hold power button → Digital assistant."
-                            else "1. Choose Korvy as the digital assistant app. 2. On Pixels: Settings → System → Gestures → Press & hold power button → Digital assistant.",
+                        Text(if (isAssistant) stringResource(R.string.assistant_role_yes) else stringResource(R.string.assistant_role_no),
                             style = MaterialTheme.typography.bodySmall)
                         if (!isAssistant) OutlinedButton(onClick = { Device.openAssistantSettings(ctx) }, modifier = Modifier.padding(top = 6.dp)) {
                             Text(stringResource(R.string.choose_digital_assistant_app))
@@ -269,8 +269,8 @@ fun SettingsScreen(
                     // Only after tapping the version in About 7 times.
                     if (s.developer) TextButton(onClick = { vm.open(Screen.DEVELOPER) }, modifier = Modifier.testTag("open_developer")) { Text(stringResource(R.string.developer_options)) }
                 }
-                Note("Version ${BuildConfig.VERSION_NAME}. No accounts, no analytics, no crash reporting. " + if (s.online) "Online features are on: only the sources you allowed above connect." else "Online features are off: nothing leaves this phone.")
-                Note("Phone class: ${tier.name.lowercase()} (${Device.specs(LocalContext.current).let { "%.1f GB, %d cores, Android API %d".format(it.totalRamMb / 1024.0, it.cores, it.sdk) }}).")
+                Note(if (s.online) stringResource(R.string.about_note_online, BuildConfig.VERSION_NAME) else stringResource(R.string.about_note_offline, BuildConfig.VERSION_NAME))
+                Device.specs(LocalContext.current).let { Note(stringResource(R.string.phone_class, tier.name.lowercase(), it.totalRamMb / 1024.0, it.cores, it.sdk)) }
             }
         }
     }
@@ -284,7 +284,7 @@ private fun Thumb(f: File, onRemove: () -> Unit) {
     androidx.compose.foundation.layout.Box(Modifier.size(width = 64.dp, height = 112.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
         bmp?.let { Image(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         IconButton(onClick = onRemove, modifier = Modifier.align(Alignment.TopEnd).size(28.dp)) {
-            Icon(Icons.Outlined.Close, "Remove picture", modifier = Modifier.size(16.dp))
+            Icon(Icons.Outlined.Close, stringResource(R.string.remove_picture), modifier = Modifier.size(16.dp))
         }
     }
 }
@@ -323,8 +323,7 @@ private fun ContactsSetting(s: Settings, vm: LauncherViewModel) {
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { vm.refreshContactsGranted() }
     if (!granted) Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp)) {
         Text(stringResource(R.string.contacts))
-        Text(stringResource(R.string.optional_lets_search_find_people) +
-            "and are never shown to the AI model.", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.optional_lets_search_find_people), style = MaterialTheme.typography.bodySmall)
         OutlinedButton(onClick = { ask.launch(android.Manifest.permission.READ_CONTACTS) }, modifier = Modifier.padding(top = 6.dp).testTag("allow_contacts")) {
             Text(stringResource(R.string.allow_contacts))
         }

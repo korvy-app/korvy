@@ -209,3 +209,9 @@ class SettingsStore(private val context: Context) {
         it[K.appChoices] = m
     }
 }
+
+val SpeakMode.titleRes: Int get() = when (this) {
+    SpeakMode.ALWAYS -> app.korvy.launcher.R.string.speak_always
+    SpeakMode.AFTER_VOICE -> app.korvy.launcher.R.string.speak_after_voice
+    SpeakMode.OFF -> app.korvy.launcher.R.string.speak_off
+}

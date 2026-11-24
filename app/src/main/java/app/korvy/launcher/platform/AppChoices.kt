@@ -53,3 +53,23 @@ object AppChoices {
     fun label(context: Context, pkg: String): String =
         runCatching { context.packageManager.let { it.getApplicationLabel(it.getApplicationInfo(pkg, 0)).toString() } }.getOrDefault(pkg)
 }
+
+/** On-screen names and examples (translated); [AppTask.title] stays English for the AI prompt. */
+val AppTask.titleRes: Int get() = when (this) {
+    AppTask.MESSAGES -> app.korvy.launcher.R.string.task_messages
+    AppTask.PHONE -> app.korvy.launcher.R.string.task_phone
+    AppTask.MAPS -> app.korvy.launcher.R.string.task_maps
+    AppTask.RIDES -> app.korvy.launcher.R.string.task_rides
+    AppTask.MUSIC -> app.korvy.launcher.R.string.task_music
+    AppTask.BROWSER -> app.korvy.launcher.R.string.task_browser
+    AppTask.EMAIL -> app.korvy.launcher.R.string.task_email
+}
+val AppTask.exampleRes: Int? get() = when (this) {
+    AppTask.MESSAGES -> app.korvy.launcher.R.string.task_messages_example
+    AppTask.PHONE -> app.korvy.launcher.R.string.task_phone_example
+    AppTask.MAPS -> app.korvy.launcher.R.string.task_maps_example
+    AppTask.RIDES -> app.korvy.launcher.R.string.task_rides_example
+    AppTask.MUSIC -> app.korvy.launcher.R.string.task_music_example
+    AppTask.BROWSER -> app.korvy.launcher.R.string.task_browser_example
+    AppTask.EMAIL -> null
+}

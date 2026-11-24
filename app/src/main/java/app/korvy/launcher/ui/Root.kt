@@ -80,7 +80,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     }
 
     fun launchHidden(app: AppEntry, level: HideLevel) {
-        if (level == HideLevel.LOCKED) host.authenticate("Open ${app.label}") { vm.launch(app) } else vm.launch(app)
+        if (level == HideLevel.LOCKED) host.authenticate(ctx.getString(R.string.auth_open_app, app.label)) { vm.launch(app) } else vm.launch(app)
     }
 
     val menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit = { app, expanded, dismiss ->
@@ -92,7 +92,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
             onInfo = { vm.appInfo(app) },
             onUninstall = { vm.uninstall(app) },
             onHome = homeGrid.contains(app.key),
-            onAddHome = { if (!vm.addToHome(app)) host.toast("The home screen is full. Remove an app first.") },
+            onAddHome = { if (!vm.addToHome(app)) host.toast(ctx.getString(R.string.home_full)) },
             onRemoveHome = { vm.removeFromHome(app) },
         )
     }
@@ -155,7 +155,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 val (hidden, locked) = splitHidden(apps, privacy.hidden)
                 HiddenAppsScreen(
                     hidden, locked, lockedOpen, vm.repo,
-                    onUnlockList = { host.authenticate("Show locked apps") { vm.lockedListOpen.value = true } },
+                    onUnlockList = { host.authenticate(ctx.getString(R.string.auth_show_locked)) { vm.lockedListOpen.value = true } },
                     onLaunch = { vm.launch(it) },
                     onUnhide = { vm.unhide(it.key) },
                     onLock = ::lockApp,

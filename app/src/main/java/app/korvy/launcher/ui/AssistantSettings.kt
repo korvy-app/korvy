@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.platform.exampleRes
+import app.korvy.launcher.platform.titleRes
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.content.Intent
@@ -69,9 +71,7 @@ fun PeopleScreen(vm: LauncherViewModel, onBack: () -> Unit) {
         Header(stringResource(R.string.people_shortcuts), onBack)
         LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
             item {
-                Text(stringResource(R.string.names_and_nicknames_the_assistant) +
-                    "Jennifer or “wife”. Kept encrypted on this phone only; the AI model never sees them. You can also tick " +
-                    "“Always use this person” when the assistant asks which one you mean.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.names_and_nicknames_the_assistant), style = MaterialTheme.typography.bodySmall)
                 OutlinedTextField(value = alias, onValueChange = { alias = it }, singleLine = true, label = { Text(stringResource(R.string.name_or_nickname)) },
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("shortcut_alias"))
                 Button(onClick = { picker.launch(Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)) },
@@ -86,7 +86,7 @@ fun PeopleScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                         Text(stringResource(R.string.text_3, s.alias, s.person.name))
                         Text(listOf(s.person.label, s.person.number).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                     }
-                    IconButton(onClick = { vm.assistant.shortcuts.remove(s.alias) }) { Icon(Icons.Outlined.Delete, "Remove ${s.alias}") }
+                    IconButton(onClick = { vm.assistant.shortcuts.remove(s.alias) }) { Icon(Icons.Outlined.Delete, stringResource(R.string.remove_alias, s.alias)) }
                 }
             }
         }
@@ -107,8 +107,8 @@ fun AppsForTasksScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) {
                 item(key = task.name) {
                     val opts = options[task].orEmpty()
                     val chosen = AppChoices.chosen(context, s.appChoices, task)
-                    Text(task.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 14.dp))
-                    if (task.example.isNotBlank()) Text(stringResource(R.string.text, task.example), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(task.titleRes), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 14.dp))
+                    task.exampleRes?.let { ex -> Text(stringResource(R.string.text, stringResource(ex)), style = MaterialTheme.typography.bodySmall) }
                     if (opts.isEmpty()) Text(stringResource(R.string.no_installed_app_can_do), style = MaterialTheme.typography.bodySmall)
                     else {
                         Row(Modifier.fillMaxWidth().clickable { vm.setAppChoice(task, null) }, verticalAlignment = Alignment.CenterVertically) {
@@ -144,9 +144,7 @@ fun NotebookScreen(vm: LauncherViewModel, onBack: () -> Unit) {
         }
         LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
             item {
-                Text(stringResource(R.string.what_the_assistant_has_learned) +
-                    "and play rain sounds”, or “forget …”. Phrases run instantly without a model. The model only sees the few notes " +
-                    "that matter for each question. Kept encrypted on this phone, never backed up. People nicknames live in People shortcuts.",
+                Text(stringResource(R.string.what_the_assistant_has_learned),
                     style = MaterialTheme.typography.bodySmall)
                 androidx.compose.material3.LinearProgressIndicator(progress = { (size.toFloat() / max).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
@@ -179,18 +177,15 @@ fun AboutScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                     modifier = Modifier.testTag("about_version").clickable {
                         if (!s.developer && ++taps >= 7) {
                             vm.setDeveloper(true)
-                            android.widget.Toast.makeText(context, "Developer options are on", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, context.getString(R.string.developer_on), android.widget.Toast.LENGTH_SHORT).show()
                         }
                     })
                 Text(stringResource(R.string.a_private_fast_home_screen),
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
                 Text(stringResource(R.string.your_privacy), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-                Text(stringResource(R.string.no_accounts_ads_analytics_or) +
-                    "your data to. Online features (weather, news, downloads…) are off until you turn each one on, and they talk " +
-                    "only to the services named in Settings → Online features.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.no_accounts_ads_analytics_or), style = MaterialTheme.typography.bodyMedium)
                 Text(stringResource(R.string.open_source), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
-                Text(stringResource(R.string.free_software_under_the_gnu) +
-                    "“Korvy” is a trademark of the project; forks are welcome under another name.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.free_software_under_the_gnu), style = MaterialTheme.typography.bodyMedium)
                 androidx.compose.material3.TextButton(onClick = { open("https://korvy.app") }) { Text(stringResource(R.string.korvy_app)) }
                 androidx.compose.material3.TextButton(onClick = { open("https://github.com/korvy-app/korvy") }) { Text(stringResource(R.string.source_code_on_github)) }
                 androidx.compose.material3.TextButton(onClick = { open("https://github.com/korvy-app/korvy/issues") }) { Text(stringResource(R.string.report_a_problem)) }
@@ -212,8 +207,7 @@ fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
         Header(stringResource(R.string.developer_options), onBack)
         LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
             item {
-                Text(stringResource(R.string.features_still_being_built_they) +
-                    "affects this phone.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.features_still_being_built_they), style = MaterialTheme.typography.bodySmall)
             }
             // Features whose code isn't in this build (e.g. the wake word in the Play build) aren't offered.
             items(Feature.entries.filter { it != Feature.WAKE_WORD || app.korvy.launcher.assistant.WakeWordService.available(context) }) { f ->
@@ -226,7 +220,7 @@ fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                 }
             }
             item {
-                androidx.compose.material3.TextButton(onClick = { vm.pro.resetTrial() }) { Text("Reset Pro trial") }
+                androidx.compose.material3.TextButton(onClick = { vm.pro.resetTrial() }) { Text(stringResource(R.string.reset_pro_trial)) }
                 androidx.compose.material3.TextButton(onClick = {
                     Feature.entries.forEach { vm.setFlag(it, it.default) }
                     vm.setDeveloper(false); onBack()
