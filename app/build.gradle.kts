@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -78,6 +80,19 @@ android {
         }
     }
 
+    signingConfigs {
+        // Play upload key, used only for upload bundles (./scripts/build-upload.sh passes -Pupload). Test APKs stay
+        // debug-signed so installed test copies keep updating. Values live in local.properties (git-ignored).
+        val props = Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+        val storeFile = props.getProperty("RELEASE_STORE_FILE")
+        if (storeFile != null && project.hasProperty("upload")) create("upload") {
+            this.storeFile = file(storeFile)
+            storePassword = props.getProperty("RELEASE_STORE_PASSWORD")
+            keyAlias = props.getProperty("RELEASE_KEY_ALIAS")
+            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -86,7 +101,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug") // real upload key later
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

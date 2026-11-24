@@ -1,0 +1,4 @@
+First test build of Korvy, a private, fast home screen with an optional assistant that runs on your phone.
+- Search apps, contacts and the web; hide or lock apps; folders and widgets on the home screen.
+- Korvy, the assistant (optional): opens apps, texts and calls (always asks first), alarms, timers, weather.
+- Teach it phrases and nicknames in its notebook. Offline voices and speech recognition.

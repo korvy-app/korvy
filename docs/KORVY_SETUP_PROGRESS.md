@@ -67,5 +67,10 @@ reinstalled (settings and downloads don't carry over).
 - [ ] Filed
 
 ## Phase 6: Store and release
+- 2026-11-23: Play app created ("Korvy: Private Launcher", free, automatic protection off), service account
+  given testing-track access, upload key created (`~/.config/play/korvy-upload.jks`, password in
+  `~/.config/play/korvy-upload.txt` and local.properties; back it up), Play build drops the wake-word mic
+  service. **0.12.0 (code 29) uploaded to internal testing as a draft.** `app.korvy.launcher` is now permanent.
+  Build: `./scripts/build-upload.sh`; upload: `./scripts/play-upload.sh upload … --track internal --notes … --draft`.
 - [ ] Play listing / F-Droid metadata
 - [ ] Release checklist

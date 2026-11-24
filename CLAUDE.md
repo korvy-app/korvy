@@ -30,6 +30,8 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 20)
 ./gradlew testPlayDebugUnitTest      # unit tests (must pass before a change counts as done)
 ./gradlew installPlayDebug           # debug build on a connected phone
 ./scripts/publish-test.sh            # optimised APK to the owner's file share (configured in local.properties)
+./scripts/build-upload.sh            # Play upload bundle, signed with the upload key (RELEASE_* in local.properties)
+./scripts/play-upload.sh upload app/build/outputs/bundle/playRelease/app-play-release.aab --track internal --notes FILE --draft
 ```
 - Same toolchain as the owner's other app (Piano Notes): Kotlin, Compose, Material 3, minSdk 26, target 37,
   AGP 9.5. AGP 9 turns on R8 full mode: anything created by reflection needs keep rules; check a release

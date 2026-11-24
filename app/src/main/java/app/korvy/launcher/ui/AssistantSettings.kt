@@ -205,6 +205,7 @@ fun AboutScreen(vm: LauncherViewModel, onBack: () -> Unit) {
 @Composable
 fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
     val s by vm.settings.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("developer")) {
         Header("Developer options", onBack)
         LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
@@ -212,7 +213,8 @@ fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                 Text("Features still being built. They may not work, and can change or disappear. Turning one on only " +
                     "affects this phone.", style = MaterialTheme.typography.bodySmall)
             }
-            items(Feature.entries) { f ->
+            // Features whose code isn't in this build (e.g. the wake word in the Play build) aren't offered.
+            items(Feature.entries.filter { it != Feature.WAKE_WORD || app.korvy.launcher.assistant.WakeWordService.available(context) }) { f ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).testTag("flag_${f.id}"), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(f.title)

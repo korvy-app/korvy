@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Play build: the wake word is still experimental (Developer options), so its microphone service and permission
+     are left out until it ships. Google Play asks for a declaration for every foreground-service type. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" tools:node="remove" />
+    <application>
+        <service android:name="app.korvy.launcher.assistant.WakeWordService" tools:node="remove" />
+    </application>
+</manifest>

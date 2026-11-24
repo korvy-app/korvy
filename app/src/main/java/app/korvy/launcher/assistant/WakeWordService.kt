@@ -231,8 +231,14 @@ class WakeWordService : Service() {
         private const val EXTRA_THRESHOLD = "threshold"
         private const val EXTRA_SCREEN_ONLY = "screenOnly"
 
+        /** False in builds that leave the service out (the Play build, until the wake word ships). */
+        fun available(context: Context) = runCatching {
+            context.packageManager.getServiceInfo(android.content.ComponentName(context, WakeWordService::class.java), 0)
+        }.isSuccess
+
         /** Starts or stops listening to match the settings. Call while the launcher is on screen. */
         fun sync(context: Context, on: Boolean, phrase: String, threshold: Float, screenOnly: Boolean) {
+            if (!available(context)) return
             val i = Intent(context, WakeWordService::class.java)
             if (!on) { if (running(context)) context.startService(i.setAction(ACTION_STOP)); return }
             if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
