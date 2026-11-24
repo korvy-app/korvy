@@ -89,14 +89,20 @@ def parse_listing(md_path):
     return title, short, full
 
 
-def listing(s, md_path, images_dir, lang="en-US"):
-    """Uploads the store text and all images (icon, feature graphic, phone screenshots) in one edit."""
+def listing(s, md_path, images_dir, langs=("en-US",), images=True):
+    """Uploads the store text (to each of [langs]) and, for the default language, all images, in one edit.
+    Translations without their own images show the default-language ones on Play."""
     title, short, full = parse_listing(md_path)
     edit = ok(s.post(f"{API}/edits"))["id"]
+    lang = langs[0]
     try:
-        ok(s.put(f"{API}/edits/{edit}/listings/{lang}", json={"language": lang, "title": title,
-            "shortDescription": short, "fullDescription": full}))
-        print(f"Listing text: “{title}” ({len(short)} + {len(full)} characters)")
+        for lg in langs:
+            ok(s.put(f"{API}/edits/{edit}/listings/{lg}", json={"language": lg, "title": title,
+                "shortDescription": short, "fullDescription": full}))
+            print(f"Listing text {lg}: “{title}” ({len(short)} + {len(full)} characters)")
+        if not images:
+            ok(s.post(f"{API}/edits/{edit}:commit")); edit = None
+            print("Store listing saved."); return
         def put_images(kind, files):
             ok(s.delete(f"{API}/edits/{edit}/listings/{lang}/{kind}"))
             for f in files:
@@ -128,12 +134,14 @@ def main():
     l = sub.add_parser("listing")
     l.add_argument("--text", default="docs/play/listing.md")
     l.add_argument("--images", default="fastlane/metadata/android/en-US/images")
+    l.add_argument("--lang", default="en-US", help="comma-separated Play language codes, e.g. es-419,es-US,es-ES")
+    l.add_argument("--no-images", action="store_true", help="text only (translations use the default images)")
     a = p.parse_args()
     s = session()
     if a.cmd == "check":
         check(s)
     elif a.cmd == "listing":
-        listing(s, a.text, a.images)
+        listing(s, a.text, a.images, tuple(a.lang.split(",")), images=not a.no_images)
     else:
         upload(s, a.aab, a.track, a.notes, a.draft)
 

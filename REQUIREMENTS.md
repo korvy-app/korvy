@@ -245,6 +245,13 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-24: **0.14.0 – languages.** All UI text, assistant replies, notifications and catalog text are in
+  strings.xml; translations in Spanish, Portuguese (Brazil), French and German (tables in docs/i18n/<lang>.txt →
+  `python3 scripts/mkres.py docs/i18n/<lang>.txt <qualifier>`, which checks placeholders). Per-app language picker
+  (locales_config). Spanish quick commands and teaching without the model (`core/Spanish`, SpanishTest); the model
+  answers in the app's language; Spanish natural voices Piper Ald (es_MX, Unlicense) and Davefx (es_ES, CC0).
+  pt-BR/fr/de: UI translated, commands still English (examples kept in English there). Store listings translated
+  (docs/play/listing.<lang>.md). Verified on the 4a in Spanish and German (layouts wrap; chip rows are FlowRows).
 - 2026-11-24: Background pictures easier to remove (owner request): a dark round ✕ badge that shows on any photo,
   and tapping a picture asks "Remove this picture?". Verified on the 4a.
 - 2026-11-24: **0.13.0 – Pro redefined (owner decision).** Free: launcher, search, folders, widgets, hide, and the

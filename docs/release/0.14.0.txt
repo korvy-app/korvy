@@ -1,0 +1,4 @@
+- Korvy now speaks Spanish, Portuguese, French and German (pick a language for Korvy alone in Android's app settings).
+- The assistant understands Spanish commands: "pon una alarma a las 7", "escríbele a Jen que voy tarde".
+- Spanish natural voices (Pro).
+- Background pictures are easier to remove: tap one.

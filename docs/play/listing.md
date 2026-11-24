@@ -18,10 +18,12 @@ FAST AND SIMPLE
 • Instant on older phones; animations switch off automatically on slower ones.
 • Search apps by initials or with typos, plus contacts, a calculator and the web search engine you choose.
 • Home-screen grid, folders, widgets, your own backgrounds and app suggestions for the time of day.
+• In English, Spanish, Portuguese, French and German.
 
 KORVY, YOUR ASSISTANT (OPTIONAL)
 • Runs entirely on your phone: pick a small AI model (Gemma, Qwen, Llama and more). Nothing you ask is sent to an AI company.
 • Opens apps, texts and calls people, sets alarms and timers, gives directions, plays music, checks the weather.
+• Understands quick commands in English and Spanish.
 • Always asks before texting, calling or booking a ride.
 • Teach it: "remember I'm vegetarian", "when I say goodnight, set a timer for 8 hours and play rain sounds", "when I say Jen I mean Jennifer".
 • Hold the power button to talk to it. Offline speech recognition and natural voices.
