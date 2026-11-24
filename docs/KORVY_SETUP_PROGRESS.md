@@ -72,6 +72,9 @@ reinstalled (settings and downloads don't carry over).
 - [ ] Filed
 
 ## Phase 6: Store and release
+- 2026-11-24: payments profile set up; `pro_unlock` ("Korvy Pro", $4.99, 174 regions, purchase option `buy`,
+  legacy-compatible) created and ACTIVE via the one-time products API (the old inappproducts API is retired).
+  Privacy policy URL set in App content. FGS/QUERY_ALL_PACKAGES declaration videos made (on the share).
 - 2026-11-23: Play app created ("Korvy: Private Launcher", free, automatic protection off), service account
   given testing-track access, upload key created (`~/.config/play/korvy-upload.jks`, password in
   `~/.config/play/korvy-upload.txt` and local.properties; back it up), Play build drops the wake-word mic
