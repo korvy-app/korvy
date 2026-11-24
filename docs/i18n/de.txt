@@ -541,3 +541,7 @@ accent_uk_f=Britisch, weiblich
 accent_uk_m=Britisch, männlich
 calc_percent=%1$s %% von %2$s sind %3$s.
 calc_tip=%1$s %% Trinkgeld auf %2$s sind %3$s (insgesamt %4$s).
+accent_mx=Mexikanisches Spanisch
+accent_es=Spanisch (Spanien)
+voice_note_piper_es_mx=Spanische Stimme, klein und schnell. Gut für ältere Smartphones.
+voice_note_piper_es_es=Spanische Stimme aus Spanien, klein und schnell. Gut für ältere Smartphones.

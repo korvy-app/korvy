@@ -540,4 +540,8 @@
     <string name="accent_uk_m">Britannique, masculine</string>
     <string name="calc_percent">%1$s %% de %2$s font %3$s.</string>
     <string name="calc_tip">Un pourboire de %1$s %% sur %2$s fait %3$s (total %4$s).</string>
+    <string name="accent_mx">Espagnol du Mexique</string>
+    <string name="accent_es">Espagnol d\'Espagne</string>
+    <string name="voice_note_piper_es_mx">Voix espagnole, petite et rapide. Bien pour les anciens téléphones.</string>
+    <string name="voice_note_piper_es_es">Voix espagnole d\'Espagne, petite et rapide. Bien pour les anciens téléphones.</string>
 </resources>

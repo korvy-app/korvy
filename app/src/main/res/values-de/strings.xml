@@ -540,4 +540,8 @@
     <string name="accent_uk_m">Britisch, männlich</string>
     <string name="calc_percent">%1$s %% von %2$s sind %3$s.</string>
     <string name="calc_tip">%1$s %% Trinkgeld auf %2$s sind %3$s (insgesamt %4$s).</string>
+    <string name="accent_mx">Mexikanisches Spanisch</string>
+    <string name="accent_es">Spanisch (Spanien)</string>
+    <string name="voice_note_piper_es_mx">Spanische Stimme, klein und schnell. Gut für ältere Smartphones.</string>
+    <string name="voice_note_piper_es_es">Spanische Stimme aus Spanien, klein und schnell. Gut für ältere Smartphones.</string>
 </resources>

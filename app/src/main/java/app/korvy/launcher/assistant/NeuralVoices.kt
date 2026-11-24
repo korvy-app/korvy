@@ -78,6 +78,21 @@ object NeuralVoiceCatalog {
             listOf(NeuralSpeaker(0, "Norman", "American, male")),
             "Small and fast, a male voice. Good for older phones.",
         ),
+        // Spanish: only voices whose recordings are public domain (Unlicense / CC0), like the English ones.
+        NeuralVoicePack(
+            "piper-es-mx-ald", "Piper · Ald (Español, México)", NeuralVoicePack.Kind.VITS, "MIT (Piper) · voice: Ald dataset, Unlicense",
+            "vits-piper-es_MX-ald-medium-int8.tar.bz2", 21_283_187, "447e82d080719409db08e54a4b6eec2e4b6ba850b98dcaf09d3fc67bf30ff692",
+            "vits-piper-es_MX-ald-medium-int8", "es_MX-ald-medium.onnx",
+            listOf(NeuralSpeaker(0, "Ald", "Mexican Spanish")),
+            "Spanish voice, small and fast. Good for older phones.",
+        ),
+        NeuralVoicePack(
+            "piper-es-es-davefx", "Piper · Davefx (Español, España)", NeuralVoicePack.Kind.VITS, "MIT (Piper) · voice: Davefx dataset, CC0",
+            "vits-piper-es_ES-davefx-medium-int8.tar.bz2", 21_171_632, "8bb8ac1cefb727caec9bd9c6c3185c673c8b42c53bd29bb25d5a7715dac37125",
+            "vits-piper-es_ES-davefx-medium-int8", "es_ES-davefx-medium.onnx",
+            listOf(NeuralSpeaker(0, "Davefx", "Spanish (Spain)")),
+            "Spanish voice from Spain, small and fast. Good for older phones.",
+        ),
     )
 
     /** The wake-word model: a 3.3M-parameter open-vocabulary keyword spotter (Apache 2.0), checked 2026-11-23. */

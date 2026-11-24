@@ -540,4 +540,8 @@
     <string name="accent_uk_m">Británico, hombre</string>
     <string name="calc_percent">El %1$s%% de %2$s es %3$s.</string>
     <string name="calc_tip">Una propina del %1$s%% sobre %2$s es %3$s (total %4$s).</string>
+    <string name="accent_mx">Español de México</string>
+    <string name="accent_es">Español de España</string>
+    <string name="voice_note_piper_es_mx">Voz en español, pequeña y rápida. Buena para teléfonos antiguos.</string>
+    <string name="voice_note_piper_es_es">Voz en español de España, pequeña y rápida. Buena para teléfonos antiguos.</string>
 </resources>

@@ -32,6 +32,8 @@ fun NeuralVoicePack.noteText(): String = when (id) {
     "kokoro-en" -> stringResource(R.string.voice_note_kokoro_en)
     "piper-ljspeech" -> stringResource(R.string.voice_note_piper_ljspeech)
     "piper-norman" -> stringResource(R.string.voice_note_piper_norman)
+    "piper-es-mx-ald" -> stringResource(R.string.voice_note_piper_es_mx)
+    "piper-es-es-davefx" -> stringResource(R.string.voice_note_piper_es_es)
     "kws-en" -> stringResource(R.string.voice_note_kws_en)
     else -> note
 }
@@ -42,5 +44,7 @@ fun NeuralSpeaker.accentText(): String = when (accent) {
     "American, male" -> stringResource(R.string.accent_us_m)
     "British, female" -> stringResource(R.string.accent_uk_f)
     "British, male" -> stringResource(R.string.accent_uk_m)
+    "Mexican Spanish" -> stringResource(R.string.accent_mx)
+    "Spanish (Spain)" -> stringResource(R.string.accent_es)
     else -> accent
 }

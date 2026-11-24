@@ -541,3 +541,7 @@ accent_uk_f=Britânica, feminina
 accent_uk_m=Britânica, masculina
 calc_percent=%1$s%% de %2$s é %3$s.
 calc_tip=Uma gorjeta de %1$s%% sobre %2$s é %3$s (total %4$s).
+accent_mx=Espanhol do México
+accent_es=Espanhol da Espanha
+voice_note_piper_es_mx=Voz em espanhol, pequena e rápida. Boa para celulares antigos.
+voice_note_piper_es_es=Voz em espanhol da Espanha, pequena e rápida. Boa para celulares antigos.

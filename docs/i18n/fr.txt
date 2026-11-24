@@ -541,3 +541,7 @@ accent_uk_f=Britannique, féminine
 accent_uk_m=Britannique, masculine
 calc_percent=%1$s %% de %2$s font %3$s.
 calc_tip=Un pourboire de %1$s %% sur %2$s fait %3$s (total %4$s).
+accent_mx=Espagnol du Mexique
+accent_es=Espagnol d'Espagne
+voice_note_piper_es_mx=Voix espagnole, petite et rapide. Bien pour les anciens téléphones.
+voice_note_piper_es_es=Voix espagnole d'Espagne, petite et rapide. Bien pour les anciens téléphones.

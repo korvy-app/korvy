@@ -553,4 +553,8 @@
     <string name="accent_uk_m">British, male</string>
     <string name="calc_percent">%1$s%% of %2$s is %3$s.</string>
     <string name="calc_tip">A %1$s%% tip on %2$s is %3$s (total %4$s).</string>
+    <string name="accent_mx">Mexican Spanish</string>
+    <string name="accent_es">Spanish (Spain)</string>
+    <string name="voice_note_piper_es_mx">Spanish voice, small and fast. Good for older phones.</string>
+    <string name="voice_note_piper_es_es">Spanish voice from Spain, small and fast. Good for older phones.</string>
 </resources>

@@ -540,4 +540,8 @@
     <string name="accent_uk_m">Britânica, masculina</string>
     <string name="calc_percent">%1$s%% de %2$s é %3$s.</string>
     <string name="calc_tip">Uma gorjeta de %1$s%% sobre %2$s é %3$s (total %4$s).</string>
+    <string name="accent_mx">Espanhol do México</string>
+    <string name="accent_es">Espanhol da Espanha</string>
+    <string name="voice_note_piper_es_mx">Voz em espanhol, pequena e rápida. Boa para celulares antigos.</string>
+    <string name="voice_note_piper_es_es">Voz em espanhol da Espanha, pequena e rápida. Boa para celulares antigos.</string>
 </resources>
