@@ -73,6 +73,8 @@ reinstalled (settings and downloads don't carry over).
   service. **0.12.0 (code 29) uploaded to internal testing as a draft.** `app.korvy.launcher` is now permanent.
   Store assets ready (fastlane/metadata/android/en-US: icon, featureGraphic, 6 phoneScreenshots; also on the
   share in apps/launcher/play-store). Drafts: docs/play/listing.md, docs/play/app-content.md, docs/privacy.md.
+  Store listing (text, icon, feature graphic, 6 screenshots) uploaded via the API on 2026-11-23
+  (`./scripts/play-upload.sh listing`). Still needed in the Console: contact email, privacy policy URL, App content forms.
   Upload key backed up off this Mac (location in CLAUDE.local.md).
   Build: `./scripts/build-upload.sh`; upload: `./scripts/play-upload.sh upload … --track internal --notes … --draft`.
 - [ ] Play listing / F-Droid metadata
