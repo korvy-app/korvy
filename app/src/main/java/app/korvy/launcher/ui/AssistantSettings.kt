@@ -226,6 +226,7 @@ fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                 }
             }
             item {
+                androidx.compose.material3.TextButton(onClick = { vm.pro.resetTrial() }) { Text("Reset Pro trial") }
                 androidx.compose.material3.TextButton(onClick = {
                     Feature.entries.forEach { vm.setFlag(it, it.default) }
                     vm.setDeveloper(false); onBack()

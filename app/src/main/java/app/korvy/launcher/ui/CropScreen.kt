@@ -72,7 +72,7 @@ fun CropScreen(
     }
     Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().navigationBarsPadding().testTag("crop")) {
         Text(
-            if (total > 1) "Picture $position of $total: drag the frame, pinch to zoom" else "Drag the frame, pinch to zoom",
+            if (total > 1) stringResource(R.string.crop_hint_many, position, total) else stringResource(R.string.crop_hint_one),
             color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(16.dp),
         )
         val b = bmp

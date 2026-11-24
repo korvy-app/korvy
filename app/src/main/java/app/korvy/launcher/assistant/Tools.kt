@@ -54,7 +54,7 @@ data class Card(
     val options: List<Person> = emptyList(),
     val alias: String? = null,
 ) {
-    enum class Kind { CONFIRM, NEED_CONTACT, NEED_LOCATION, CHOOSE_CONTACT }
+    enum class Kind { CONFIRM, NEED_CONTACT, NEED_LOCATION, CHOOSE_CONTACT, PRO }
 }
 
 /**

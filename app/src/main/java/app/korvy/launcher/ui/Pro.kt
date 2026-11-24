@@ -1,5 +1,9 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.app.Activity
@@ -19,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -32,18 +37,64 @@ private fun Context.activity(): Activity? = when (this) { is Activity -> this; i
 @Composable
 fun proUnlocked(vm: LauncherViewModel): Boolean = vm.pro.unlocked.collectAsStateWithLifecycle().value
 
-/** "This is part of Pro" with a buy button; shown in place of a Pro feature's controls. */
+/** "This is part of Pro": try free for 7 days (once) or unlock. Shown in place of a Pro feature's controls. */
 @Composable
 fun ProUnlock(vm: LauncherViewModel, what: String, modifier: Modifier = Modifier) {
-    val price by vm.pro.price.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     LaunchedEffect(Unit) { vm.pro.refresh() }
-    Row(modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("pro_unlock"), verticalAlignment = Alignment.CenterVertically) {
-        Text(stringResource(R.string.are_part_of_pro_a, what), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        FilledTonalButton(onClick = { context.activity()?.let { vm.pro.buy(it) } }, enabled = vm.pro.canBuy, modifier = Modifier.padding(start = 8.dp)) {
-            Text(price?.let { "Unlock · $it" } ?: "Unlock Pro")
+    Column(modifier.fillMaxWidth().padding(vertical = 6.dp).testTag("pro_unlock")) {
+        Text(stringResource(R.string.are_part_of_pro_a, what), style = MaterialTheme.typography.bodySmall)
+        ProButtons(vm, Modifier.padding(top = 6.dp))
+    }
+}
+
+/** The two Pro buttons: the free trial (if not used yet) and the purchase. */
+@Composable
+fun ProButtons(vm: LauncherViewModel, modifier: Modifier = Modifier) = ProButtons(vm.pro, modifier)
+
+@Composable
+fun ProButtons(pro: app.korvy.launcher.platform.ProAccess, modifier: Modifier = Modifier) {
+    val price by pro.price.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (pro.canStartTrial()) FilledTonalButton(onClick = { pro.startTrial() }, modifier = Modifier.testTag("pro_trial")) {
+            Text(stringResource(R.string.pro_try_free))
+        }
+        androidx.compose.material3.OutlinedButton(onClick = { context.activity()?.let { pro.buy(it) } }, enabled = pro.canBuy) {
+            Text(price?.let { stringResource(R.string.pro_unlock_price, it) } ?: stringResource(R.string.pro_unlock))
         }
     }
+}
+
+/** A whole screen that's part of Pro (AI models, notebook, people, personality), shown when Pro isn't unlocked. */
+@Composable
+fun ProLockedScreen(vm: LauncherViewModel, title: String, what: String, onBack: () -> Unit) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("pro_locked")) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.IconButton(onClick = onBack) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.ArrowBack, stringResource(R.string.back)) }
+            Text(title, style = MaterialTheme.typography.titleLarge)
+        }
+        Column(Modifier.padding(20.dp)) {
+            Text(stringResource(R.string.pro_locked_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.pro_locked_body, what), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+            Text(stringResource(R.string.pro_list), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
+            ProButtons(vm, Modifier.padding(top = 16.dp))
+        }
+    }
+}
+
+/** Asked from an action (e.g. Hide and lock): the same choice as a dialog. */
+@Composable
+fun ProDialog(vm: LauncherViewModel) {
+    val what by vm.proPrompt.collectAsStateWithLifecycle()
+    val unlocked = proUnlocked(vm)
+    val w = what ?: return
+    if (unlocked) { vm.proPrompt.value = null; return }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { vm.proPrompt.value = null },
+        title = { Text(stringResource(R.string.pro_locked_title)) },
+        text = { Column { Text(stringResource(R.string.pro_locked_body, w)); ProButtons(vm, Modifier.padding(top = 14.dp)) } },
+        confirmButton = {}, dismissButton = { androidx.compose.material3.TextButton(onClick = { vm.proPrompt.value = null }) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 /** Device stats → "Show over other apps" (Pro). Asks for "Display over other apps" the first time. */
@@ -80,30 +131,25 @@ fun StatsOverlayToggle(vm: LauncherViewModel) {
     }
 }
 
-/** Settings → Pro: status, buy and restore. */
+/** Settings → Pro: status (bought, trial days left), what it adds, try/buy and restore. */
 @Composable
 fun ProSection(vm: LauncherViewModel) {
     val unlocked = proUnlocked(vm)
-    val s by vm.settings.collectAsStateWithLifecycle()
-    val wake = app.korvy.launcher.core.Feature.WAKE_WORD.on(s.flagsOn, s.flagsOff)
-    val price by vm.pro.price.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val bought by vm.pro.purchased.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.pro.refresh() }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).testTag("pro_section")) {
-        if (unlocked) {
-            Text(stringResource(R.string.pro_is_unlocked_thank_you), style = MaterialTheme.typography.bodyMedium)
-            Text(stringResource(R.string.natural_voices_whisper_speech_recognitio) + (if (wake) "the wake word, " else "") + "the slideshow and the stats overlay.", style = MaterialTheme.typography.bodySmall)
-        } else {
-            Text("Pro: one-time ${price ?: "$4.99"}", style = MaterialTheme.typography.bodyMedium)
-            Text(stringResource(R.string.adds_natural_voices_whisper_speech) + (if (wake) "the wake word, " else "") + "the background slideshow and the stats overlay. " +
-                "Everything else stays free, with no ads and no tracking. Buying is handled by Google Play; this app never sees your payment details.",
-                style = MaterialTheme.typography.bodySmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                FilledTonalButton(onClick = { context.activity()?.let { vm.pro.buy(it) } }, enabled = vm.pro.canBuy, modifier = Modifier.testTag("pro_buy")) {
-                    Text(price?.let { "Unlock · $it" } ?: "Unlock Pro")
-                }
-                TextButton(onClick = { vm.pro.refresh() }) { Text(stringResource(R.string.restore_purchase)) }
+        when {
+            bought -> Text(stringResource(R.string.pro_unlocked_thanks), style = MaterialTheme.typography.bodyMedium)
+            unlocked -> {
+                val days = vm.pro.trialDaysLeft()
+                Text(if (days <= 1) stringResource(R.string.pro_trial_last_day) else stringResource(R.string.pro_trial_days_left, days),
+                    style = MaterialTheme.typography.bodyMedium)
             }
+        }
+        Text(stringResource(R.string.pro_list), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        if (!bought) {
+            ProButtons(vm, Modifier.padding(top = 6.dp))
+            TextButton(onClick = { vm.pro.refresh() }) { Text(stringResource(R.string.restore_purchase)) }
         }
     }
 }

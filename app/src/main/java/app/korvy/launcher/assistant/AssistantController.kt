@@ -160,6 +160,11 @@ class AssistantController(
         job = scope.launch {
             try {
                 // 1. Teaching ("remember …", "when I say …", "forget …"): plain code, no model.
+                Lesson.parse(q)?.takeIf { !pro.unlocked.value }?.let {
+                    update(replyId) { it.copy(text = context.getString(app.korvy.launcher.R.string.assistant_needs_pro_teach), pending = false,
+                        card = Card(Card.Kind.PRO, context.getString(app.korvy.launcher.R.string.pro_locked_title), context.getString(app.korvy.launcher.R.string.pro_feature_teach))) }
+                    return@launch
+                }
                 Lesson.parse(q)?.let { lesson ->
                     val r = learn(lesson)
                     update(replyId) { it.copy(text = r.text, lines = r.lines, pending = false) }
@@ -167,7 +172,7 @@ class AssistantController(
                     return@launch
                 }
                 // 2. A phrase the user taught: run its steps in order, each with its own reply.
-                val phrase = notebook.book.value.phraseFor(q)
+                val phrase = if (pro.unlocked.value) notebook.book.value.phraseFor(q) else null
                 if (phrase != null) {
                     phrase.steps.forEachIndexed { i, step ->
                         val id = if (i == 0) replyId else nextId++.also { chat.value = chat.value + ChatItem(it, false, "", pending = true) }
@@ -262,6 +267,11 @@ class AssistantController(
 
     private suspend fun modelAction(q: String, replyId: Long, speak: Boolean): Action? {
         val s = settings.value
+        if (!pro.unlocked.value) {
+            update(replyId) { it.copy(pending = false, text = context.getString(app.korvy.launcher.R.string.assistant_needs_pro_ai),
+                card = Card(Card.Kind.PRO, context.getString(app.korvy.launcher.R.string.pro_locked_title), context.getString(app.korvy.launcher.R.string.pro_feature_ai))) }
+            return null
+        }
         val m = ModelCatalog.chatById(s.modelId)
         if (m == null || m.id !in models.installed.value) {
             update(replyId) { it.copy(pending = false, text = "To answer questions I need a model. Pick one in Settings → Assistant → Model. " +

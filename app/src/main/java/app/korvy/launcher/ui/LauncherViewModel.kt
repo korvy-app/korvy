@@ -270,6 +270,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     val assistant = la.assistant
     val models = la.models
     val pro get() = la.pro
+    /** A Pro feature the user just tried to use (shows ProDialog), or null. */
+    val proPrompt = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    /** True if Pro (or the trial) is on; otherwise asks with ProDialog and returns false. */
+    fun requirePro(what: String): Boolean = pro.unlocked.value.also { if (!it) proPrompt.value = what }
     val widgets get() = la.widgets
     /** Packages of hidden apps (their widgets aren't offered). */
     fun hiddenPackages(): Set<String> = la.privacy.load().hidden.keys.map { it.substringBefore('/') }.toSet()

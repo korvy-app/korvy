@@ -100,12 +100,12 @@ fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = 
         )
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) begin() else state.error = "Voice needs microphone permission. You can still type."
+        if (granted) begin() else state.error = context.getString(R.string.mic_needs_permission)
     }
     fun toggle() {
         when {
             state.listening -> { voice.stop(); state.listening = false }
-            !voice.available() -> state.error = "No offline speech recognition on this phone yet. Download a Whisper model in Settings → Voice (nothing is ever sent online)."
+            !voice.available() -> state.error = context.getString(R.string.mic_no_recognizer)
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> begin()
             else -> permission.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -118,7 +118,7 @@ fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = 
                 .background(if (state.listening) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(if (state.listening) Icons.Filled.Mic else Icons.Outlined.Mic, if (state.listening) "Stop listening" else "Speak",
+            Icon(if (state.listening) Icons.Filled.Mic else Icons.Outlined.Mic, if (state.listening) stringResource(R.string.stop_listening) else stringResource(R.string.speak),
                 tint = if (state.listening) MaterialTheme.colorScheme.onPrimary else tint)
         }
     }
@@ -127,6 +127,7 @@ fun MicButton(state: MicState, onResult: (String) -> Unit, modifier: Modifier = 
 /** Settings → Assistant → Voice: when to speak, which engine and voice, speed and pitch. */
 @Composable
 fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) {
+    val context = LocalContext.current
     val speaker = vm.assistant.speaker
     var engines by remember { mutableStateOf(speaker.engines()) }
     var voices by remember { mutableStateOf<List<Voice>>(emptyList()) }
@@ -162,7 +163,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 Text(stringResource(R.string.pitch_1f).format(s.ttsPitch))
                 Slider(s.ttsPitch, { vm.setTtsPitch((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
                 OutlinedButton(onClick = {
-                    speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say("Hi! This is how I'll sound."); vm.assistant.warnIfQuiet()
+                    speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say(context.getString(R.string.voice_test_phrase)); vm.assistant.warnIfQuiet()
                 }, modifier = Modifier.testTag("voice_test")) { Text(stringResource(R.string.test_voice)) }
                 NaturalVoices(s, vm)
                 Text(stringResource(R.string.speech_engine), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
@@ -217,7 +218,7 @@ fun SpeakToggle(mode: SpeakMode, onChange: (SpeakMode) -> Unit, onTurnedOn: () -
     IconButton(onClick = { if (on) onChange(SpeakMode.AFTER_VOICE) else { onChange(SpeakMode.ALWAYS); onTurnedOn() } },
         modifier = Modifier.testTag("speak_toggle")) {
         Icon(if (on) Icons.AutoMirrored.Outlined.VolumeUp else Icons.AutoMirrored.Outlined.VolumeOff,
-            if (on) "Spoken replies on (tap to only speak after I talk)" else "Spoken replies off (tap to speak every reply)",
+            if (on) stringResource(R.string.spoken_replies_on) else stringResource(R.string.spoken_replies_off),
             tint = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -367,9 +368,9 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
         value = phrase, onValueChange = { phrase = it.take(30) }, singleLine = true, label = { Text(stringResource(R.string.wake_word)) },
         supportingText = {
             Text(when {
-                !usable -> "Letters only (English)."
-                syllables < 3 -> "Short or everyday words wake it by mistake more often. Try 3+ syllables, like “Hey Korvy”."
-                else -> "Good: distinctive phrases work best."
+                !usable -> stringResource(R.string.wake_letters_only)
+                syllables < 3 -> stringResource(R.string.wake_too_short)
+                else -> stringResource(R.string.wake_good)
             })
         },
         modifier = Modifier.fillMaxWidth().testTag("wake_phrase"),
@@ -384,7 +385,7 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
     } else Text(stringResource(R.string.each_wake_is_double_checked), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     Text(stringResource(R.string.sensitivity), modifier = Modifier.padding(top = 6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("Fewer false wakes", "Balanced", "Hears me better").forEachIndexed { i, label ->
+        listOf(stringResource(R.string.wake_fewer_false), stringResource(R.string.wake_balanced), stringResource(R.string.wake_hears_better)).forEachIndexed { i, label ->
             FilterChip(selected = s.wakeSensitivity == i, onClick = { vm.setWake(sensitivity = i) }, label = { Text(label) })
         }
     }

@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.runtime.collectAsState
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.Manifest
@@ -110,13 +111,21 @@ fun ActionCard(id: Long, card: Card, actions: CardActions) {
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth().clickable { rememberChoice = !rememberChoice }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                // Saving a nickname for next time is part of Pro (teaching the assistant).
+                val canRemember = (androidx.compose.ui.platform.LocalContext.current.applicationContext as app.korvy.launcher.LauncherApp).pro.unlocked.collectAsState().value
+                if (!canRemember) rememberChoice = false
+                if (canRemember) Row(Modifier.fillMaxWidth().clickable { rememberChoice = !rememberChoice }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     androidx.compose.material3.Checkbox(checked = rememberChoice, onCheckedChange = { rememberChoice = it }, modifier = Modifier.testTag("choose_remember"))
                     Text(stringResource(R.string.always_use_this_person_for, card.alias.orEmpty()), style = MaterialTheme.typography.bodySmall)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     TextButton(onClick = { actions.cancel(id) }) { Text(stringResource(R.string.cancel)) }
                 }
+            }
+            Card.Kind.PRO -> {
+                val pro = (androidx.compose.ui.platform.LocalContext.current.applicationContext as app.korvy.launcher.LauncherApp).pro
+                Text(stringResource(R.string.pro_list), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                ProButtons(pro, Modifier.padding(top = 8.dp))
             }
             Card.Kind.NEED_LOCATION -> Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
                 TextButton(onClick = { actions.cancel(id) }) { Text(stringResource(R.string.cancel)) }

@@ -56,13 +56,12 @@ fun HiddenAppsScreen(
             Text(stringResource(R.string.hidden_apps), style = MaterialTheme.typography.titleLarge)
         }
         Text(
-            "Hidden apps are left out of this launcher's home screen, app list, search and suggestions. " +
-                "They still appear in Android's Settings → Apps and in other launchers.",
+            stringResource(R.string.hidden_explainer),
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
         )
         LazyColumn(Modifier.fillMaxSize().testTag("hidden_list")) {
             item { Header(stringResource(R.string.hidden)) }
-            if (hidden.isEmpty()) item { Empty("No hidden apps. Long-press an app and choose Hide.") }
+            if (hidden.isEmpty()) item { Empty(stringResource(R.string.hidden_none)) }
             items(hidden, key = { "h-" + it.key }) { app ->
                 AppRow(app, repo, onLaunch) {
                     TextButton(onClick = { onLock(app) }) { Text(stringResource(R.string.lock)) }
@@ -77,7 +76,7 @@ fun HiddenAppsScreen(
                     Button(onClick = onUnlockList, modifier = Modifier.testTag("unlock_locked")) { Text(stringResource(R.string.unlock_to_see_locked_apps)) }
                 }
             } else {
-                if (locked.isEmpty()) item { Empty("No locked apps. Long-press an app and choose Hide and lock.") }
+                if (locked.isEmpty()) item { Empty(stringResource(R.string.locked_none)) }
                 items(locked, key = { "l-" + it.key }) { app ->
                     AppRow(app, repo, onLaunch) {
                         TextButton(onClick = { onUnlockApp(app) }) { Text(stringResource(R.string.don_t_lock)) }

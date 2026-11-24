@@ -26,8 +26,8 @@ KORVY, YOUR ASSISTANT (OPTIONAL)
 • Teach it: "remember I'm vegetarian", "when I say goodnight, set a timer for 8 hours and play rain sounds", "when I say Jen I mean Jennifer".
 • Hold the power button to talk to it. Offline speech recognition and natural voices.
 
-PRO (ONE-TIME UNLOCK)
-Natural voices, Whisper speech recognition, background slideshows and the stats overlay. Everything else is free, with no ads.
+PRO (ONE-TIME UNLOCK, TRY FREE FOR 7 DAYS)
+The on-device AI that answers in its own words, teaching the assistant your phrases and nicknames, the personality editor, natural voices, Whisper speech recognition, hide and lock, background slideshows and the stats overlay. The launcher and the assistant's quick commands stay free, with no ads.
 
 **Category:** Personalization · **Tags:** launcher, privacy, home screen, assistant
 **Contact email:** (your support email) · **Website:** https://korvy.app · **Privacy policy:** https://korvy.app/privacy

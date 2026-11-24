@@ -44,28 +44,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-private data class Page(val icon: ImageVector, val title: String, val body: String)
+private data class Page(val icon: ImageVector, @androidx.annotation.StringRes val title: Int, @androidx.annotation.StringRes val body: Int)
 
 private val pages = listOf(
-    Page(Icons.Outlined.Shield, "Welcome to Korvy",
-        "A private home screen: no accounts, no ads, no analytics, and no server of ours. Online extras like the " +
-            "weather stay off until you turn them on."),
-    Page(Icons.Outlined.SwipeUp, "All your apps",
-        "Swipe up anywhere on the home screen to see every app. Press Home to come back."),
-    Page(Icons.Outlined.Search, "Search everything",
-        "Tap the search bar and type a few letters: \"gm\" finds Google Maps. Press Go to open the first app, " +
-            "or search the web with DuckDuckGo or another engine you choose in Settings."),
-    Page(Icons.Outlined.Lock, "Hide and lock apps",
-        "Long-press any app and choose Hide, or Hide and lock to protect it with your fingerprint or PIN. " +
-            "Find them again in Settings → Hidden apps."),
-    Page(Icons.Outlined.Schedule, "Apps for right now",
-        "The home screen learns which apps you open at different times and days, and suggests them. " +
-            "It's all worked out on this phone. Turn it off or forget the history in Settings."),
-    Page(Icons.Outlined.AutoAwesome, "Korvy, your assistant",
-        "Optional, and it runs on this phone. Tap ✦ or hold the power button: \"call Jen\", \"set an alarm for 7\", " +
-            "\"when I say goodnight, play rain sounds\". It always asks before texting, calling or booking."),
-    Page(Icons.Outlined.Home, "Make Korvy your home screen",
-        "Set it as your home app so the Home button opens it. Long-press the home screen any time for Settings."),
+    Page(Icons.Outlined.Shield, R.string.tour_1_title, R.string.tour_1_body),
+    Page(Icons.Outlined.SwipeUp, R.string.tour_2_title, R.string.tour_2_body),
+    Page(Icons.Outlined.Search, R.string.tour_3_title, R.string.tour_3_body),
+    Page(Icons.Outlined.Lock, R.string.tour_4_title, R.string.tour_4_body),
+    Page(Icons.Outlined.Schedule, R.string.tour_5_title, R.string.tour_5_body),
+    Page(Icons.Outlined.AutoAwesome, R.string.tour_6_title, R.string.tour_6_body),
+    Page(Icons.Outlined.Home, R.string.tour_7_title, R.string.tour_7_body),
 )
 
 /** First-run tour (also in Settings → Help). The last page offers to set this as the default home app. */
@@ -88,9 +76,9 @@ fun Tutorial(isDefaultHome: Boolean, onSetDefaultHome: () -> Unit, onDone: () ->
                     Icon(p.icon, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Spacer(Modifier.height(28.dp))
-                Text(p.title, style = MaterialTheme.typography.headlineSmall, color = Color.White, textAlign = TextAlign.Center)
+                Text(stringResource(p.title), style = MaterialTheme.typography.headlineSmall, color = Color.White, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
-                Text(p.body, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
+                Text(stringResource(p.body), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.85f), textAlign = TextAlign.Center)
                 if (i == pages.lastIndex) {
                     Spacer(Modifier.height(24.dp))
                     if (isDefaultHome) Text(stringResource(R.string.it_s_already_your_home), color = MaterialTheme.colorScheme.primary)

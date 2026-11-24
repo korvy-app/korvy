@@ -245,6 +245,14 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-24: **0.13.0 – Pro redefined (owner decision).** Free: launcher, search, folders, widgets, hide, and the
+  assistant's plain-code quick commands (apps, alarms, timers, maths, calls, texts, rides, directions, music,
+  weather/news/stocks, power button with the phone's voice). Pro ($4.99): the on-device AI model (open questions,
+  models screen), teaching (notebook, phrases, nicknames incl. "always use this person"), personality editor,
+  natural voices, Whisper, hide-and-lock (new locks only: existing locks always stay), slideshow, stats overlay.
+  7-day trial (`core/Trial`, `platform/ProAccess`; local, honour-based). Developer options → "Test Pro locks"
+  simulates an unbought Play install. Verified on the 4a: AI/teaching/hide-and-lock prompts, free alarm still
+  works, trial unlocks immediately ("7 days left"). Also: i18n step 1 (strings.xml) for translations.
 - 2026-11-24: **0.12.1** – Piper "Lessac" voice removed: its dataset (Blizzard 2013 Lessac) is licensed for research
   only, and natural voices are part of paid Pro. Replaced by Piper LJSpeech (female) and Norman (male), both trained
   on public-domain recordings. A downloaded Lessac voice is deleted at startup and anyone using it falls back to

@@ -67,14 +67,14 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
             extra()
             if (s == null) { Text(stringResource(R.string.measuring), modifier = Modifier.padding(16.dp)); return@Column }
 
-            Card("This app") {
+            Card(stringResource(R.string.stats_this_app)) {
                 Stat("CPU", "%.1f%% of the phone".format(s.appCpuPercent))
-                Stat("Memory", "%.0f MB".format(s.appMemoryMb))
-                Stat("Frames drawn", "%.0f fps (screen runs at %.0f Hz)".format(s.fps, s.refreshHz))
-                Stat("Dropped frames", s.slowFramePercent?.let { "%.0f%%".format(it) } ?: "needs motion to measure")
+                Stat(stringResource(R.string.stats_memory), stringResource(R.string.stats_mb, s.appMemoryMb))
+                Stat(stringResource(R.string.stats_frames_drawn), stringResource(R.string.stats_fps, s.fps, s.refreshHz))
+                Stat(stringResource(R.string.stats_dropped), s.slowFramePercent?.let { stringResource(R.string.stats_percent, it) } ?: stringResource(R.string.stats_needs_motion))
                 Text(
                     "A still screen draws nothing, which saves battery, so fps is near zero when idle. " +
-                        "Turn on the smoothness test to measure animation.",
+                        stringResource(R.string.stats_smoothness_hint),
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -84,7 +84,7 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
                 if (stress) Spinner()
             }
 
-            Card("Memory (whole phone)") {
+            Card(stringResource(R.string.stats_memory_phone)) {
                 val used = s.ramTotalMb - s.ramAvailableMb
                 Stat("Used", "%.1f of %.1f GB".format(used / 1024.0, s.ramTotalMb / 1024.0))
                 LinearProgressIndicator(progress = { used.toFloat() / s.ramTotalMb }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
@@ -92,26 +92,26 @@ fun StatsScreen(sampler: StatsSampler, onBack: () -> Unit, extra: @Composable ()
             }
 
             Card("CPU (${s.cores} cores)") {
-                s.coreMhz.forEachIndexed { i, mhz -> Stat("Core $i", mhz?.let { "$it MHz" } ?: "asleep or not readable") }
+                s.coreMhz.forEachIndexed { i, mhz -> Stat(stringResource(R.string.stats_core, i), mhz?.let { stringResource(R.string.stats_mhz, it) } ?: stringResource(R.string.stats_core_asleep)) }
             }
 
-            Card("Battery") {
+            Card(stringResource(R.string.stats_battery)) {
                 Stat("Level", if (s.batteryPercent >= 0) "${s.batteryPercent}%" + if (s.charging) " (charging)" else "" else "unknown")
-                Stat(if (s.charging) "Charging current" else "Drain", s.currentMa?.let { "$it mA" } ?: "not reported")
+                Stat(if (s.charging) stringResource(R.string.stats_charging_current) else stringResource(R.string.stats_drain), s.currentMa?.let { stringResource(R.string.stats_ma, it) } ?: stringResource(R.string.stats_not_reported))
                 Stat("Power", s.powerMw?.let { "%.0f mW".format(it) } ?: "not reported")
-                Stat("Voltage", s.voltage?.let { "%.2f V".format(it) } ?: "not reported")
-                Stat("Temperature", s.batteryTempC?.let { "%.1f °C".format(it) } ?: "not reported")
+                Stat(stringResource(R.string.stats_voltage), s.voltage?.let { stringResource(R.string.stats_volts, it) } ?: stringResource(R.string.stats_not_reported))
+                Stat(stringResource(R.string.stats_temperature), s.batteryTempC?.let { stringResource(R.string.stats_celsius, it) } ?: stringResource(R.string.stats_not_reported))
             }
 
             Card("Heat") {
-                Stat("Thermal state", s.thermal)
+                Stat(stringResource(R.string.stats_thermal), s.thermal)
                 s.thermalHeadroom?.let {
-                    Stat("Headroom", "%.0f%% of the way to slowing down".format(it * 100))
+                    Stat(stringResource(R.string.stats_headroom), stringResource(R.string.stats_headroom_value, it * 100))
                     LinearProgressIndicator(progress = { it.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
                 }
             }
             Text(
-                "Measured on this phone only. Nothing is recorded or sent anywhere.",
+                stringResource(R.string.stats_local_only),
                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 16.dp),
             )
         }

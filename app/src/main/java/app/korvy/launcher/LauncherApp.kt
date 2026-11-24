@@ -1,6 +1,7 @@
 package app.korvy.launcher
 
 import android.app.Application
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -33,7 +34,11 @@ class LauncherApp : Application() {
     }
     val models by lazy { ModelStore(this) }
     /** One-time Pro unlock (Play Billing in the play build; always unlocked in foss). Not touched at startup. */
-    val pro by lazy { app.korvy.launcher.platform.createProStore(this) }
+    val pro by lazy {
+        val testLocked = settingsState.map { app.korvy.launcher.core.Feature.PRO_LOCK_TEST.on(it.flagsOn, it.flagsOff) }
+            .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, false)
+        app.korvy.launcher.platform.ProAccess(app.korvy.launcher.platform.createProStore(this), this, scope, testLocked)
+    }
     val widgets by lazy { Widgets(this) }
     val voices by lazy { VoiceStore(this) }
     val personality by lazy { Personality(this) }

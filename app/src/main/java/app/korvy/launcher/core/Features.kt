@@ -8,6 +8,8 @@ package app.korvy.launcher.core
 enum class Feature(val id: String, val title: String, val note: String, val default: Boolean) {
     WAKE_WORD("wake_word", "Wake word (“Hey Korvy”)",
         "Experimental: hands-free listening. Not reliable yet.", default = false),
+    PRO_LOCK_TEST("pro_lock_test", "Test Pro locks",
+        "Act as if Pro isn't bought (and the trial is available), to check the free version.", default = false),
     ;
 
     /** On if switched on in Developer options, else its default. */

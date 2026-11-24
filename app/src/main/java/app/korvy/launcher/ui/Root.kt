@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.R
+import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -49,6 +51,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val closeInstantly by vm.closeInstantly.collectAsStateWithLifecycle()
     val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
     val openFolder by vm.openFolder.collectAsStateWithLifecycle()
+    val pro = proUnlocked(vm)
     val chat by vm.chat.collectAsStateWithLifecycle()
     val busy by vm.assistantBusy.collectAsStateWithLifecycle()
     val installedModels by vm.models.installed.collectAsStateWithLifecycle()
@@ -68,9 +71,12 @@ fun Root(vm: LauncherViewModel, host: Host) {
     }
     val animations = vm.animationsOn(settings)
 
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     fun lockApp(app: AppEntry) {
+        // Locking new apps is Pro; apps already locked always stay locked (see LauncherViewModel.requirePro).
+        if (!vm.requirePro(ctx.getString(R.string.pro_feature_hide_lock))) return
         if (host.canLock()) vm.hide(app, HideLevel.LOCKED)
-        else host.toast("Set a screen lock (PIN, pattern or password) in Android settings to lock apps.")
+        else host.toast(ctx.getString(R.string.set_screen_lock_first))
     }
 
     fun launchHidden(app: AppEntry, level: HideLevel) {
@@ -171,14 +177,14 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 )
             }
             AnimatedVisibility(screen == Screen.MODELS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                ModelsScreen(
+                if (!pro) ProLockedScreen(vm, stringResource(R.string.models_title), stringResource(R.string.pro_feature_ai), onBack = { vm.open(Screen.SETTINGS) }) else ModelsScreen(
                     settings, installedModels, download, vm.models.freeBytes(), vm.models.isMetered(),
                     onDownload = vm::downloadModel, onCancel = vm::cancelDownload, onUse = vm::useModel, onDelete = vm::deleteModel,
                     onOpenOnline = { vm.open(Screen.SETTINGS) }, onBack = { vm.open(Screen.SETTINGS) },
                 )
             }
             AnimatedVisibility(screen == Screen.PERSONALITY, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                PersonalityScreen(vm.personality, onSave = { vm.savePersonality(it) }, onBack = { vm.open(Screen.SETTINGS) })
+                if (!pro) ProLockedScreen(vm, stringResource(R.string.personality_title), stringResource(R.string.pro_feature_personality), onBack = { vm.open(Screen.SETTINGS) }) else PersonalityScreen(vm.personality, onSave = { vm.savePersonality(it) }, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.CROP && pendingCrops.isNotEmpty(), enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 pendingCrops.firstOrNull()?.let { uri ->
@@ -190,7 +196,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 VoiceSettingsScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.PEOPLE, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                PeopleScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
+                if (!pro) ProLockedScreen(vm, stringResource(R.string.people_title), stringResource(R.string.pro_feature_people), onBack = { vm.open(Screen.SETTINGS) }) else PeopleScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.APPS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 AppsForTasksScreen(settings, vm, onBack = { vm.open(Screen.SETTINGS) })
@@ -202,7 +208,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 AboutScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.NOTEBOOK, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
-                NotebookScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
+                if (!pro) ProLockedScreen(vm, stringResource(R.string.notebook_title), stringResource(R.string.pro_feature_teach), onBack = { vm.open(Screen.SETTINGS) }) else NotebookScreen(vm, onBack = { vm.open(Screen.SETTINGS) })
             }
             AnimatedVisibility(screen == Screen.WIDGETS, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 WidgetPickerScreen(vm, onBack = { vm.open(Screen.HOME) })
@@ -211,6 +217,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 openFolder!!, homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu,
                 onRename = { vm.renameFolder(openFolder!!, it) }, onClose = { vm.openFolder.value = null },
             )
+            ProDialog(vm)
             DragOverlay(drag, vm.repo, homeGrid, visibleByKey)
             AnimatedVisibility(screen == Screen.TUTORIAL, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {
                 Tutorial(isDefaultHome, { vm.tourSetDefaultHome(host.setDefaultHome) }, onDone = { vm.finishTutorial() })
