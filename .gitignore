@@ -19,3 +19,4 @@ app/.cxx/
 
 # Prebuilt libraries fetched by scripts/fetch-libs.sh (checksummed)
 app/libs/*.aar
+__pycache__/
