@@ -54,6 +54,8 @@ reinstalled (settings and downloads don't carry over).
 - [ ] Links updated
 
 ## Phase 4: korvy.app website
+- 2026-11-24: **korvy-app/korvy made public** after a history audit (no secrets, home-network details, owner
+  email/name or real contact data); THIRD_PARTY_NOTICES.md added; issues on; homepage korvy.app.
 - 2026-11-23: site built (~/claude/korvy-site → korvy-app/korvy.app), Pages enabled with CNAME korvy.app.
   Owner added Namecheap records (4×A 185.199.108-111.153, 4×AAAA 2606:50c0:800x::153, www CNAME
   korvy-app.github.io) and the GitHub Pages TXT challenge; at 23:5x they weren't live on dns1.registrar-servers.com yet.
