@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.R
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -75,7 +76,7 @@ class AssistantController(
         }
         override fun available() = pick() != null
         override fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit) {
-            val s = pick() ?: return onError("No offline speech recognition yet: download a Whisper model in Settings → Voice.")
+            val s = pick() ?: return onError(t(R.string.c_no_offline_stt))
             current = s; s.start(onPartial, onFinal, onError, onLevel)
         }
         override fun stop() { current?.stop() }
@@ -161,8 +162,8 @@ class AssistantController(
             try {
                 // 1. Teaching ("remember …", "when I say …", "forget …"): plain code, no model.
                 Lesson.parse(q)?.takeIf { !pro.unlocked.value }?.let {
-                    update(replyId) { it.copy(text = context.getString(app.korvy.launcher.R.string.assistant_needs_pro_teach), pending = false,
-                        card = Card(Card.Kind.PRO, context.getString(app.korvy.launcher.R.string.pro_locked_title), context.getString(app.korvy.launcher.R.string.pro_feature_teach))) }
+                    update(replyId) { it.copy(text = context.getString(R.string.assistant_needs_pro_teach), pending = false,
+                        card = Card(Card.Kind.PRO, context.getString(R.string.pro_locked_title), context.getString(R.string.pro_feature_teach))) }
                     return@launch
                 }
                 Lesson.parse(q)?.let { lesson ->
@@ -184,7 +185,7 @@ class AssistantController(
             } catch (e: Exception) {
                 // A failing lesson or phrase must not leave the assistant stuck.
                 android.util.Log.w("Assistant", "request failed", e)
-                update(replyId) { it.copy(text = "Sorry: ${e.message ?: "that didn't work"}", pending = false) }
+                update(replyId) { it.copy(text = t(R.string.c_sorry_error, e.message ?: t(R.string.c_didnt_work)), pending = false) }
             } finally {
                 busy.value = false
             }
@@ -198,7 +199,7 @@ class AssistantController(
                 val action = Calc.answer(q)?.let { Action(ActionType.ANSWER, it) }
                     ?: AgentCore.quickParse(q)
                     ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
-                        ?.let { a -> if (AgentCore.grounded(a, q)) a else Action(ActionType.ANSWER, "Sorry, I'm not sure what you meant. Could you say it another way?") }
+                        ?.let { a -> if (AgentCore.grounded(a, q)) a else Action(ActionType.ANSWER, t(R.string.c_not_sure)) }
                 if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return }
                 update(replyId) { it.copy(actionJson = AgentCore.toJson(action)) }
                 if (action.type == ActionType.OPEN_APP) appsCache = visibleApps()
@@ -211,39 +212,39 @@ class AssistantController(
                     if (streamed) speaker.endStream(r.text) else speaker.sayAll(words)
                 }
             } catch (e: CancellationException) {
-                update(replyId) { it.copy(text = it.text.ifBlank { "Stopped." }, pending = false) }
+                update(replyId) { it.copy(text = it.text.ifBlank { t(R.string.c_stopped) }, pending = false) }
                 throw e
             } catch (e: Exception) {
-                update(replyId) { it.copy(text = "Sorry: ${e.message}", pending = false) }
+                update(replyId) { it.copy(text = t(R.string.c_sorry_error, e.message ?: t(R.string.c_didnt_work)), pending = false) }
             }
     }
 
     /** Applies something the user taught. People go to the encrypted shortcuts; the rest to the notebook. */
     private suspend fun learn(lesson: Lesson): ToolResult {
         val nb = notebook.book.value
-        val full = "My notebook is full. Tidy it in Settings → Assistant → Notebook first."
+        val full = t(R.string.c_notebook_full)
         return when (lesson) {
             is Lesson.Note ->
-                if (notebook.save(nb.addNote(lesson.text))) ToolResult("Got it. I'll keep in mind: ${lesson.text}.") else ToolResult(full)
+                if (notebook.save(nb.addNote(lesson.text))) ToolResult(t(R.string.c_noted, lesson.text)) else ToolResult(full)
             is Lesson.NewPhrase -> {
                 val unknown = lesson.steps.filter { Calc.answer(it) == null && AgentCore.quickParse(it) == null && notebook.book.value.phraseFor(it) == null }
                 if (!notebook.save(nb.addPhrase(lesson.trigger, lesson.steps))) ToolResult(full)
-                else ToolResult("Okay. When you say “${lesson.trigger}”, I'll:", lesson.steps.map { "• $it" } +
-                    (if (unknown.isEmpty()) emptyList() else listOf("(I'll ask the model for: ${unknown.joinToString(", ")})")),
-                    spoken = "Okay. When you say ${lesson.trigger}, I'll ${lesson.steps.joinToString(", then ")}.")
+                else ToolResult(t(R.string.c_phrase_saved, lesson.trigger), lesson.steps.map { "• $it" } +
+                    (if (unknown.isEmpty()) emptyList() else listOf(t(R.string.c_phrase_model, unknown.joinToString(", ")))),
+                    spoken = t(R.string.c_phrase_spoken, lesson.trigger, lesson.steps.joinToString(t(R.string.c_then))))
             }
             is Lesson.Alias -> alias(lesson.word, lesson.target, full)
             is Lesson.Forget -> {
                 val (after, n) = nb.forget(lesson.what)
                 val person = shortcuts.find(lesson.what)?.let { shortcuts.remove(shortcuts.all.value.first { s -> AppSearch.normalize(s.alias) == AppSearch.normalize(lesson.what) }.alias); 1 } ?: 0
                 notebook.save(after)
-                ToolResult(if (n + person == 0) "I don't have anything about “${lesson.what}”." else "Forgotten.")
+                ToolResult(if (n + person == 0) t(R.string.c_nothing_about, lesson.what) else t(R.string.c_forgotten))
             }
             Lesson.Show -> {
                 val lines = nb.notes.map { "• $it" } + nb.phrases.map { "• “${it.trigger}” → ${it.steps.joinToString("; ")}" } +
                     shortcuts.all.value.map { "• “${it.alias}” → ${it.person.name}" }
-                if (lines.isEmpty()) ToolResult("Nothing yet. Try “remember I'm vegetarian” or “when I say goodnight, set a timer for 8 hours”.")
-                else ToolResult("Here's what I remember (edit it in Settings → Assistant → Notebook):", lines, spoken = "I remember ${lines.size} things. They're listed on screen.")
+                if (lines.isEmpty()) ToolResult(t(R.string.c_nothing_yet))
+                else ToolResult(t(R.string.c_remember_list), lines, spoken = context.resources.getQuantityString(R.plurals.c_remember_count, lines.size, lines.size))
             }
         }
     }
@@ -254,28 +255,27 @@ class AssistantController(
             val people = contacts.candidates(target)
             val exact = people.filter { AppSearch.normalize(it.name) == AppSearch.normalize(target) }
             val p = exact.singleOrNull() ?: people.singleOrNull()
-            if (p != null) { shortcuts.set(word, p); return ToolResult("Got it: “$word” means ${p.name}.") }
+            if (p != null) { shortcuts.set(word, p); return ToolResult(t(R.string.c_alias_person, word, p.name)) }
         }
         val apps = visibleApps()
         val app = apps.maxByOrNull { AppSearch.score(target, it.label) }
             ?.takeIf { AppSearch.score(target, it.label) >= 800 }
         if (app != null) return if (notebook.save(notebook.book.value.addPhrase(word, listOf("open ${app.label}"))))
-            ToolResult("Got it: “$word” opens ${app.label}.") else ToolResult(full)
+            ToolResult(t(R.string.c_alias_app, word, app.label)) else ToolResult(full)
         return if (notebook.save(notebook.book.value.addNote("When I say “$word”, I mean $target")))
-            ToolResult("Got it. When you say “$word”, I'll know you mean $target.") else ToolResult(full)
+            ToolResult(t(R.string.c_alias_note, word, target)) else ToolResult(full)
     }
 
     private suspend fun modelAction(q: String, replyId: Long, speak: Boolean): Action? {
         val s = settings.value
         if (!pro.unlocked.value) {
-            update(replyId) { it.copy(pending = false, text = context.getString(app.korvy.launcher.R.string.assistant_needs_pro_ai),
-                card = Card(Card.Kind.PRO, context.getString(app.korvy.launcher.R.string.pro_locked_title), context.getString(app.korvy.launcher.R.string.pro_feature_ai))) }
+            update(replyId) { it.copy(pending = false, text = context.getString(R.string.assistant_needs_pro_ai),
+                card = Card(Card.Kind.PRO, context.getString(R.string.pro_locked_title), context.getString(R.string.pro_feature_ai))) }
             return null
         }
         val m = ModelCatalog.chatById(s.modelId)
         if (m == null || m.id !in models.installed.value) {
-            update(replyId) { it.copy(pending = false, text = "To answer questions I need a model. Pick one in Settings → Assistant → Model. " +
-                "Without one I can still open apps, set timers, do maths, and (with Online features on) get the weather, news and stock prices.") }
+            update(replyId) { it.copy(pending = false, text = t(R.string.c_need_model)) }
             return null
         }
         // The prompt starts identically every time (system prompt with today's date, examples, earlier turns), so the
@@ -318,9 +318,9 @@ class AssistantController(
             )
         } finally { watchdog.cancel() }
         if (System.currentTimeMillis() - lastProgress > STALL_MS && AgentCore.parse(out) == null) {
-            return Action(ActionType.ANSWER, "That was taking too long, so I stopped. A smaller model answers faster on this phone.")
+            return Action(ActionType.ANSWER, t(R.string.c_too_long))
         }
-        return AgentCore.parse(out) ?: Action(ActionType.ANSWER, "Sorry, I got confused. Could you rephrase that?")
+        return AgentCore.parse(out) ?: Action(ActionType.ANSWER, t(R.string.c_confused))
     }
 
     /** Earlier finished exchanges (user question + assistant action), oldest first, before item [excludeFrom]. */
@@ -359,14 +359,14 @@ class AssistantController(
     fun sayHello() {
         val s = settings.value
         speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch))
-        speaker.stop(); speaker.say("Okay, I'll read my answers out loud.")
+        speaker.stop(); speaker.say(t(R.string.c_read_aloud_on))
         warnIfQuiet()
     }
 
     /** Spoken replies use the media volume; say so on screen if it's too low to hear. */
     fun warnIfQuiet() {
         if (speaker.volumeLow()) android.widget.Toast.makeText(context,
-            "Media volume is low: turn it up to hear replies.", android.widget.Toast.LENGTH_LONG).show()
+            t(R.string.c_volume_low), android.widget.Toast.LENGTH_LONG).show()
     }
 
     /** Called when the assistant opens: load the chosen model now so the first answer starts sooner. */
@@ -387,7 +387,7 @@ class AssistantController(
         update(id) { it.copy(card = null, text = status) }
     }
 
-    fun cancel(id: Long) = update(id) { it.copy(card = null, text = "Cancelled.") }
+    fun cancel(id: Long) = update(id) { it.copy(card = null, text = t(R.string.c_cancelled)) }
 
     /** A contact was chosen in the picker for a "who should I text/call?" card. */
     fun withContact(id: Long, p: Person) {
@@ -420,4 +420,6 @@ class AssistantController(
     fun clear() { if (!busy.value) chat.value = emptyList() }
 
     companion object { const val STALL_MS = 90_000L }
+
+    private fun t(id: Int, vararg a: Any): String = if (a.isEmpty()) context.getString(id) else context.getString(id, *a)
 }

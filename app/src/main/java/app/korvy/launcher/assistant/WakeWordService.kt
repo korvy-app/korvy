@@ -200,14 +200,14 @@ class WakeWordService : Service() {
 
     private fun notification(phrase: String): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Wake word", NotificationManager.IMPORTANCE_MIN).apply {
-            description = "Shown while the launcher listens for your wake word"; setShowBadge(false)
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.n_channel_wake), NotificationManager.IMPORTANCE_MIN).apply {
+            description = getString(R.string.n_channel_wake_desc); setShowBadge(false)
         })
         val stop = PendingIntent.getService(this, 0, Intent(this, WakeWordService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_listen)
-            .setContentTitle("Listening for “$phrase”")
-            .setContentText("Only the wake word is recognised, on this phone.")
+            .setContentTitle(getString(R.string.n_wake_listening, phrase))
+            .setContentText(getString(R.string.n_wake_detail))
             .setOngoing(true).setSilent(true)
             .addAction(0, "Stop", stop)
             .build()

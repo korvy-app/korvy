@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.R
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -19,7 +20,7 @@ class VoiceInput(private val context: Context) : SpeechInput {
     override fun available(): Boolean = Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
 
     override fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit) {
-        if (!available()) { onError("This phone has no on-device speech recognition."); return }
+        if (!available()) { onError(context.getString(R.string.v_no_stt)); return }
         stop()
         val r = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
         recognizer = r
@@ -41,11 +42,11 @@ class VoiceInput(private val context: Context) : SpeechInput {
             override fun onError(error: Int) {
                 stop()
                 onError(when (error) {
-                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "I didn't catch that."
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Microphone permission is needed for voice."
+                    SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> context.getString(R.string.v_didnt_catch)
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> context.getString(R.string.v_mic_permission)
                     SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE ->
-                        "Your language isn't downloaded for offline speech recognition."
-                    else -> "Voice input stopped (error $error)."
+                        context.getString(R.string.v_lang_missing)
+                    else -> context.getString(R.string.v_stopped, error)
                 })
             }
         })

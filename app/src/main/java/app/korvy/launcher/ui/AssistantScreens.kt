@@ -295,7 +295,7 @@ fun ModelsScreen(
                             Text(stringResource(R.string.text_2, m.maker, m.license, m.sizeText), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    Text(m.note, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                    Text(m.noteText(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
                     if (tooBig) Text(stringResource(R.string.may_be_too_big_for).format(m.minRamGb),
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     when {

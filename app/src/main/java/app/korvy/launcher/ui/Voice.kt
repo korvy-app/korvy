@@ -251,7 +251,7 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
                     Text(stringResource(R.string.text_4, p.license, p.sizeText), style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Text(p.note, style = MaterialTheme.typography.bodySmall)
+            Text(p.noteText(), style = MaterialTheme.typography.bodySmall)
             when {
                 download is DownloadState.Running && (download as DownloadState.Running).id == p.id -> {
                     val d = download as DownloadState.Running
@@ -266,7 +266,7 @@ private fun NaturalVoices(s: Settings, vm: LauncherViewModel) {
                         p.speakers.forEach { sp ->
                             Row(Modifier.fillMaxWidth().clickable { vm.setTtsVoice(sp.id.toString()) }, verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = (s.ttsVoice?.toIntOrNull() ?: p.speakers.first().id) == sp.id, onClick = { vm.setTtsVoice(sp.id.toString()) })
-                                Text(stringResource(R.string.text_4, sp.name, sp.accent))
+                                Text(stringResource(R.string.text_4, sp.name, sp.accentText()))
                             }
                         }
                     }
@@ -310,7 +310,7 @@ internal fun SpeechRecognitionSection(s: Settings, vm: LauncherViewModel) {
                 enabled = have, onClick = { vm.setSttModel(m.id) })
             Column(Modifier.weight(1f)) {
                 Text(m.name)
-                Text(stringResource(R.string.text_4, m.sizeText, m.note), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.text_4, m.sizeText, m.noteText()), style = MaterialTheme.typography.bodySmall)
                 when {
                     state is DownloadState.Running && state.id == m.id ->
                         androidx.compose.material3.LinearProgressIndicator(progress = { state.done.toFloat() / state.total }, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))

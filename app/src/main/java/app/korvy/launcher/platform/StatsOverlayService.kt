@@ -103,10 +103,10 @@ class StatsOverlayService : Service() {
 
     private fun notification(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Stats overlay", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.n_channel_overlay), NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
         val stop = PendingIntent.getService(this, 0, Intent(this, StatsOverlayService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL).setSmallIcon(R.drawable.ic_stat_listen)
-            .setContentTitle("Stats overlay is on").setOngoing(true).setSilent(true)
+            .setContentTitle(getString(R.string.n_overlay_on)).setOngoing(true).setSilent(true)
             .addAction(0, "Hide", stop).build()
     }
 

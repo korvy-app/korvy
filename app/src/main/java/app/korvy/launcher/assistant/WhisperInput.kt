@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.R
 import android.annotation.SuppressLint
 import android.content.Context
 import android.media.AudioFormat
@@ -44,7 +45,7 @@ class WhisperInput(private val context: Context, private val client: AssistantCl
     @SuppressLint("MissingPermission") // the mic button asks for RECORD_AUDIO first
     override fun start(onPartial: (String) -> Unit, onFinal: (String) -> Unit, onError: (String) -> Unit, onLevel: (Float) -> Unit) {
         val m = model; val file = modelFile
-        if (m == null || file == null || !file.exists()) { onError("Download a speech model in Settings → Voice first."); return }
+        if (m == null || file == null || !file.exists()) { onError(context.getString(R.string.v_need_whisper)); return }
         cancel()
         val me = Session()
         session = me
@@ -56,7 +57,7 @@ class WhisperInput(private val context: Context, private val client: AssistantCl
                     AudioFormat.ENCODING_PCM_FLOAT, maxOf(min, rate * 4))
             }.getOrNull()
             if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) {
-                rec?.release(); main.post { if (!me.cancelled) onError("Couldn't open the microphone.") }; return@Thread
+                rec?.release(); main.post { if (!me.cancelled) onError(context.getString(R.string.v_no_mic)) }; return@Thread
             }
             val audio = java.io.ByteArrayOutputStream(rate * 4 * 5)
             val frame = FloatArray(rate / 10) // 100 ms
@@ -79,7 +80,7 @@ class WhisperInput(private val context: Context, private val client: AssistantCl
                 Log.w("WhisperInput", "recording failed", t)
             } finally { runCatching { rec.stop() }; rec.release() } // the mic is released on every path
             if (me.cancelled) return@Thread
-            if (!ep.heard) { main.post { if (!me.cancelled) onError("I didn't catch that.") }; return@Thread }
+            if (!ep.heard) { main.post { if (!me.cancelled) onError(context.getString(R.string.v_didnt_catch)) }; return@Thread }
             main.post { if (!me.cancelled) onPartial("…") }
             val tmp = File(context.cacheDir, "speech-${System.nanoTime()}.f32").apply { writeBytes(audio.toByteArray()) }
             scope.launch {
@@ -89,12 +90,12 @@ class WhisperInput(private val context: Context, private val client: AssistantCl
                         Endpointer.clean(client.transcribe(file.path, tmp, if (m.englishOnly) "en" else "auto", PROMPT))
                     }
                     if (!me.cancelled) when {
-                        text == null -> onError("Speech recognition took too long. Try again.")
-                        text.isBlank() -> onError("I didn't catch that.")
+                        text == null -> onError(context.getString(R.string.v_too_long))
+                        text.isBlank() -> onError(context.getString(R.string.v_didnt_catch))
                         else -> onFinal(text)
                     }
                 } catch (e: Exception) {
-                    if (!me.cancelled) onError(e.message ?: "Speech recognition failed")
+                    if (!me.cancelled) onError(e.message ?: context.getString(R.string.s_stt_failed))
                 } finally { tmp.delete(); if (session === me) session = null }
             }
         }, "whisper-mic").also { it.start() }

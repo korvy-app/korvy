@@ -1,5 +1,6 @@
 package app.korvy.launcher.platform
 
+import app.korvy.launcher.R
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
@@ -132,16 +133,16 @@ class StatsSampler(private val context: Context, private val activity: Activity?
     }
 
     private fun thermal(): String {
-        if (Build.VERSION.SDK_INT < 29) return "Not reported (needs Android 10)"
+        if (Build.VERSION.SDK_INT < 29) return context.getString(R.string.t_not_reported)
         return when (pm.currentThermalStatus) {
-            PowerManager.THERMAL_STATUS_NONE -> "Normal"
-            PowerManager.THERMAL_STATUS_LIGHT -> "Light (warm)"
-            PowerManager.THERMAL_STATUS_MODERATE -> "Moderate (may slow down)"
-            PowerManager.THERMAL_STATUS_SEVERE -> "Severe (slowing down)"
-            PowerManager.THERMAL_STATUS_CRITICAL -> "Critical"
-            PowerManager.THERMAL_STATUS_EMERGENCY -> "Emergency"
-            PowerManager.THERMAL_STATUS_SHUTDOWN -> "Shutting down"
-            else -> "Unknown"
+            PowerManager.THERMAL_STATUS_NONE -> context.getString(R.string.t_normal)
+            PowerManager.THERMAL_STATUS_LIGHT -> context.getString(R.string.t_light)
+            PowerManager.THERMAL_STATUS_MODERATE -> context.getString(R.string.t_moderate)
+            PowerManager.THERMAL_STATUS_SEVERE -> context.getString(R.string.t_severe)
+            PowerManager.THERMAL_STATUS_CRITICAL -> context.getString(R.string.t_critical)
+            PowerManager.THERMAL_STATUS_EMERGENCY -> context.getString(R.string.t_emergency)
+            PowerManager.THERMAL_STATUS_SHUTDOWN -> context.getString(R.string.t_shutdown)
+            else -> context.getString(R.string.t_unknown)
         }
     }
 

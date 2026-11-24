@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.R
 import android.app.Service
 import android.content.Intent
 import android.os.Bundle
@@ -61,12 +62,12 @@ class AssistantService : Service() {
                     val pcm = java.nio.ByteBuffer.wrap(audio.readBytes()).order(java.nio.ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
                         .let { b -> FloatArray(b.remaining()).also { b.get(it) } }
                     audio.delete()
-                    if (Native.whisperLoad(d.getString(K_PATH)!!) != 0) { send(reply, MSG_ERROR, "Couldn't load the speech model"); return@execute }
+                    if (Native.whisperLoad(d.getString(K_PATH)!!) != 0) { send(reply, MSG_ERROR, getString(R.string.s_load_speech_failed)); return@execute }
                     val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
                     val text = Native.whisperTranscribe(pcm, d.getString(K_LANG) ?: "en", threads, d.getString(K_PROMPT).orEmpty())
-                    if (text == null) send(reply, MSG_ERROR, "Speech recognition failed") else send(reply, MSG_DONE, text.trim())
+                    if (text == null) send(reply, MSG_ERROR, getString(R.string.s_stt_failed)) else send(reply, MSG_DONE, text.trim())
                 } catch (t: Throwable) {
-                    Log.e("AssistantService", "transcribe failed", t); send(reply, MSG_ERROR, t.message ?: "Speech recognition failed")
+                    Log.e("AssistantService", "transcribe failed", t); send(reply, MSG_ERROR, t.message ?: getString(R.string.s_stt_failed))
                 }
             }
             MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
@@ -75,16 +76,16 @@ class AssistantService : Service() {
                 val path = d.getString(K_PATH)!!
                 try {
                     if (!ensureLoaded(path, d.getInt(K_CTX, CTX), reply)) return@execute
-                    send(reply, MSG_STATUS, "Thinking…")
+                    send(reply, MSG_STATUS, getString(R.string.thinking))
                     val out = Native.complete(
                         d.getStringArray(K_ROLES)!!, d.getStringArray(K_CONTENTS)!!, d.getString(K_GRAMMAR) ?: "",
                         d.getInt(K_MAX, 256), d.getFloat(K_TEMP, 0.3f),
                     ) { piece -> send(reply, MSG_TOKEN, piece); true }
-                    if (out == null) send(reply, MSG_ERROR, "The model couldn't answer (prompt too long?)")
+                    if (out == null) send(reply, MSG_ERROR, getString(R.string.s_prompt_too_long))
                     else send(reply, MSG_DONE, out)
                 } catch (t: Throwable) {
                     Log.e("AssistantService", "inference failed", t)
-                    send(reply, MSG_ERROR, t.message ?: "Assistant error")
+                    send(reply, MSG_ERROR, t.message ?: getString(R.string.s_assistant_error))
                 }
             }
         }
@@ -93,10 +94,10 @@ class AssistantService : Service() {
     /** Loads [path] unless it's already loaded. Runs on the worker thread. */
     private fun ensureLoaded(path: String, ctx: Int, reply: Messenger?): Boolean {
         if (path == loadedPath) return true
-        send(reply, MSG_STATUS, "Loading model…")
+        send(reply, MSG_STATUS, getString(R.string.s_loading_model))
         val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
         val rc = Native.load(path, ctx, threads)
-        if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, "Couldn't load the model (code $rc)"); return false }
+        if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, getString(R.string.s_load_model_failed, rc)); return false }
         loadedPath = path
         return true
     }

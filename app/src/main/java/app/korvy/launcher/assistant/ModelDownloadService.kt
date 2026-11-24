@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.R
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -42,7 +43,7 @@ class ModelDownloadService : Service() {
         NeuralVoiceCatalog.byId(intent?.getStringExtra(EXTRA_VOICE))?.let { downloadVoice(it); return START_NOT_STICKY }
         val model = ModelCatalog.byId(intent?.getStringExtra(EXTRA_MODEL)) ?: run { stop(); return START_NOT_STICKY }
         val app = application as LauncherApp
-        startInForeground(notification(model, 0, model.bytes, "Starting…"))
+        startInForeground(notification(model, 0, model.bytes, getString(R.string.n_starting)))
         if (job?.isActive == true) return START_NOT_STICKY
         acquireLocks()
         job = scope.launch {
@@ -50,8 +51,8 @@ class ModelDownloadService : Service() {
                 app.models.download.collect { st ->
                     val n = when (st) {
                         is DownloadState.Running -> notification(model, st.done, st.total, null)
-                        is DownloadState.Retrying -> notification(model, st.done, st.total, "Connection dropped, retrying in ${st.inSeconds} s")
-                        is DownloadState.Verifying -> notification(model, -1, 0, "Checking the download…")
+                        is DownloadState.Retrying -> notification(model, st.done, st.total, getString(R.string.n_retrying, st.inSeconds.toInt()))
+                        is DownloadState.Verifying -> notification(model, -1, 0, getString(R.string.n_checking))
                         else -> null
                     }
                     n?.let { getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, it) }
@@ -73,7 +74,7 @@ class ModelDownloadService : Service() {
     private fun downloadVoice(p: NeuralVoicePack) {
         val app = application as LauncherApp
         fun note(done: Long, total: Long, text: String?) = notification(p.name, done, total, text)
-        startInForeground(note(0, p.bytes, "Starting…"))
+        startInForeground(note(0, p.bytes, getString(R.string.n_starting)))
         if (job?.isActive == true) return
         acquireLocks()
         job = scope.launch {
@@ -81,8 +82,8 @@ class ModelDownloadService : Service() {
                 app.voices.download.collect { st ->
                     val n = when (st) {
                         is DownloadState.Running -> note(st.done, st.total, null)
-                        is DownloadState.Retrying -> note(st.done, st.total, "Connection dropped, retrying in ${st.inSeconds} s")
-                        is DownloadState.Verifying -> note(-1, 0, "Checking and unpacking…")
+                        is DownloadState.Retrying -> note(st.done, st.total, getString(R.string.n_retrying, st.inSeconds.toInt()))
+                        is DownloadState.Verifying -> note(-1, 0, getString(R.string.n_unpacking))
                         else -> null
                     }
                     n?.let { getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, it) }
@@ -108,8 +109,8 @@ class ModelDownloadService : Service() {
     private fun channel() {
         val nm = getSystemService(NotificationManager::class.java)
         if (nm.getNotificationChannel(CHANNEL) == null) {
-            nm.createNotificationChannel(NotificationChannel(CHANNEL, "Model downloads", NotificationManager.IMPORTANCE_LOW).apply {
-                description = "Progress of assistant model downloads"
+            nm.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.n_channel_downloads), NotificationManager.IMPORTANCE_LOW).apply {
+                description = getString(R.string.n_channel_downloads_desc)
                 setShowBadge(false)
             })
         }
@@ -125,7 +126,7 @@ class ModelDownloadService : Service() {
         val cancel = PendingIntent.getService(this, 1, Intent(this, ModelDownloadService::class.java).setAction(ACTION_CANCEL), PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Downloading $name")
+            .setContentTitle(getString(R.string.n_downloading, name))
             .setContentText(text ?: "%.0f of %.0f MB".format(done / 1e6, total / 1e6))
             .setProgress(if (done < 0) 0 else 100, if (done < 0 || total <= 0) 0 else (done * 100 / total).toInt(), done < 0)
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
@@ -146,7 +147,7 @@ class ModelDownloadService : Service() {
         channel()
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID + 1,
             NotificationCompat.Builder(this, CHANNEL).setSmallIcon(if (ok) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error)
-                .setContentTitle(if (ok) "Download finished" else "Download stopped").setContentText(text)
+                .setContentTitle(if (ok) getString(R.string.n_download_done) else getString(R.string.n_download_stopped)).setContentText(text)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(text))
                 .setContentIntent(openApp()).setAutoCancel(true).build())
     }
