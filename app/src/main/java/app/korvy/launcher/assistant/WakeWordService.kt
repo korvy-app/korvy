@@ -92,10 +92,14 @@ class WakeWordService : Service() {
     @SuppressLint("MissingPermission") // only started after the user turned it on and granted the microphone
     private fun listen(phrase: String) {
         val dir = (application as LauncherApp).voices.folderFor(NeuralVoiceCatalog.wakeWord)
-        val pieces = WordPieces.parse(assets.open("kws-pieces.tsv").bufferedReader().readText()).encode(phrase)
-        if (pieces == null || !File(dir, NeuralVoiceCatalog.wakeWord.modelFile).exists()) { Log.w(TAG, "no model or bad phrase"); stopSelf(); return }
+        val wp = WordPieces.parse(assets.open("kws-pieces.tsv").bufferedReader().readText())
+        // Several sounds-alike spellings, one keyword line each, all meaning the same wake word.
+        val variants = wp.spellings(phrase).mapNotNull { wp.encode(it) }.distinct()
+        if (variants.isEmpty() || !File(dir, NeuralVoiceCatalog.wakeWord.modelFile).exists()) { Log.w(TAG, "no model or bad phrase"); stopSelf(); return }
         val threshold = prefs.getFloat(EXTRA_THRESHOLD, 0.25f)
-        val keywords = File(filesDir, "wake-keywords.txt").apply { writeText("$pieces :2.0 #$threshold @$phrase\n") }
+        // The "@label" must be a single token: sherpa-onnx splits the line on spaces (and aborts on unknown pieces).
+        val label = phrase.trim().replace(Regex("[^A-Za-z0-9]+"), "_")
+        val keywords = File(filesDir, "wake-keywords.txt").apply { writeText(variants.joinToString("") { "$it :2.0 #$threshold @$label\n" }) }
         val m = "epoch-12-avg-2-chunk-16-left-64.int8.onnx"
         val kws = KeywordSpotter(null, KeywordSpotterConfig(
             featConfig = FeatureConfig(sampleRate = 16_000, featureDim = 80),

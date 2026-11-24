@@ -31,6 +31,21 @@ class WordPieces(private val scores: Map<String, Float>) {
         return out.joinToString(" ").ifEmpty { null }
     }
 
+    /**
+     * The keyword model hears an invented name like "Korvy" as "korvi" or "corvie", not as it's spelled, so a wake
+     * phrase is listened for in a few sounds-alike spellings of its last word: endings -y/-ie/-i, and k/c at the
+     * start. Tested against speech in several voices and near-misses ("hey curvy", "hey Korea", "hey coffee").
+     */
+    fun spellings(phrase: String): List<String> {
+        val words = phrase.lowercase().split(Regex("[^a-z']+")).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return emptyList()
+        val last = words.last()
+        val stems = linkedSetOf(last)
+        Regex("^(.{3,}?)(y|ie|ee|i)$").matchEntire(last)?.let { m -> listOf("y", "ie", "i").forEach { stems += m.groupValues[1] + it } }
+        val all = stems.flatMap { w -> listOfNotNull(w, when { w.startsWith("k") -> "c" + w.drop(1); w.startsWith("c") -> "k" + w.drop(1); else -> null }) }
+        return all.distinct().map { (words.dropLast(1) + it).joinToString(" ") }.take(8)
+    }
+
     companion object {
         fun parse(tsv: String) = WordPieces(tsv.lineSequence().mapNotNull { l ->
             val t = l.split('\t'); if (t.size == 2) t[0] to t[1].toFloat() else null

@@ -32,6 +32,13 @@ reinstalled (settings and downloads don't carry over).
 ## Phase 2: Wake word
 - [x] Default phrase "Hey Korvy"
 - [ ] Near-miss list and threshold tuning (recordings)
+  - 2026-11-23 findings (bench: `scripts/kws-bench`, 6 macOS voices × "Hey Korvy" + 7 near-misses):
+    the 3.3M keyword model hears "Korvy" as korvi/corvie, never as spelled (`K OR V Y`: 0/6 voices).
+    Sounds-alike spellings (korvy/corvy/korvie/corvie/korvi/corvi) → 3/6 voices, 0 false triggers at
+    every threshold; spellings that catch the other 3 voices fire on "hey curvy"/"hey coffee".
+    Over the air (Mac speaker → 4a) "Hey Korvy" didn't wake; control "Hey Siri" did.
+    Fixed: wake service crashed on a keyword label with a space ("@Hey Korvy").
+  - Next: two-step check (permissive keyword match, then Whisper tiny confirms the words).
 - [ ] Spoken prompts/TTS with the old name updated
 
 ## Phase 3: GitHub

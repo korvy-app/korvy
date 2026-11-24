@@ -3,6 +3,7 @@ package app.korvy.launcher
 import app.korvy.launcher.core.WordPieces
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -23,6 +24,13 @@ class WordPiecesTest {
         assertEquals("▁HE Y ▁LA UN CH ER", wp.encode("Hey, Launcher!"))
         assertEquals("▁HE Y ▁K OR V Y", wp.encode("Hey Korvy"))
         assertNull(wp.encode("123"))
+    }
+
+    @Test fun soundsAlikeSpellings() {
+        assertEquals(listOf("hey korvy", "hey corvy", "hey korvie", "hey corvie", "hey korvi", "hey corvi"), wp.spellings("Hey Korvy"))
+        assertEquals(listOf("hey launcher"), wp.spellings("Hey Launcher"))
+        // Every spelling can be written in the model's word pieces.
+        wp.spellings("Hey Korvy").forEach { assertTrue(it, wp.encode(it) != null) }
     }
 
     @Test fun syllables() {
