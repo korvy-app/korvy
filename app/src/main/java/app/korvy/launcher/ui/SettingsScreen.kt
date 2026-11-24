@@ -264,6 +264,8 @@ fun SettingsScreen(
                 Section("About")
                 Row(Modifier.padding(horizontal = 20.dp)) {
                     TextButton(onClick = { vm.open(Screen.ABOUT) }, modifier = Modifier.testTag("open_about")) { Text("About Korvy") }
+                    // Only after tapping the version in About 7 times.
+                    if (s.developer) TextButton(onClick = { vm.open(Screen.DEVELOPER) }, modifier = Modifier.testTag("open_developer")) { Text("Developer options") }
                 }
                 Note("Version ${BuildConfig.VERSION_NAME}. No accounts, no analytics, no crash reporting. " + if (s.online) "Online features are on: only the sources you allowed above connect." else "Online features are off: nothing leaves this phone.")
                 Note("Phone class: ${tier.name.lowercase()} (${Device.specs(LocalContext.current).let { "%.1f GB, %d cores, Android API %d".format(it.totalRamMb / 1024.0, it.cores, it.sdk) }}).")

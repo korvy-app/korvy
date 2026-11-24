@@ -12,7 +12,7 @@ Website: [korvy.app](https://korvy.app)
 - **Korvy, the assistant (optional):** pick a local model (Gemma, Qwen, Llama and others, via llama.cpp). It opens
   apps, texts and calls (always asking first), sets alarms and timers, gives directions, plays music, and answers.
   Teach it notes, phrases and nicknames in its notebook. Voice input with whisper.cpp or the phone's on-device
-  recognizer, natural offline voices (sherpa-onnx), the power button, and an optional "Hey Korvy" wake word.
+  recognizer, natural offline voices (sherpa-onnx), and the power button.
 - Device stats screen and overlay.
 
 Free on F-Droid and GitHub (everything included, no Google code). On Google Play, a one-time Pro unlock supports

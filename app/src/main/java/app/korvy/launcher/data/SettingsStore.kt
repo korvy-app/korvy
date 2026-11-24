@@ -55,6 +55,10 @@ data class Settings(
     val orientation: Int = 0,
     /** Wake word (Pro, opt-in): on/off, the phrase, sensitivity 0 low … 2 high, and only while the screen is on. */
     val wakeWord: Boolean = false,
+    /** Developer options: feature flags switched on/off by hand (see core/Features), and whether the screen shows. */
+    val flagsOn: Set<String> = emptySet(),
+    val flagsOff: Set<String> = emptySet(),
+    val developer: Boolean = false,
     val wakePhrase: String = "Hey Korvy",
     val wakeSensitivity: Int = 1,
     val wakeScreenOnly: Boolean = true,
@@ -99,6 +103,9 @@ class SettingsStore(private val context: Context) {
         val sttModel = stringPreferencesKey("stt_model")
         val orientation = androidx.datastore.preferences.core.intPreferencesKey("orientation")
         val wakeWord = booleanPreferencesKey("wake_word")
+        val flagsOn = androidx.datastore.preferences.core.stringSetPreferencesKey("flags_on")
+        val flagsOff = androidx.datastore.preferences.core.stringSetPreferencesKey("flags_off")
+        val developer = booleanPreferencesKey("developer")
         val wakePhrase = stringPreferencesKey("wake_phrase")
         val wakeSensitivity = androidx.datastore.preferences.core.intPreferencesKey("wake_sensitivity")
         val wakeScreenOnly = booleanPreferencesKey("wake_screen_only")
@@ -134,6 +141,9 @@ class SettingsStore(private val context: Context) {
             sttModel = p[K.sttModel],
             orientation = p[K.orientation] ?: 0,
             wakeWord = p[K.wakeWord] ?: false,
+            flagsOn = p[K.flagsOn] ?: emptySet(),
+            flagsOff = p[K.flagsOff] ?: emptySet(),
+            developer = p[K.developer] ?: false,
             wakePhrase = p[K.wakePhrase] ?: "Hey Korvy",
             wakeSensitivity = p[K.wakeSensitivity] ?: 1,
             wakeScreenOnly = p[K.wakeScreenOnly] ?: true,
@@ -179,6 +189,12 @@ class SettingsStore(private val context: Context) {
         sensitivity?.let { v -> it[K.wakeSensitivity] = v }; screenOnly?.let { v -> it[K.wakeScreenOnly] = v }
     }
     suspend fun setOrientation(v: Int) = set { it[K.orientation] = v }
+    suspend fun setFlag(feature: app.korvy.launcher.core.Feature, on: Boolean) = set {
+        val en = (it[K.flagsOn] ?: emptySet()) - feature.id; val dis = (it[K.flagsOff] ?: emptySet()) - feature.id
+        it[K.flagsOn] = if (on && !feature.default) en + feature.id else en
+        it[K.flagsOff] = if (!on && feature.default) dis + feature.id else dis
+    }
+    suspend fun setDeveloper(v: Boolean) = set { it[K.developer] = v }
     suspend fun setSttModel(v: String?) = set { if (v == null) it.remove(K.sttModel) else it[K.sttModel] = v }
     suspend fun setTtsEngine(v: String?) = set { if (v == null) it.remove(K.ttsEngine) else it[K.ttsEngine] = v; it.remove(K.ttsVoice) }
     suspend fun setTtsVoice(v: String?) = set { if (v == null) it.remove(K.ttsVoice) else it[K.ttsVoice] = v }

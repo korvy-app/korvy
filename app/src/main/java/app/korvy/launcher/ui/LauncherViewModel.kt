@@ -40,7 +40,7 @@ import app.korvy.launcher.platform.AppTask
 import app.korvy.launcher.platform.Net
 import app.korvy.launcher.platform.OnlineSource
 
-enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS, WIDGETS, NOTEBOOK, ABOUT }
+enum class Screen { HOME, DRAWER, SETTINGS, HIDDEN, TUTORIAL, STATS, ASSISTANT, MODELS, PERSONALITY, CROP, VOICE, PEOPLE, APPS, WIDGETS, NOTEBOOK, ABOUT, DEVELOPER }
 
 /** One line of the assistant conversation. */
 data class ChatItem(
@@ -304,6 +304,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setSpeak(v: SpeakMode) = save { la.settings.setSpeak(v) }
     fun setTtsEngine(v: String?) = save { la.settings.setTtsEngine(v) }
     fun setSttModel(v: String?) = save { la.settings.setSttModel(v) }
+    fun setFlag(f: app.korvy.launcher.core.Feature, on: Boolean) = save { la.settings.setFlag(f, on); la.syncWakeWord() }
+    fun setDeveloper(v: Boolean) = save { la.settings.setDeveloper(v) }
     fun setOrientation(v: Int) = save { la.settings.setOrientation(v) }
     fun setWake(on: Boolean? = null, phrase: String? = null, sensitivity: Int? = null, screenOnly: Boolean? = null) =
         save { la.settings.setWake(on, phrase, sensitivity, screenOnly); la.syncWakeWord() }

@@ -41,7 +41,8 @@ class LauncherApp : Application() {
     fun syncWakeWord() {
         scope.launch {
             val s = settings.settings.first()
-            val on = s.wakeWord && pro.unlocked.value && NeuralVoiceCatalog.wakeWord.id in voices.installed.value
+            // Behind a feature flag until it works reliably (Developer options).
+            val on = app.korvy.launcher.core.Feature.WAKE_WORD.on(s.flagsOn, s.flagsOff) && s.wakeWord && pro.unlocked.value && NeuralVoiceCatalog.wakeWord.id in voices.installed.value
             WakeWordService.sync(this@LauncherApp, on, s.wakePhrase,
                 floatArrayOf(0.35f, 0.25f, 0.15f)[s.wakeSensitivity.coerceIn(0, 2)], s.wakeScreenOnly)
         }

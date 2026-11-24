@@ -153,7 +153,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                     Switch(s.listenOnAssist, { vm.setListenOnAssist(it) })
                 }
                 SpeechRecognitionSection(s, vm)
-                WakeWordSection(s, vm)
+                if (app.korvy.launcher.core.Feature.WAKE_WORD.on(s.flagsOn, s.flagsOff)) WakeWordSection(s, vm)
                 Text("Speed %.1f×".format(s.ttsRate))
                 Slider(s.ttsRate, { vm.setTtsRate((it * 10).toInt() / 10f) }, valueRange = 0.5f..2f)
                 Text("Pitch %.1f".format(s.ttsPitch))

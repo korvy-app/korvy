@@ -44,6 +44,7 @@ import app.korvy.launcher.data.Settings
 import app.korvy.launcher.platform.AppChoices
 import app.korvy.launcher.platform.AppTask
 import app.korvy.launcher.BuildConfig
+import app.korvy.launcher.core.Feature
 import app.korvy.launcher.core.Notebook
 
 @Composable
@@ -158,8 +159,10 @@ fun NotebookScreen(vm: LauncherViewModel, onBack: () -> Unit) {
 
 /** Settings → About Korvy: name, version, license, links and the privacy promise in plain words. */
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(vm: LauncherViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
+    val s by vm.settings.collectAsStateWithLifecycle()
+    var taps by remember { mutableStateOf(0) }
     fun open(url: String) = runCatching {
         context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
     }
@@ -168,8 +171,15 @@ fun AboutScreen(onBack: () -> Unit) {
         LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
             item {
                 Text("Korvy Launcher™", style = MaterialTheme.typography.headlineSmall)
+                // Tap the version 7 times for Developer options (experimental features behind flags).
                 Text("Version ${BuildConfig.VERSION_NAME}" +
-                    if (BuildConfig.FLAVOR == "foss") " · F-Droid build" else "", style = MaterialTheme.typography.bodySmall)
+                    if (BuildConfig.FLAVOR == "foss") " · F-Droid build" else "", style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testTag("about_version").clickable {
+                        if (!s.developer && ++taps >= 7) {
+                            vm.setDeveloper(true)
+                            android.widget.Toast.makeText(context, "Developer options are on", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    })
                 Text("A private, fast home screen with an optional assistant that runs on your phone.",
                     style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 12.dp))
                 Text("Your privacy", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
@@ -182,6 +192,40 @@ fun AboutScreen(onBack: () -> Unit) {
                 androidx.compose.material3.TextButton(onClick = { open("https://korvy.app") }) { Text("korvy.app") }
                 androidx.compose.material3.TextButton(onClick = { open("https://github.com/korvy-app/korvy") }) { Text("Source code on GitHub") }
                 androidx.compose.material3.TextButton(onClick = { open("https://github.com/korvy-app/korvy/issues") }) { Text("Report a problem") }
+            }
+            if (s.developer) item {
+                androidx.compose.material3.TextButton(onClick = { vm.open(Screen.DEVELOPER) }, modifier = Modifier.testTag("open_developer")) { Text("Developer options") }
+            }
+        }
+    }
+}
+
+
+/** Developer options (hidden until the version in About is tapped 7 times): experimental features behind flags. */
+@Composable
+fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
+    val s by vm.settings.collectAsStateWithLifecycle()
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).statusBarsPadding().navigationBarsPadding().testTag("developer")) {
+        Header("Developer options", onBack)
+        LazyColumn(contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)) {
+            item {
+                Text("Features still being built. They may not work, and can change or disappear. Turning one on only " +
+                    "affects this phone.", style = MaterialTheme.typography.bodySmall)
+            }
+            items(Feature.entries) { f ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp).testTag("flag_${f.id}"), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(f.title)
+                        Text(f.note, style = MaterialTheme.typography.bodySmall)
+                    }
+                    androidx.compose.material3.Switch(f.on(s.flagsOn, s.flagsOff), { vm.setFlag(f, it) })
+                }
+            }
+            item {
+                androidx.compose.material3.TextButton(onClick = {
+                    Feature.entries.forEach { vm.setFlag(it, it.default) }
+                    vm.setDeveloper(false); onBack()
+                }, modifier = Modifier.padding(top = 12.dp)) { Text("Reset and hide developer options") }
             }
         }
     }

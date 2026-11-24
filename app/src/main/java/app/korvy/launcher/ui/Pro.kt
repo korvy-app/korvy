@@ -82,16 +82,18 @@ fun StatsOverlayToggle(vm: LauncherViewModel) {
 @Composable
 fun ProSection(vm: LauncherViewModel) {
     val unlocked = proUnlocked(vm)
+    val s by vm.settings.collectAsStateWithLifecycle()
+    val wake = app.korvy.launcher.core.Feature.WAKE_WORD.on(s.flagsOn, s.flagsOff)
     val price by vm.pro.price.collectAsStateWithLifecycle()
     val context = LocalContext.current
     LaunchedEffect(Unit) { vm.pro.refresh() }
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).testTag("pro_section")) {
         if (unlocked) {
             Text("Pro is unlocked. Thank you!", style = MaterialTheme.typography.bodyMedium)
-            Text("Natural voices, Whisper speech recognition, the wake word, the slideshow and the stats overlay.", style = MaterialTheme.typography.bodySmall)
+            Text("Natural voices, Whisper speech recognition, " + (if (wake) "the wake word, " else "") + "the slideshow and the stats overlay.", style = MaterialTheme.typography.bodySmall)
         } else {
             Text("Pro: one-time ${price ?: "$4.99"}", style = MaterialTheme.typography.bodyMedium)
-            Text("Adds natural voices, Whisper speech recognition, the wake word, the background slideshow and the stats overlay. " +
+            Text("Adds natural voices, Whisper speech recognition, " + (if (wake) "the wake word, " else "") + "the background slideshow and the stats overlay. " +
                 "Everything else stays free, with no ads and no tracking. Buying is handled by Google Play; this app never sees your payment details.",
                 style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
