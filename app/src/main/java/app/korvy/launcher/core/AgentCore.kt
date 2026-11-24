@@ -138,7 +138,7 @@ object AgentCore {
             return Action(ActionType.RIDE, "$app: ${m.groupValues[2].trim()}")
         }
         TEXT_SPLIT.matchEntire(t)?.let {
-            // The message without wrapping quotes: send a message to Lukas that says "Turn off the lights".
+            // The message without wrapping quotes: send a message to Sam that says "Turn off the lights".
             val msg = it.groupValues[2].trim().trim('"', '“', '”', '\'').trim()
             return Action(ActionType.TEXT, "${it.groupValues[1].trim()}: $msg")
         }

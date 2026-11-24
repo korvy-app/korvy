@@ -18,6 +18,8 @@ Website: [korvy.app](https://korvy.app)
 Free on F-Droid and GitHub (everything included, no Google code). On Google Play, a one-time Pro unlock supports
 development. See [REQUIREMENTS.md](REQUIREMENTS.md) for the plan and decisions.
 
+Bugs and ideas: [Issues](https://github.com/korvy-app/korvy/issues), or support@korvy.app.
+
 ## Build
 JDK 17+ (see CLAUDE.md for the exact setup), then:
 ```
@@ -28,5 +30,5 @@ git submodule update --init      # llama.cpp and whisper.cpp
 ```
 
 ## License
-GPL-3.0-or-later. See [LICENSE](LICENSE). "Korvy" is a trademark of the project: forks are welcome, under
+GPL-3.0-or-later. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). "Korvy" is a trademark of the project: forks are welcome, under
 another name.

@@ -252,9 +252,9 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
   drag like apps but never nest; hidden/uninstalled apps drop out of folders. Verified on the 4a: Calendar onto
   Clock → folder, Camera onto folder → 3 apps, renamed "Daily", Camera dragged back out, Back closes it.
 - 2026-11-23: **0.11.4** – "Remember (that) when I say X, do Y" is a phrase, not a note (old notes like that are
-  converted on load); "send a message to Lukas that says \"…\"" understood (message without "says"/quotes).
+  converted on load); "send a message to Sam that says \"…\"" understood (message without "says"/quotes).
   0.11.3: mic/stuck-assistant fixes (see git log). Verified on the 4a with a temporary contact: taught the owner's
-  exact sentence, "Do the thing" → Which Lukas? → "Text Lukas Zedtest: Turn off the lights" (cancelled, cleaned up).
+  exact sentence, "Do the thing" → Which Sam? → "Text Sam Zedtest: Turn off the lights" (cancelled, cleaned up).
 - 2026-11-23: **0.11.1** – "Hey Korvy" wake word: two-step check (keyword model with sounds-alike spellings, then
   Whisper confirms the words), crash fix for multi-word labels, Whisper check reads model files directly (the wake
   process's list was stale), Settings offers Whisper tiny when none is installed. Bench in `scripts/kws-bench`.
