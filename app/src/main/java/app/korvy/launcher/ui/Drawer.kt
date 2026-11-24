@@ -102,7 +102,10 @@ fun AppDrawer(
     LaunchedEffect(query) {
         if (query != field.text) field = androidx.compose.ui.text.input.TextFieldValue(query, androidx.compose.ui.text.TextRange(query.length))
     }
-    val calc = remember(query) { Calc.answer(query) }
+    val pctWords = stringResource(R.string.calc_percent); val tipWords = stringResource(R.string.calc_tip)
+    val calc = remember(query, pctWords) {
+        Calc.answer(query, Calc.Words({ p, n, r -> String.format(pctWords, p, n, r) }, { p, b, t, total -> String.format(tipWords, p, b, t, total) }))
+    }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current

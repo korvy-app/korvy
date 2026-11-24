@@ -161,12 +161,13 @@ class AssistantController(
         job = scope.launch {
             try {
                 // 1. Teaching ("remember …", "when I say …", "forget …"): plain code, no model.
-                Lesson.parse(q)?.takeIf { !pro.unlocked.value }?.let {
+                val lessonFor = parseLesson(q)
+                lessonFor?.takeIf { !pro.unlocked.value }?.let {
                     update(replyId) { it.copy(text = context.getString(R.string.assistant_needs_pro_teach), pending = false,
                         card = Card(Card.Kind.PRO, context.getString(R.string.pro_locked_title), context.getString(R.string.pro_feature_teach))) }
                     return@launch
                 }
-                Lesson.parse(q)?.let { lesson ->
+                lessonFor?.let { lesson ->
                     val r = learn(lesson)
                     update(replyId) { it.copy(text = r.text, lines = r.lines, pending = false) }
                     if (speak) speaker.sayAll(r.spoken ?: Speech.forSpeech(r.text, r.lines))
@@ -196,8 +197,8 @@ class AssistantController(
     private suspend fun runOne(q: String, replyId: Long, speak: Boolean) {
             var streamed = false
             try {
-                val action = Calc.answer(q)?.let { Action(ActionType.ANSWER, it) }
-                    ?: AgentCore.quickParse(q)
+                val action = calc(q)?.let { Action(ActionType.ANSWER, it) }
+                    ?: parseCommand(q)
                     ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
                         ?.let { a -> if (AgentCore.grounded(a, q)) a else Action(ActionType.ANSWER, t(R.string.c_not_sure)) }
                 if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return }
@@ -227,7 +228,7 @@ class AssistantController(
             is Lesson.Note ->
                 if (notebook.save(nb.addNote(lesson.text))) ToolResult(t(R.string.c_noted, lesson.text)) else ToolResult(full)
             is Lesson.NewPhrase -> {
-                val unknown = lesson.steps.filter { Calc.answer(it) == null && AgentCore.quickParse(it) == null && notebook.book.value.phraseFor(it) == null }
+                val unknown = lesson.steps.filter { calc(it) == null && parseCommand(it) == null && notebook.book.value.phraseFor(it) == null }
                 if (!notebook.save(nb.addPhrase(lesson.trigger, lesson.steps))) ToolResult(full)
                 else ToolResult(t(R.string.c_phrase_saved, lesson.trigger), lesson.steps.map { "• $it" } +
                     (if (unknown.isEmpty()) emptyList() else listOf(t(R.string.c_phrase_model, unknown.joinToString(", ")))),
@@ -286,7 +287,7 @@ class AssistantController(
         val apps = AppTask.entries.mapNotNull { t ->
             AppChoices.chosen(context, s.appChoices, t)?.let { "${t.title}: ${AppChoices.label(context, it)}" }
         }.joinToString("; ")
-        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null }, apps)
+        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null }, apps, userLanguage())
         AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
         // Only the notes that matter for this question, sent with it (not in the system prompt, so the model can
         // keep reusing its cached work for the unchanged start of the prompt).
@@ -420,6 +421,19 @@ class AssistantController(
     fun clear() { if (!busy.value) chat.value = emptyList() }
 
     companion object { const val STALL_MS = 90_000L }
+
+    // Plain-code understanding: English first, then Spanish rewritten to the English form (core/Spanish).
+    private fun parseCommand(q: String) = AgentCore.quickParse(q) ?: app.korvy.launcher.core.Spanish.toEnglish(q)?.let { AgentCore.quickParse(it) }
+    private fun parseLesson(q: String) = Lesson.parse(q) ?: app.korvy.launcher.core.Spanish.toEnglish(q)?.let { Lesson.parse(it) }
+    private val calcWords = Calc.Words(
+        percentOf = { p, n, r -> t(R.string.calc_percent, p, n, r) },
+        tip = { p, b, tip, total -> t(R.string.calc_tip, p, b, tip, total) },
+    )
+    private fun calc(q: String) = Calc.answer(q, calcWords) ?: app.korvy.launcher.core.Spanish.toEnglish(q)?.let { Calc.answer(it, calcWords) }
+
+    /** The phone's (or Korvy's per-app) language in English, e.g. "Spanish"; null for English. */
+    private fun userLanguage(): String? = context.resources.configuration.locales[0].takeIf { it.language != "en" }
+        ?.getDisplayLanguage(java.util.Locale.ENGLISH)
 
     private fun t(id: Int, vararg a: Any): String = if (a.isEmpty()) context.getString(id) else context.getString(id, *a)
 }

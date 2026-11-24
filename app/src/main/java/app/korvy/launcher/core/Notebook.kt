@@ -81,7 +81,7 @@ data class Notebook(val notes: List<String> = emptyList(), val phrases: List<Phr
         const val NOTE_BUDGET = 600
         private val STOP = setOf("the", "and", "for", "you", "your", "are", "was", "with", "that", "this", "what", "when", "how", "can", "please", "about", "like", "have", "has", "not", "but", "all", "any", "its", "it's", "i'm", "me", "my")
 
-        fun key(s: String) = s.lowercase().replace(Regex("[^a-z0-9' ]"), " ").replace(Regex("\\s+"), " ").trim()
+        fun key(s: String) = s.lowercase().replace(Regex("[^\\p{L}\\p{N}' ]"), " ").replace(Regex("\\s+"), " ").trim()
         private fun words(s: String) = key(s).split(' ').filter { it.length >= 3 && it !in STOP }.map { it.removeSuffix("s") }.toSet()
 
         fun parse(md: String?): Notebook {

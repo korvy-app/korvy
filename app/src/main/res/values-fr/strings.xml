@@ -538,4 +538,6 @@
     <string name="accent_us_m">Américaine, masculine</string>
     <string name="accent_uk_f">Britannique, féminine</string>
     <string name="accent_uk_m">Britannique, masculine</string>
+    <string name="calc_percent">%1$s %% de %2$s font %3$s.</string>
+    <string name="calc_tip">Un pourboire de %1$s %% sur %2$s fait %3$s (total %4$s).</string>
 </resources>

@@ -538,4 +538,6 @@
     <string name="accent_us_m">Americana, masculina</string>
     <string name="accent_uk_f">Britânica, feminina</string>
     <string name="accent_uk_m">Britânica, masculina</string>
+    <string name="calc_percent">%1$s%% de %2$s é %3$s.</string>
+    <string name="calc_tip">Uma gorjeta de %1$s%% sobre %2$s é %3$s (total %4$s).</string>
 </resources>

@@ -539,3 +539,5 @@ accent_us_f=Americana, feminina
 accent_us_m=Americana, masculina
 accent_uk_f=Britânica, feminina
 accent_uk_m=Britânica, masculina
+calc_percent=%1$s%% de %2$s é %3$s.
+calc_tip=Uma gorjeta de %1$s%% sobre %2$s é %3$s (total %4$s).

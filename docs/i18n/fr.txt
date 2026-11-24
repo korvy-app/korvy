@@ -539,3 +539,5 @@ accent_us_f=Américaine, féminine
 accent_us_m=Américaine, masculine
 accent_uk_f=Britannique, féminine
 accent_uk_m=Britannique, masculine
+calc_percent=%1$s %% de %2$s font %3$s.
+calc_tip=Un pourboire de %1$s %% sur %2$s fait %3$s (total %4$s).

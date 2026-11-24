@@ -539,3 +539,5 @@ accent_us_f=Amerikanisch, weiblich
 accent_us_m=Amerikanisch, männlich
 accent_uk_f=Britisch, weiblich
 accent_uk_m=Britisch, männlich
+calc_percent=%1$s %% von %2$s sind %3$s.
+calc_tip=%1$s %% Trinkgeld auf %2$s sind %3$s (insgesamt %4$s).

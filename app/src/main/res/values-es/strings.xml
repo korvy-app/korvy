@@ -538,4 +538,6 @@
     <string name="accent_us_m">Estadounidense, hombre</string>
     <string name="accent_uk_f">Británica, mujer</string>
     <string name="accent_uk_m">Británico, hombre</string>
+    <string name="calc_percent">El %1$s%% de %2$s es %3$s.</string>
+    <string name="calc_tip">Una propina del %1$s%% sobre %2$s es %3$s (total %4$s).</string>
 </resources>

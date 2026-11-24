@@ -13,16 +13,22 @@ object Calc {
     private val EXPR_PREFIX = Regex("""^(?:what(?:'s| is)|calculate|calc|compute|=)\s*""", RegexOption.IGNORE_CASE)
 
     /** A sentence answering [input], or null when it isn't a calculation. */
-    fun answer(input: String): String? {
+    /** The two answer sentences, so the app can pass translated ones (format args as in strings.xml). */
+    class Words(
+        val percentOf: (p: String, n: String, result: String) -> String = { p, n, r -> "$p% of $n is $r." },
+        val tip: (p: String, bill: String, tip: String, total: String) -> String = { p, b, t, total -> "A $p% tip on $b is $t (total $total)." },
+    )
+
+    fun answer(input: String, words: Words = Words()): String? {
         val t = input.trim().trimEnd('?', '.', '!').trim()
         PERCENT_OF.matchEntire(t)?.let { m ->
             val p = m.groupValues[1].toBigDecimal(); val n = m.groupValues[2].toBigDecimal()
-            return "${fmt(p)}% of ${fmt(n)} is ${fmt(pct(p * n))}."
+            return words.percentOf(fmt(p), fmt(n), fmt(pct(p * n)))
         }
         TIP.matchEntire(t)?.let { m ->
             val p = m.groupValues[1].toBigDecimal(); val bill = m.groupValues[2].toBigDecimal()
             val tip = pct(p * bill).setScale(2, RoundingMode.HALF_UP)
-            return "A ${fmt(p)}% tip on ${money(bill)} is ${money(tip)} (total ${money(bill + tip)})."
+            return words.tip(fmt(p), money(bill), money(tip), money(bill + tip))
         }
         val expr = EXPR_PREFIX.replace(t, "").trim()
         if (expr.none { it.isDigit() } || expr.none { it in "+-*/^x×÷" }) return null

@@ -1,5 +1,6 @@
 package app.korvy.launcher.assistant
 
+import app.korvy.launcher.core.Spanish
 import app.korvy.launcher.platform.titleRes
 import app.korvy.launcher.R
 import android.content.Context
@@ -105,7 +106,9 @@ class Tools(
     }
 
     private fun openApp(name: String): ToolResult {
-        val app = AppSearch.rank(name, apps()) { it.label }.firstOrNull() ?: return ToolResult(t(R.string.r_no_app, name))
+        val app = AppSearch.rank(name, apps()) { it.label }.firstOrNull()
+            ?: Spanish.appSynonym(name)?.let { en -> AppSearch.rank(en, apps()) { it.label }.firstOrNull() } // "cámara" on an English phone
+            ?: return ToolResult(t(R.string.r_no_app, name))
         launch(app)
         return ToolResult(t(R.string.r_opening, app.label))
     }

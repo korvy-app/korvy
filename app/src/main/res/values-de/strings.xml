@@ -538,4 +538,6 @@
     <string name="accent_us_m">Amerikanisch, männlich</string>
     <string name="accent_uk_f">Britisch, weiblich</string>
     <string name="accent_uk_m">Britisch, männlich</string>
+    <string name="calc_percent">%1$s %% von %2$s sind %3$s.</string>
+    <string name="calc_tip">%1$s %% Trinkgeld auf %2$s sind %3$s (insgesamt %4$s).</string>
 </resources>
