@@ -102,7 +102,7 @@ fun SettingsScreen(
             item {
                 Section(stringResource(R.string.look_and_feel))
                 Text(stringResource(R.string.screen_rotation), modifier = Modifier.padding(start = 20.dp, top = 8.dp))
-                Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(stringResource(R.string.rotation_follow), stringResource(R.string.rotation_portrait), stringResource(R.string.rotation_landscape)).forEachIndexed { i, label ->
                         FilterChip(selected = s.orientation == i, onClick = { vm.setOrientation(i) }, label = { Text(label) },
                             modifier = Modifier.testTag("orientation_$i"))
@@ -123,7 +123,7 @@ fun SettingsScreen(
                 ) {
                     items(backgrounds, key = { it.name }) { f -> Thumb(f) { vm.backgrounds.remove(f) } }
                 }
-                Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(
                         onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                         modifier = Modifier.testTag("add_backgrounds"),
@@ -141,7 +141,7 @@ fun SettingsScreen(
                     s.slideshow && pro, "toggle_slideshow", enabled = backgrounds.size >= 2 && pro,
                 ) { vm.setSlideshow(it) }
                 if (!pro) ProUnlock(vm, stringResource(R.string.slideshows), Modifier.padding(horizontal = 20.dp))
-                if (s.slideshow) Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (s.slideshow) androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(1, 5, 15, 60).forEach { m ->
                         FilterChip(selected = s.slideshowMinutes == m, onClick = { vm.setSlideshowMinutes(m) },
                             label = { Text(if (m == 60) "1 hour" else "$m min") })

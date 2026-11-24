@@ -147,7 +147,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             item {
                 Text(stringResource(R.string.speak_replies), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SpeakMode.entries.forEach { m -> FilterChip(selected = s.speak == m, onClick = { vm.setSpeak(m) }, label = { Text(stringResource(m.titleRes)) }) }
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -382,7 +382,7 @@ internal fun WakeWordSection(s: Settings, vm: LauncherViewModel) {
         OutlinedButton(onClick = { vm.downloadModel(tiny); vm.setWake() }, modifier = Modifier.testTag("wake_get_whisper")) { Text(stringResource(R.string.download_whisper_tiny)) }
     } else Text(stringResource(R.string.each_wake_is_double_checked), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
     Text(stringResource(R.string.sensitivity), modifier = Modifier.padding(top = 6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf(stringResource(R.string.wake_fewer_false), stringResource(R.string.wake_balanced), stringResource(R.string.wake_hears_better)).forEachIndexed { i, label ->
             FilterChip(selected = s.wakeSensitivity == i, onClick = { vm.setWake(sensitivity = i) }, label = { Text(label) })
         }

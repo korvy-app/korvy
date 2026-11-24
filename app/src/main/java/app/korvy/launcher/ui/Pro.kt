@@ -55,7 +55,7 @@ fun ProButtons(vm: LauncherViewModel, modifier: Modifier = Modifier) = ProButton
 fun ProButtons(pro: app.korvy.launcher.platform.ProAccess, modifier: Modifier = Modifier) {
     val price by pro.price.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    androidx.compose.foundation.layout.FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (pro.canStartTrial()) FilledTonalButton(onClick = { pro.startTrial() }, modifier = Modifier.testTag("pro_trial")) {
             Text(stringResource(R.string.pro_try_free))
         }
