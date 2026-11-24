@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Korvy icon (logo B: coral house, one amber "lit" window). Drawn on a 1024 grid, fitted to the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="6.434" android:translateY="6.527" android:scaleX="0.09290" android:scaleY="0.09290">
+        <!-- Rounded outline only (no fill), then the house with the windows cut out. -->
+        <path android:strokeColor="#FFFFFFFF" android:strokeWidth="40" android:strokeLineJoin="round" android:pathData="M512,262 L778,490 L720,490 L720,760 L304,760 L304,490 L246,490 Z"/>
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M512,262 L778,490 L720,490 L720,760 L304,760 L304,490 L246,490 Z M418,434 H474 Q494,434 494,454 V510 Q494,530 474,530 H418 Q398,530 398,510 V454 Q398,434 418,434 Z M550,434 H606 Q626,434 626,454 V510 Q626,530 606,530 H550 Q530,530 530,510 V454 Q530,434 550,434 Z M418,566 H474 Q494,566 494,586 V642 Q494,662 474,662 H418 Q398,662 398,642 V586 Q398,566 418,566 Z M550,566 H606 Q626,566 626,586 V642 Q626,662 606,662 H550 Q530,662 530,642 V586 Q530,566 550,566 Z"/>
+    </group>
+</vector>
