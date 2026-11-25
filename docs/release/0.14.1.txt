@@ -1,0 +1,3 @@
+- The on-device AI answers much faster: on a Pixel 4a the first words now appear in about 3 seconds instead of over 20.
+- It writes about 30% faster, using the phone's fast cores the right way.
+- Speaking to the assistant no longer waits for the AI model to load.
