@@ -166,7 +166,7 @@ fun VoiceSettingsScreen(s: Settings, vm: LauncherViewModel, onBack: () -> Unit) 
                 OutlinedButton(onClick = {
                     speaker.configure(Speaker.Config(s.ttsEngine, s.ttsVoice, s.ttsRate, s.ttsPitch)); speaker.stop(); speaker.say(context.getString(R.string.voice_test_phrase)); vm.assistant.warnIfQuiet()
                 }, modifier = Modifier.testTag("voice_test")) { Text(stringResource(R.string.test_voice)) }
-                NaturalVoices(s, vm)
+                if (app.korvy.launcher.BuildConfig.NATURAL_VOICES) NaturalVoices(s, vm)
                 Text(stringResource(R.string.speech_engine), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 16.dp))
                 Text(stringResource(R.string.any_text_to_speech_app), style = MaterialTheme.typography.bodySmall)
             }

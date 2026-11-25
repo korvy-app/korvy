@@ -373,7 +373,7 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
                   onUseLocation: ((Boolean) -> Unit)? = null,
                   toggle: @Composable (String, String, Boolean, String, Boolean, (Boolean) -> Unit) -> Unit) {
     toggle(stringResource(R.string.online_title), stringResource(R.string.online_detail), s.online, "toggle_online", true, onMaster)
-    OnlineSource.entries.forEach { src ->
+    OnlineSource.entries.filter { it != OnlineSource.VOICES || app.korvy.launcher.BuildConfig.NATURAL_VOICES }.forEach { src ->
         toggle(stringResource(src.titleRes), stringResource(src.detailRes) + " (" + src.hosts.joinToString() + ")", s.allows(src), "toggle_src_${src.name}", s.online) { onSource(src, it) }
     }
     if (s.online) {

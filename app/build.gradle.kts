@@ -72,11 +72,17 @@ android {
     //   foss: F-Droid / GitHub, everything unlocked, no Google code at all
     flavorDimensions += "store"
     productFlavors {
-        create("play") { dimension = "store" }
+        create("play") {
+            dimension = "store"
+            buildConfigField("boolean", "NATURAL_VOICES", "true")
+        }
+        // F-Droid / GitHub build: no Google code and no prebuilt libraries (F-Droid builds everything from source),
+        // so no natural voices (sherpa-onnx is a prebuilt AAR) and no wake word; Pro is always unlocked.
         create("foss") {
             dimension = "store"
             applicationIdSuffix = ".foss"
             versionNameSuffix = "-foss"
+            buildConfigField("boolean", "NATURAL_VOICES", "false")
         }
     }
 
@@ -136,10 +142,11 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.profileinstaller)
     baselineProfile(project(":baselineprofile"))
-    // Natural voices: sherpa-onnx (prebuilt, fetched by scripts/fetch-libs.sh) and tar.bz2 unpacking for voice packs.
+    // Natural voices (Play build only): sherpa-onnx, a prebuilt AAR fetched by scripts/fetch-libs.sh. The foss build
+    // doesn't use it, so it builds without the file (F-Droid accepts only source-built libraries).
     val sherpa = file("libs/sherpa-onnx-1.13.8.aar")
-    if (!sherpa.exists()) throw GradleException("Missing ${sherpa.name}: run ./scripts/fetch-libs.sh")
-    implementation(files(sherpa))
+    if (sherpa.exists()) "playImplementation"(files(sherpa))
+    else logger.warn("Missing ${sherpa.name}: the play build needs it (run ./scripts/fetch-libs.sh); foss builds without it.")
     implementation(libs.commons.compress)
     implementation(libs.kotlinx.coroutines.android)
     debugImplementation(libs.androidx.compose.ui.tooling)

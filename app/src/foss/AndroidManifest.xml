@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foss build (F-Droid): no wake word, so no microphone foreground service (see WakeWordService in src/foss). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" tools:node="remove" />
+    <application>
+        <service android:name="app.korvy.launcher.assistant.WakeWordService" tools:node="remove" />
+    </application>
+</manifest>

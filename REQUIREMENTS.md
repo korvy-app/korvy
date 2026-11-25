@@ -26,6 +26,14 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Drag from the app list, search results or suggestions onto the grid (the list fades but keeps the gesture);
   drag within the grid to move (an occupied target swaps; from the list, the occupant moves to the nearest
   free cell); drag to "Remove from home" at the top. Menu: Add to home / Remove from home.
+- **Planned (owner request 2026-11-24): more home pages.** The user can add pages of icons and swipe left or
+  right between them, like other launchers. A new page appears when needed (e.g. dragging an icon to the
+  screen edge, or "Add page" in the home menu); empty pages can be removed. Page dots show where you are.
+  Each page has its own grid in `core/HomeGrid` (folders keep working on every page). **Parallax:** the
+  background image moves a little as you swipe between pages (a fraction of the page width, so a wide or
+  zoomed photo pans gently); with the phone's wallpaper, pass the page offset to Android
+  (`WallpaperManager.setWallpaperOffsets`) so wallpapers that support scrolling do the same. Respects the
+  animations toggle (no parallax when animations are off or on low-tier phones) and must stay smooth on the 4a.
 
 ## Online features (decided 2026-11-22)
 - One app (owner's choice). Android can't make INTERNET a runtime permission, so: **online features are off by
