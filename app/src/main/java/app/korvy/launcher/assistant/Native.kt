@@ -15,7 +15,11 @@ object Native {
     }
 
     private external fun init(nativeLibDir: String)
-    external fun load(path: String, nCtx: Int, threads: Int): Int
+    /** Reads the fixed start of every request ahead of time, kept in [statePath]; tokens read, or -1. */
+    external fun prefill(roles: Array<String>, contents: Array<String>, statePath: String): Int
+
+    /** [threads] write the reply (fast cores only), [threadsBatch] read the prompt (all cores). */
+    external fun load(path: String, nCtx: Int, threads: Int, threadsBatch: Int): Int
     external fun complete(roles: Array<String>, contents: Array<String>, grammar: String, maxTokens: Int, temp: Float, listener: Listener): String?
     external fun stop()
     external fun unload()

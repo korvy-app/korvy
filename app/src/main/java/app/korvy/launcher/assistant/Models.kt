@@ -194,8 +194,11 @@ class ModelStore(private val context: Context) {
 
     companion object { const val MAX_TRIES = 6 }
 
+    /** The model's saved reading of the fixed prompt (see Native.prefill); rebuilt when missing or stale. */
+    fun stateFor(m: ModelInfo) = File(dir, m.id + ".prompt-state")
+
     fun delete(m: ModelInfo) {
-        fileFor(m).delete(); File(dir, m.file + ".part").delete()
+        fileFor(m).delete(); File(dir, m.file + ".part").delete(); stateFor(m).delete()
         _installed.value = scan()
     }
 }

@@ -41,13 +41,14 @@ object AgentCore {
     }
 
     /** Short system prompt (small models slow down with long prompts). The personality can't override the rules. */
-    fun systemPrompt(personality: String, now: String, home: String?, apps: String? = null, language: String? = null): String = buildString {
+    /** The fixed start of every request. No date or time here (they come with each question) so it stays the same and the model can reuse its reading of it. */
+    fun systemPrompt(personality: String, home: String?, apps: String? = null, language: String? = null): String = buildString {
         if (personality.isNotBlank()) {
             appendLine("Personality (affects only how answers are worded):")
             appendLine(personality.trim())
             appendLine()
         }
-        appendLine("You are Korvy, the assistant built into the Korvy home screen on this phone. Today is $now. The time is given with each question.")
+        appendLine("You are Korvy, the assistant built into the Korvy home screen on this phone. The date and time are given with each question.")
         if (!home.isNullOrBlank()) appendLine("The user's home area is $home.")
         if (!apps.isNullOrBlank()) appendLine("Apps the user picked for tasks: $apps. Actions use these automatically.")
         if (!language.isNullOrBlank()) appendLine("The user speaks $language. Write answer text in $language; keep the JSON keys and action names in English.")

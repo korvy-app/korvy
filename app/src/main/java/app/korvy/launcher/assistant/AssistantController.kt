@@ -279,20 +279,15 @@ class AssistantController(
             update(replyId) { it.copy(pending = false, text = t(R.string.c_need_model)) }
             return null
         }
-        // The prompt starts identically every time (system prompt with today's date, examples, earlier turns), so the
-        // model process can reuse what it already read and only process the new question.
-        val today = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
-        val time = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("h:mm a"))
-        val roles = ArrayList<String>(); val contents = ArrayList<String>()
-        val apps = AppTask.entries.mapNotNull { t ->
-            AppChoices.chosen(context, s.appChoices, t)?.let { "${t.title}: ${AppChoices.label(context, it)}" }
-        }.joinToString("; ")
-        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, today, s.homePlace.ifBlank { null }, apps, userLanguage())
-        AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
+        // The prompt starts identically every time (system prompt, examples, earlier turns as they were sent), so the
+        // model process reuses what it already read (warmUp reads the fixed part ahead) and only reads the new question.
+        val now = ZonedDateTime.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy, h:mm a", java.util.Locale.ENGLISH))
+        val (roles, contents) = fixedMessages()
         // Only the notes that matter for this question, sent with it (not in the system prompt, so the model can
         // keep reusing its cached work for the unchanged start of the prompt).
         val notes = notebook.book.value.notesFor(q)
-        val prefix = if (notes.isEmpty()) "(It's $time.)" else "(It's $time. Keep in mind: ${notes.joinToString(" ")})"
+        val prefix = if (notes.isEmpty()) "(It's $now.)" else "(It's $now. Keep in mind: ${notes.joinToString(" ")})"
+        sentAs[replyId - 1] = "$prefix $q"
         AgentCore.historyMessages(history(excludeFrom = replyId - 1), "$prefix $q").forEach { (r, c) -> roles += r; contents += c }
         val sb = StringBuilder()
         if (speak) speaker.beginStream()
@@ -332,7 +327,7 @@ class AssistantController(
             val u = items[i]; val a = items[i + 1]
             if (u.fromUser && !a.fromUser && a.actionJson != null && !a.pending) {
                 val wasTool = AgentCore.parse(a.actionJson)?.type?.let { it != ActionType.ANSWER } ?: false
-                turns += AgentCore.Turn(u.text, a.actionJson, (listOf(a.text) + a.lines).joinToString(" "), wasTool)
+                turns += AgentCore.Turn(sentAs[u.id] ?: u.text, a.actionJson, (listOf(a.text) + a.lines).joinToString(" "), wasTool)
             }
         }
         return turns
@@ -373,7 +368,26 @@ class AssistantController(
     /** Called when the assistant opens: load the chosen model now so the first answer starts sooner. */
     fun warmUp() {
         val m = ModelCatalog.chatById(settings.value.modelId) ?: return
-        if (m.id in models.installed.value) client.preload(models.fileFor(m).path)
+        if (m.id !in models.installed.value || !pro.unlocked.value) return
+        scope.launch {
+            val (roles, contents) = fixedMessages()
+            client.preload(models.fileFor(m).path, roles, contents, models.stateFor(m).path)
+        }
+    }
+
+    /** Questions as the model saw them (with the time and notes), so earlier turns are replayed word for word. */
+    private val sentAs = java.util.concurrent.ConcurrentHashMap<Long, String>()
+
+    /** The part of the prompt that's the same for every question: system prompt and examples. */
+    private suspend fun fixedMessages(): Pair<ArrayList<String>, ArrayList<String>> {
+        val s = settings.value
+        val roles = ArrayList<String>(); val contents = ArrayList<String>()
+        val apps = AppTask.entries.mapNotNull { t ->
+            AppChoices.chosen(context, s.appChoices, t)?.let { "${t.title}: ${AppChoices.label(context, it)}" }
+        }.joinToString("; ")
+        roles += "system"; contents += AgentCore.systemPrompt(withContext(Dispatchers.IO) { personality.load() }, s.homePlace.ifBlank { null }, apps, userLanguage())
+        AgentCore.EXAMPLES.forEach { (u, a) -> roles += "user"; contents += u; roles += "assistant"; contents += a }
+        return roles to contents
     }
 
     fun stop() { client.stop(); stopSpeaking(); job?.cancel() }
@@ -418,7 +432,7 @@ class AssistantController(
             }
         }
     }
-    fun clear() { if (!busy.value) chat.value = emptyList() }
+    fun clear() { if (!busy.value) { chat.value = emptyList(); sentAs.clear() } }
 
     companion object { const val STALL_MS = 90_000L }
 

@@ -43,7 +43,9 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
             override fun onBindingDied(name: ComponentName) { service = null; failPending(); release() }
         }
         connection = conn
-        context.bindService(Intent(context, AssistantService::class.java), conn, Context.BIND_AUTO_CREATE)
+        // BIND_IMPORTANT: the model process gets the launcher's CPU priority. Without it Android puts it in the
+        // "foreground" cpuset, which on many phones leaves out some of the fast cores (on a Pixel 4a, half of them).
+        context.bindService(Intent(context, AssistantService::class.java), conn, Context.BIND_AUTO_CREATE or Context.BIND_IMPORTANT)
     }
 
     /**
@@ -105,12 +107,20 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
     }
 
     /** Loads the model in the background (e.g. when the assistant opens) so the first answer starts sooner. */
-    fun preload(modelPath: String) {
+    /** Loads the model and reads the fixed start of the prompt ([roles]/[contents]) before the first question. */
+    fun preload(modelPath: String, roles: List<String> = emptyList(), contents: List<String> = emptyList(), statePath: String? = null) {
         scope.launch {
             idleJob?.cancel()
             runCatching {
                 bind().send(Message.obtain(null, AssistantService.MSG_PRELOAD).apply {
-                    data = Bundle().apply { putString(AssistantService.K_PATH, modelPath) }
+                    data = Bundle().apply {
+                        putString(AssistantService.K_PATH, modelPath)
+                        if (roles.isNotEmpty()) {
+                            putStringArray(AssistantService.K_ROLES, roles.toTypedArray())
+                            putStringArray(AssistantService.K_CONTENTS, contents.toTypedArray())
+                            putString(AssistantService.K_STATE, statePath.orEmpty())
+                        }
+                    }
                 })
             }
             scheduleIdle()

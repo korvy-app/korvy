@@ -245,6 +245,17 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-24: **Model speed (Pixel 4a, Qwen 2.5 1.5B, release build).** Before: first question after opening
+  ~23 s to the first word (655-token fixed prompt read from scratch at 30 t/s), replies written at 6.6 t/s.
+  Causes found: (1) the :assistant process sat in the "foreground" cpuset (cores 0-5,7: one of the two fast cores
+  missing) → bind with BIND_IMPORTANT (now top-app); (2) 4 threads mixed fast and slow cores → `core/Threads`:
+  fast cores only for writing, all cores for reading (llama-bench: tg 2t 10.6 vs 4t 8.7; pp 8t 57 vs 4t 44);
+  (3) the fixed prompt (system + examples) was read on every cold start → read at warm-up (`Native.prefill`) and
+  saved to disk (`<model>.prompt-state`, ~20 MB, restored in ~50 ms); the date moved from the system prompt into
+  each question so the fixed part stays the same; earlier turns are replayed exactly as sent so follow-ups reuse
+  the cache. After: first words 2.5–2.7 s (first and follow-up questions), writing 8.4–8.5 t/s. Model load stays
+  ~6 s (weight repacking; repack off = 2.3× slower prompt reading) but runs at warm-up; Whisper now has its own
+  thread so speech isn't queued behind it. Q4_0 instead of Q4_K_M: only ~5% faster, not worth re-downloads.
 - 2026-11-24: **0.14.0 – languages.** All UI text, assistant replies, notifications and catalog text are in
   strings.xml; translations in Spanish, Portuguese (Brazil), French and German (tables in docs/i18n/<lang>.txt →
   `python3 scripts/mkres.py docs/i18n/<lang>.txt <qualifier>`, which checks placeholders). Per-app language picker

@@ -20,6 +20,8 @@ import java.util.concurrent.Executors
  */
 class AssistantService : Service() {
     private val worker = Executors.newSingleThreadExecutor()
+    // Speech recognition gets its own thread: what the user said must not wait behind the chat model loading (~6 s).
+    private val listener = Executors.newSingleThreadExecutor()
     // Speech gets its own thread so a reply can be spoken while the model keeps writing the next sentence.
     private val voice = Executors.newSingleThreadExecutor()
     private val neural by lazy { NeuralTts() }
@@ -55,7 +57,7 @@ class AssistantService : Service() {
                     send(reply, MSG_SPEAK_DONE, "")
                 }
             }
-            MSG_TRANSCRIBE -> worker.execute {
+            MSG_TRANSCRIBE -> listener.execute {
                 val d = msg.data
                 try {
                     val audio = java.io.File(d.getString(K_AUDIO)!!)
@@ -70,7 +72,15 @@ class AssistantService : Service() {
                     Log.e("AssistantService", "transcribe failed", t); send(reply, MSG_ERROR, t.message ?: getString(R.string.s_stt_failed))
                 }
             }
-            MSG_PRELOAD -> worker.execute { msg.data.getString(K_PATH)?.let { runCatching { ensureLoaded(it, msg.data.getInt(K_CTX, CTX), null) } } }
+            MSG_PRELOAD -> worker.execute {
+                val d = msg.data
+                val path = d.getString(K_PATH) ?: return@execute
+                runCatching {
+                    if (!ensureLoaded(path, d.getInt(K_CTX, CTX), null)) return@execute
+                    val roles = d.getStringArray(K_ROLES) ?: return@execute
+                    Native.prefill(roles, d.getStringArray(K_CONTENTS)!!, d.getString(K_STATE).orEmpty())
+                }.onFailure { Log.e("AssistantService", "warm-up failed", it) }
+            }
             MSG_COMPLETE -> worker.execute {
                 val d = msg.data
                 val path = d.getString(K_PATH)!!
@@ -95,8 +105,9 @@ class AssistantService : Service() {
     private fun ensureLoaded(path: String, ctx: Int, reply: Messenger?): Boolean {
         if (path == loadedPath) return true
         send(reply, MSG_STATUS, getString(R.string.s_loading_model))
-        val threads = (Runtime.getRuntime().availableProcessors() - 2).coerceIn(2, 4)
-        val rc = Native.load(path, ctx, threads)
+        val (threads, batch) = app.korvy.launcher.platform.CpuCores.inferenceThreads()
+        Log.i("AssistantService", "threads: $threads to write, $batch to read")
+        val rc = Native.load(path, ctx, threads, batch)
         if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, getString(R.string.s_load_model_failed, rc)); return false }
         loadedPath = path
         return true
@@ -115,7 +126,7 @@ class AssistantService : Service() {
     override fun onDestroy() {
         Native.stop()
         speechGeneration++; runCatching { neural.release() }; runCatching { Native.whisperUnload() }
-        worker.shutdown(); voice.shutdown()
+        worker.shutdown(); voice.shutdown(); listener.shutdown()
         super.onDestroy()
         // Give the memory back right away instead of leaving a cached process holding a model.
         Process.killProcess(Process.myPid())
@@ -130,6 +141,6 @@ class AssistantService : Service() {
         const val MSG_TOKEN = 10; const val MSG_DONE = 11; const val MSG_ERROR = 12; const val MSG_STATUS = 13
         const val MSG_SPEAK_START = 14; const val MSG_SPEAK_DONE = 15
         const val K_PATH = "path"; const val K_CTX = "ctx"; const val K_ROLES = "roles"; const val K_CONTENTS = "contents"
-        const val K_GRAMMAR = "grammar"; const val K_MAX = "max"; const val K_TEMP = "temp"; const val K_TEXT = "text"
+        const val K_STATE = "state"; const val K_GRAMMAR = "grammar"; const val K_MAX = "max"; const val K_TEMP = "temp"; const val K_TEXT = "text"
     }
 }
