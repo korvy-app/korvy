@@ -37,6 +37,8 @@ class ProAccess(
 ) : ProStore by store {
     private val prefs = context.getSharedPreferences("pro_trial", android.content.Context.MODE_PRIVATE)
     private val trialStart = kotlinx.coroutines.flow.MutableStateFlow(prefs.getLong("started", 0L))
+    /** When Korvy was first installed on this phone; kept by Android even when the app's data is cleared. */
+    private val installedAt = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime }.getOrDefault(0L)
     /** Ticks once a minute so the trial ends on time without a restart. */
     private val clock = kotlinx.coroutines.flow.flow { while (true) { emit(System.currentTimeMillis()); kotlinx.coroutines.delay(60_000) } }
 
@@ -49,7 +51,7 @@ class ProAccess(
             .stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly,
                 purchased.value || app.korvy.launcher.core.Trial.active(trialStart.value, System.currentTimeMillis()))
 
-    fun canStartTrial() = (store.canBuy || testLocked.value) && app.korvy.launcher.core.Trial.canStart(trialStart.value)
+    fun canStartTrial() = (store.canBuy || testLocked.value) && app.korvy.launcher.core.Trial.canStart(trialStart.value, installedAt, System.currentTimeMillis())
 
     /** Developer options: forget the trial so it can be tried again. */
     fun resetTrial() { prefs.edit().remove("started").apply(); trialStart.value = 0L }

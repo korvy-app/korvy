@@ -253,6 +253,8 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-25: Pro trial can only start within 30 days of installing (`PackageInfo.firstInstallTime`, which survives
+  clearing app data; uninstall + reinstall still resets it, accepted). Owner: the free trial may be removed later.
 - 2026-11-25: **Home pages with parallax** (see Home-screen grid); verified on the 4a (edge page turn, drop on a new
   page, empty page closes, Home → first page, wallpaper offset 0→1, own picture slides). "Reset Pro trial" is now
   in debug builds only (in a release anyone with Developer options could restart the trial). Play build rechecked

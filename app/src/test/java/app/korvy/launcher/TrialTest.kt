@@ -12,7 +12,7 @@ class TrialTest {
 
     @Test fun sevenDaysThenOver() {
         assertFalse(Trial.active(0, t0))                    // never started
-        assertTrue(Trial.canStart(0)); assertFalse(Trial.canStart(t0))
+        assertTrue(Trial.canStart(0, t0, t0)); assertFalse(Trial.canStart(t0, t0, t0))
         assertTrue(Trial.active(t0, t0))
         assertEquals(7, Trial.daysLeft(t0, t0))
         assertEquals(7, Trial.daysLeft(t0, t0 + day / 2))   // rounds up
@@ -20,5 +20,11 @@ class TrialTest {
         assertFalse(Trial.active(t0, t0 + 7 * day))
         assertEquals(0, Trial.daysLeft(t0, t0 + 8 * day))
         assertFalse(Trial.active(t0, t0 - 1))               // clock set back before the start: not active
+    }
+
+    @Test fun onlyInTheFirst30DaysAfterInstalling() {
+        assertTrue(Trial.canStart(0, installedAt = t0, now = t0 + 29 * day))
+        assertFalse(Trial.canStart(0, installedAt = t0, now = t0 + 30 * day)) // data cleared later: no new trial
+        assertFalse(Trial.canStart(0, installedAt = t0, now = t0 - day))      // clock set before the install
     }
 }

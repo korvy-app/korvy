@@ -6,6 +6,8 @@ package app.korvy.launcher.core
  */
 object Trial {
     const val DAYS = 7
+    /** The trial can only be started this many days after installing (clearing app data can't restart it later). */
+    const val START_WITHIN_DAYS = 30
     private const val DAY_MS = 24L * 60 * 60 * 1000
 
     /** True while the trial runs. [startedAt] 0 = never started. */
@@ -15,5 +17,7 @@ object Trial {
     fun daysLeft(startedAt: Long, now: Long): Int =
         if (!active(startedAt, now)) 0 else ((startedAt + DAYS * DAY_MS - now + DAY_MS - 1) / DAY_MS).toInt()
 
-    fun canStart(startedAt: Long) = startedAt == 0L
+    /** Not used yet, and within [START_WITHIN_DAYS] of [installedAt] (the install date survives clearing app data). */
+    fun canStart(startedAt: Long, installedAt: Long, now: Long): Boolean =
+        startedAt == 0L && now >= installedAt && now - installedAt < START_WITHIN_DAYS * DAY_MS
 }
