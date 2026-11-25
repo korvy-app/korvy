@@ -27,8 +27,8 @@ android {
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 34
-        versionName = "0.14.2"
+        versionCode = 35
+        versionName = "0.15.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.

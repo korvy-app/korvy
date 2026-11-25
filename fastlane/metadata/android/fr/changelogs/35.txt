@@ -1,0 +1,3 @@
+- Pages d'accueil : balayez à gauche et à droite entre des pages d'icônes. Faites glisser une icône au bord de l'écran pour créer une page.
+- L'arrière-plan glisse doucement quand vous changez de page (parallaxe).
+- Accueil ramène à la première page.

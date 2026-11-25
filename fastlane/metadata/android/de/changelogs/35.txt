@@ -1,0 +1,3 @@
+- Startbildschirm-Seiten: Wische nach links und rechts zwischen Seiten mit Symbolen. Zieh ein Symbol an den Bildschirmrand, um eine neue Seite anzulegen.
+- Der Hintergrund gleitet beim Blättern sanft mit (Parallaxe).
+- Die Startbildschirm-Taste bringt dich zur ersten Seite.

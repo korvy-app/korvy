@@ -1,0 +1,3 @@
+- Home pages: swipe left and right between pages of icons. Drag an icon to the screen edge to start a new page.
+- Your background slides gently as you swipe (parallax).
+- Home takes you back to the first page.

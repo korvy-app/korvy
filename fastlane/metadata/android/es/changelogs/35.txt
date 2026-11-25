@@ -1,0 +1,3 @@
+- Páginas de inicio: desliza a izquierda y derecha entre páginas de iconos. Arrastra un icono al borde de la pantalla para crear una página nueva.
+- El fondo se desliza suavemente al cambiar de página (paralaje).
+- Inicio te lleva a la primera página.

@@ -1,0 +1,3 @@
+- Páginas na tela inicial: deslize para os lados entre páginas de ícones. Arraste um ícone até a borda da tela para criar uma página nova.
+- O plano de fundo desliza suavemente ao trocar de página (paralaxe).
+- Início leva você de volta à primeira página.
