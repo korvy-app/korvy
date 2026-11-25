@@ -26,14 +26,14 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Drag from the app list, search results or suggestions onto the grid (the list fades but keeps the gesture);
   drag within the grid to move (an occupied target swaps; from the list, the occupant moves to the nearest
   free cell); drag to "Remove from home" at the top. Menu: Add to home / Remove from home.
-- **Planned (owner request 2026-11-24): more home pages.** The user can add pages of icons and swipe left or
-  right between them, like other launchers. A new page appears when needed (e.g. dragging an icon to the
-  screen edge, or "Add page" in the home menu); empty pages can be removed. Page dots show where you are.
-  Each page has its own grid in `core/HomeGrid` (folders keep working on every page). **Parallax:** the
-  background image moves a little as you swipe between pages (a fraction of the page width, so a wide or
-  zoomed photo pans gently); with the phone's wallpaper, pass the page offset to Android
-  (`WallpaperManager.setWallpaperOffsets`) so wallpapers that support scrolling do the same. Respects the
-  animations toggle (no parallax when animations are off or on low-tier phones) and must stay smooth on the 4a.
+- **Home pages (owner request 2026-11-24, built 2026-11-25).** The icon grid swipes left/right between pages
+  (`core/HomeGrid.pages`; cells number on across pages; "4x5x3" when saved, old layouts load as one page). The
+  clock, widgets, suggestions and search bar stay fixed; page dots under the grid. While dragging an icon an extra
+  empty page waits on the right (hollow dot); holding the icon near the left/right edge for ~0.65 s turns the page.
+  "Add to home" uses the first free cell on any page, or opens a new page (max 10). Empty pages close by
+  themselves. Home pressed on the home screen goes back to the first page; coming back from an app keeps the page.
+  **Parallax:** the user's own picture is shown 10% larger and slides as the pages are swiped; with the phone's
+  wallpaper, Android gets `setWallpaperOffsets` so scrolling wallpapers follow. No parallax with animations off.
 
 ## Online features (decided 2026-11-22)
 - One app (owner's choice). Android can't make INTERNET a runtime permission, so: **online features are off by
@@ -253,6 +253,10 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-25: **Home pages with parallax** (see Home-screen grid); verified on the 4a (edge page turn, drop on a new
+  page, empty page closes, Home → first page, wallpaper offset 0→1, own picture slides). "Reset Pro trial" is now
+  in debug builds only (in a release anyone with Developer options could restart the trial). Play build rechecked
+  after the F-Droid split: natural voices listed and speaking (sherpa-onnx loads), AI 2.7 s to first words.
 - 2026-11-24: **Model speed (Pixel 4a, Qwen 2.5 1.5B, release build).** Before: first question after opening
   ~23 s to the first word (655-token fixed prompt read from scratch at 30 t/s), replies written at 6.6 t/s.
   Causes found: (1) the :assistant process sat in the "foreground" cpuset (cores 0-5,7: one of the two fast cores

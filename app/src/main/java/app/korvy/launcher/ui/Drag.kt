@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.core.animateFloatAsState
@@ -80,6 +81,8 @@ class DragController(
         private set
     var gridBounds: Rect? = null
     var removeBounds: Rect? = null
+    /** The home page on screen (set by the home pager), so a drop lands on that page. */
+    var page: Int = 0
 
     fun start(app: AppEntry, fromCell: Int?, pos: Offset) {
         drag = DragInfo(app, fromCell, pos).also(onStart)
@@ -90,7 +93,8 @@ class DragController(
     fun hoverCell(): Int? {
         val d = drag ?: return null
         val b = gridBounds ?: return null
-        return grid().cellAt(d.pos.x - b.left, d.pos.y - b.top, b.width, b.height)
+        val g = grid()
+        return g.cellAt(d.pos.x - b.left, d.pos.y - b.top, b.width, b.height)?.let { page * g.pageSize + it }
     }
 
     /**
@@ -106,7 +110,8 @@ class DragController(
         val occupant = g.cells[cell] ?: return false
         if (occupant == d.app.key) return false
         val cw = b.width / g.cols; val ch = b.height / g.rows
-        val cx = b.left + cw * (cell % g.cols + 0.5f); val cy = b.top + ch * (cell / g.cols + 0.5f)
+        val local = cell % g.pageSize
+        val cx = b.left + cw * (local % g.cols + 0.5f); val cy = b.top + ch * (local / g.cols + 0.5f)
         val dx = d.pos.x - cx; val dy = d.pos.y - cy
         return kotlin.math.sqrt(dx * dx + dy * dy) < 0.32f * minOf(cw, ch)
     }
@@ -212,7 +217,11 @@ fun AppTile(app: AppEntry, repo: AppRepository, modifier: Modifier = Modifier, i
     }
 }
 
-/** The home-screen grid. While something is being dragged, the cells show faintly and the target lights up. */
+/**
+ * The home-screen grid, one page per screen; swipe sideways between pages (dots underneath). While something is
+ * being dragged, the cells show faintly, the target lights up, an extra empty page waits on the right, and
+ * holding the icon near the left or right edge turns the page.
+ */
 @Composable
 fun HomeGridView(
     grid: HomeGrid,
@@ -221,23 +230,93 @@ fun HomeGridView(
     drag: DragController,
     onLaunch: (AppEntry) -> Unit,
     menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
+    pager: androidx.compose.foundation.pager.PagerState,
     modifier: Modifier = Modifier,
     onOpenFolder: (String) -> Unit = {},
     onUngroup: (String) -> Unit = {},
 ) {
     val dragging = drag.drag != null
+    val animations = LocalAnimations.current
+    drag.page = pager.currentPage
+    EdgeTurnsPage(drag, pager, animations)
+    Column(modifier) {
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pager,
+            userScrollEnabled = !dragging, // while dragging, the page turns at the screen edge instead
+            beyondViewportPageCount = 1,
+            modifier = Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { drag.gridBounds = it.boundsInRoot() }.testTag("home_grid"),
+            key = { it },
+        ) { page -> GridPage(grid, page, apps, repo, drag, onLaunch, menu, onOpenFolder, onUngroup) }
+        if (pager.pageCount > 1) PageDots(pager, grid.pages)
+    }
+}
+
+/** While an icon is held still near the left or right edge of the grid, turn the page (about every 0.7 s). */
+@Composable
+private fun EdgeTurnsPage(drag: DragController, pager: androidx.compose.foundation.pager.PagerState, animations: Boolean) {
+    val edge = with(LocalDensity.current) { 28.dp.toPx() }
+    val dragging = drag.drag != null
+    androidx.compose.runtime.LaunchedEffect(dragging) {
+        if (!dragging) return@LaunchedEffect
+        var side = 0; var since = 0L
+        while (drag.drag != null) {
+            kotlinx.coroutines.delay(80)
+            val d = drag.drag ?: break
+            val b = drag.gridBounds ?: continue
+            val now = side.let { _ -> when {
+                d.pos.y < b.top || d.pos.y > b.bottom -> 0
+                d.pos.x < b.left + edge -> -1
+                d.pos.x > b.right - edge -> 1
+                else -> 0
+            } }
+            if (now != side) { side = now; since = System.currentTimeMillis(); continue }
+            if (side != 0 && System.currentTimeMillis() - since > 650) {
+                val target = (pager.currentPage + side).coerceIn(0, pager.pageCount - 1)
+                if (target != pager.currentPage) {
+                    if (animations) pager.animateScrollToPage(target) else pager.scrollToPage(target)
+                }
+                since = System.currentTimeMillis()
+            }
+        }
+    }
+}
+
+@Composable
+private fun PageDots(pager: androidx.compose.foundation.pager.PagerState, realPages: Int) {
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp).testTag("page_dots"), horizontalArrangement = Arrangement.Center) {
+        for (i in 0 until pager.pageCount) {
+            val on = i == pager.currentPage
+            Box(
+                Modifier.padding(horizontal = 4.dp).size(if (on) 8.dp else 6.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                    .then(
+                        if (i < realPages) Modifier.background(Color.White.copy(alpha = if (on) 0.95f else 0.45f))
+                        else Modifier.border(1.dp, Color.White.copy(alpha = 0.7f), androidx.compose.foundation.shape.CircleShape) // the new page
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun GridPage(
+    grid: HomeGrid, page: Int, apps: Map<String, AppEntry>, repo: AppRepository, drag: DragController,
+    onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
+    onOpenFolder: (String) -> Unit, onUngroup: (String) -> Unit,
+) {
+    val dragging = drag.drag != null
     val hover by remember(drag) { derivedStateOf { drag.hoverCell() } }
     val combine by remember(drag) { derivedStateOf { drag.hoverCombine() } }
     val animations = LocalAnimations.current
-    BoxWithConstraints(modifier.onGloballyPositioned { drag.gridBounds = it.boundsInRoot() }.testTag("home_grid")) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         val cw = maxWidth / grid.cols
         val ch = maxHeight / grid.rows
-        for (cell in 0 until grid.size) {
+        for (local in 0 until grid.pageSize) {
+            val cell = page * grid.pageSize + local
             val app = grid.cells[cell]?.let(apps::get)
             val isSource = dragging && drag.drag?.fromCell == cell
             Box(
                 Modifier
-                    .offset(x = cw * (cell % grid.cols), y = ch * (cell / grid.cols))
+                    .offset(x = cw * (local % grid.cols), y = ch * (local / grid.cols))
                     .size(cw, ch)
                     .padding(3.dp),
                 contentAlignment = Alignment.Center,

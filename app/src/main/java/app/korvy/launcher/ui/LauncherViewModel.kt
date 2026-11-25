@@ -119,7 +119,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, HomeGrid())
 
     private fun updateGrid(f: (HomeGrid) -> HomeGrid) {
-        viewModelScope.launch { la.settings.setHomeGrid(f(homeGridStored.value)) }
+        viewModelScope.launch { la.settings.setHomeGrid(f(homeGridStored.value).compact()) } // empty pages close
     }
     fun placeOnHome(app: AppEntry, target: Int, from: Int?, combine: Boolean = false) = updateGrid { it.place(app.key, target, from, combine) }
 
@@ -134,7 +134,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun addToHome(app: AppEntry): Boolean {
         val g = homeGridStored.value
-        if (g.cellOf(app.key) == null && g.firstEmpty() == null) return false
+        if (!g.add(app.key).contains(app.key)) return false // every page full and no room for another
         updateGrid { it.add(app.key) }; return true
     }
     fun removeFromHome(app: AppEntry) = updateGrid { it.remove(app.key) }
@@ -206,7 +206,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun openSearch() { open(Screen.DRAWER); focusSearch.value++ }
     /** True when the last close should be instant (coming back from an app): no closing animation to tap through. */
     val closeInstantly = MutableStateFlow(false)
-    fun goHome(instant: Boolean = false) {
+    /** Bumped when Home is pressed while the home screen is already showing: back to the first page. */
+    val firstPageRequests = kotlinx.coroutines.flow.MutableStateFlow(0)
+
+    fun goHome(instant: Boolean = false, pressedOnHome: Boolean = false) {
+        if (pressedOnHome && _screen.value == Screen.HOME && openFolder.value == null) firstPageRequests.value++
         // Only a close the user can see (from the list itself) animates. If the home screen is already the target
         // (e.g. coming back from an app), keep an earlier "instant" request: no frames have been drawn since.
         if (instant) closeInstantly.value = true else if (_screen.value != Screen.HOME) closeInstantly.value = false

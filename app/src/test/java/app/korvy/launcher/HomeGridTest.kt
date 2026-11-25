@@ -35,7 +35,9 @@ class HomeGridTest {
         var full = g
         repeat(g.size) { full = full.place("app$it", it) }
         assertEquals(full, full.place("extra", 3))
-        assertEquals(full, full.add("extra"))
+        // "Add to home" with every page full opens a new page instead of failing.
+        assertEquals(2, full.add("extra").pages)
+        assertEquals(g.size, full.add("extra").cellOf("extra"))
     }
 
     @Test fun cellAtMapsPointsAndRejectsOutside() {

@@ -4,15 +4,22 @@ package app.korvy.launcher.core
 data class Folder(val name: String, val keys: List<String>)
 
 /**
- * The home-screen grid: which app or folder sits in which cell. Cells are numbered row by row from the top left
- * (cell = row * cols + col). Apps are identified by their key (AppEntry.key); a folder's cell holds "folder:<id>".
+ * The home-screen grid: which app or folder sits in which cell, over one or more pages the user swipes between.
+ * Cells are numbered row by row from the top left of page 0, then on through page 1 and so on
+ * (cell = page * pageSize + row * cols + col). Apps are identified by their key (AppEntry.key); a folder's cell
+ * holds "folder:<id>". Empty pages are dropped by [compact].
  */
 data class HomeGrid(
     val cols: Int = 4, val rows: Int = 5,
     val cells: Map<Int, String> = emptyMap(),
     val folders: Map<String, Folder> = emptyMap(),
+    val pages: Int = 1,
 ) {
-    val size get() = cols * rows
+    val pageSize get() = cols * rows
+    /** All cells on all pages. */
+    val size get() = pageSize * pages
+
+    fun pageOf(cell: Int) = cell / pageSize
 
     /** The cell holding [key] directly (an app or "folder:<id>"), not counting apps inside folders. */
     fun cellOf(key: String): Int? = cells.entries.firstOrNull { it.value == key }?.key
@@ -27,12 +34,26 @@ data class HomeGrid(
 
     fun firstEmpty(): Int? = (0 until size).firstOrNull { it !in cells }
 
+    /** A grid with an extra empty page at the end (up to [MAX_PAGES]). */
+    fun withNewPage(): HomeGrid = if (pages < MAX_PAGES) copy(pages = pages + 1) else this
+
+    /** Drops pages with nothing on them (keeping at least one); later pages move up. */
+    fun compact(): HomeGrid {
+        val used = cells.keys.mapTo(HashSet()) { it / pageSize }
+        val keep = (0 until pages).filter { it in used }.ifEmpty { listOf(0) }
+        if (keep.size == pages) return this
+        val newIndex = keep.withIndex().associate { (i, p) -> p to i }
+        return copy(pages = keep.size, cells = cells.mapKeys { (c, _) -> newIndex.getValue(c / pageSize) * pageSize + c % pageSize })
+    }
+
     /**
      * Drops [key] on [target]. Coming from another home cell ([from]), an app already in the target swaps
      * into the old spot. Coming from the app list, the occupant moves to the nearest empty cell instead
      * (or the drop is refused when the grid is full). An app already on the grid is moved, never duplicated.
      */
     fun place(key: String, target: Int, from: Int? = null, combine: Boolean = false): HomeGrid {
+        // A drop on the page after the last one (shown while dragging) adds that page.
+        if (target >= size && target < size + pageSize && pages < MAX_PAGES) return copy(pages = pages + 1).place(key, target, from, combine)
         if (target !in 0 until size) return this
         val occupant = cells[target]
         // Dropped onto the middle of another icon: make a folder (or add to the folder there).
@@ -81,15 +102,21 @@ data class HomeGrid(
     fun takeOutOfFolder(key: String): HomeGrid {
         val id = folderOf(key) ?: return this
         val near = cellOf(FOLDER + id) ?: 0
-        val g = withoutInFolders(key)
-        val spot = g.nearestEmpty(near, g.cells) ?: return this
+        var g = withoutInFolders(key)
+        val spot = g.nearestEmpty(near, g.cells) ?: g.withNewPage().let { if (it.pages == g.pages) return this; g = it; g.size - g.pageSize }
         return g.copy(cells = g.cells + (spot to key))
     }
 
     fun renameFolder(id: String, name: String): HomeGrid =
         folders[id]?.let { copy(folders = folders + (id to it.copy(name = name.replace(Regex("[|\\u001F\\n]"), " ").trim().ifEmpty { DEFAULT_NAME }.take(40)))) } ?: this
 
-    fun add(key: String): HomeGrid = if (contains(key)) this else firstEmpty()?.let { place(key, it) } ?: this
+    /** Adds an app at the first free spot, on a new page if every page is full. */
+    fun add(key: String): HomeGrid = when {
+        contains(key) -> this
+        firstEmpty() != null -> place(key, firstEmpty()!!)
+        pages < MAX_PAGES -> withNewPage().let { it.place(key, it.firstEmpty()!!) }
+        else -> this
+    }
 
     /** Removes an app (from its cell or its folder), or a whole folder given "folder:<id>". */
     fun remove(key: String): HomeGrid = if (isFolder(key)) copy(cells = cells.filterValues { it != key }, folders = folders - key.removePrefix(FOLDER))
@@ -102,7 +129,7 @@ data class HomeGrid(
         return g.copy(folders = g.folders.filterKeys { g.cellOf(FOLDER + it) != null }) // folders whose cell is gone
     }
 
-    /** Cell under a point in the grid's own coordinates, or null outside it. */
+    /** Cell (in-page index, 0 until [pageSize]) under a point in one page's coordinates, or null outside it. */
     fun cellAt(x: Float, y: Float, width: Float, height: Float): Int? {
         if (x < 0 || y < 0 || x >= width || y >= height) return null
         val col = (x / (width / cols)).toInt().coerceIn(0, cols - 1)
@@ -110,15 +137,20 @@ data class HomeGrid(
         return row * cols + col
     }
 
+    /** The free cell closest to [target], preferring its own page. */
     fun nearestEmpty(target: Int, m: Map<Int, String> = cells): Int? {
-        val tr = target / cols; val tc = target % cols
+        val tp = target / pageSize; val tr = target % pageSize / cols; val tc = target % cols
         return (0 until size).filter { it !in m && it != target }
-            .minByOrNull { val r = it / cols; val c = it % cols; (r - tr) * (r - tr) + (c - tc) * (c - tc) }
+            .minByOrNull {
+                val p = it / pageSize; val r = it % pageSize / cols; val c = it % cols
+                kotlin.math.abs(p - tp) * 10_000 + (r - tr) * (r - tr) + (c - tc) * (c - tc)
+            }
     }
 
-    /** Stored as "cols x rows|cell=key|…|@id=name␟key␟key" (␟ = U+001F). Keys never contain '|' or ␟. */
+    /** Stored as "cols x rows[x pages]|cell=key|…|@id=name␟key␟key" (␟ = U+001F). Keys never contain '|' or ␟. */
     fun serialize(): String = buildString {
         append(cols).append('x').append(rows)
+        if (pages > 1) append('x').append(pages)
         cells.toSortedMap().forEach { (c, k) -> append('|').append(c).append('=').append(k) }
         folders.toSortedMap().forEach { (id, f) -> append("|@").append(id).append('=').append((listOf(f.name) + f.keys).joinToString(SEP)) }
     }
@@ -128,13 +160,16 @@ data class HomeGrid(
     companion object {
         const val FOLDER = "folder:"
         const val DEFAULT_NAME = "Folder"
+        const val MAX_PAGES = 10
         private const val SEP = "\u001F"
         fun isFolder(cellValue: String) = cellValue.startsWith(FOLDER)
 
         fun parse(s: String?): HomeGrid {
             if (s.isNullOrBlank()) return HomeGrid()
             val parts = s.split('|')
-            val (cols, rows) = parts[0].split('x').mapNotNull { it.toIntOrNull() }.let { if (it.size == 2) it[0] to it[1] else 4 to 5 }
+            val dims = parts[0].split('x').mapNotNull { it.toIntOrNull() }
+            val (cols, rows) = if (dims.size >= 2) dims[0] to dims[1] else 4 to 5
+            val pages = dims.getOrNull(2)?.coerceIn(1, MAX_PAGES) ?: 1
             val cells = parts.drop(1).filterNot { it.startsWith("@") }.mapNotNull { p ->
                 val i = p.indexOf('='); if (i <= 0) null else p.substring(0, i).toIntOrNull()?.let { it to p.substring(i + 1) }
             }.toMap()
@@ -143,7 +178,7 @@ data class HomeGrid(
                 val items = p.substring(i + 1).split(SEP)
                 p.substring(1, i) to Folder(items.first(), items.drop(1).filter { it.isNotEmpty() })
             }.toMap()
-            return HomeGrid(cols, rows, cells.filterKeys { it in 0 until cols * rows }, folders)
+            return HomeGrid(cols, rows, cells.filterKeys { it in 0 until cols * rows * pages }, folders, pages)
         }
     }
 }

@@ -53,14 +53,23 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // Home pressed in another app (we're not in front): close everything instantly, no animation to tap into.
-        if (intent.hasCategory(Intent.CATEGORY_HOME)) vm.goHome(instant = !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED))
+        // Home pressed on our own screen (we weren't stopped since last shown) goes back to the first page;
+        // coming back from an app keeps the page the user was on.
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) vm.goHome(
+            instant = !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED),
+            pressedOnHome = onScreen,
+        )
         if (intent.action == ACTION_OPEN_ASSISTANT) vm.openAssistant()
         if (intent.action == ACTION_OPEN_MODELS) vm.open(Screen.MODELS)
     }
 
     /** Leaving for another app: come back to a clean home screen, not the app list or search. */
+    /** True from onResume until onStop: the launcher was on screen (a Home press then pauses it first). */
+    private var onScreen = false
+
     override fun onStop() {
         super.onStop()
+        onScreen = false
         vm.onStopped()
         runCatching { (application as LauncherApp).widgets.host.stopListening() }
     }
@@ -89,6 +98,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        onScreen = true
         vm.refreshSuggestions() // the time of day has probably changed
         vm.refreshDefaultHome()
         vm.refreshContactsGranted()

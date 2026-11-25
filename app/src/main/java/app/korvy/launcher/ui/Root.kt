@@ -61,10 +61,14 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val contactResults by vm.contactResults.collectAsStateWithLifecycle()
     val readingAloud by vm.assistant.readingAloud.collectAsStateWithLifecycle()
     val speechState by vm.assistant.speech.collectAsStateWithLifecycle()
+    val droppedOnPage = androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val drag = remember(vm) {
         DragController(
             grid = { vm.homeGrid.value },
-            onDrop = { app, target, from, combine -> vm.placeOnHome(app, target, from, combine); vm.endDrag() },
+            onDrop = { app, target, from, combine ->
+                droppedOnPage.intValue = target / vm.homeGrid.value.pageSize + 1 // hold that page until the save lands
+                vm.placeOnHome(app, target, from, combine); vm.endDrag()
+            },
             onRemove = { app -> vm.removeFromHome(app); vm.endDrag() }, // apps and whole folders
             onStart = { d -> if (d.fromCell == null) vm.startDragFromList() },
         )
@@ -97,9 +101,30 @@ fun Root(vm: LauncherViewModel, host: Host) {
         )
     }
 
+    // Home pages: one pager state for the grid, the page dots and the background's parallax. While dragging an
+    // icon there's one extra (empty) page to drop onto.
+    // After a drop on the new page, keep it until the saved layout (with the page) arrives, so the view stays there.
+    androidx.compose.runtime.LaunchedEffect(homeGrid.pages, droppedOnPage.intValue) {
+        if (droppedOnPage.intValue == 0) return@LaunchedEffect
+        if (homeGrid.pages >= droppedOnPage.intValue) droppedOnPage.intValue = 0
+        else { kotlinx.coroutines.delay(1500); droppedOnPage.intValue = 0 } // the drop didn't add a page after all
+    }
+    val pageCount = maxOf(homeGrid.pages + if (drag.drag != null) 1 else 0, droppedOnPage.intValue)
+    val pageCountState = androidx.compose.runtime.rememberUpdatedState(pageCount)
+    val pager = androidx.compose.foundation.pager.rememberPagerState { pageCountState.value }
+    val firstPage by vm.firstPageRequests.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(firstPage) { if (firstPage > 0) { if (animations) pager.animateScrollToPage(0) else pager.scrollToPage(0) } }
+    /** 0 = first page … 1 = last page (follows the finger while swiping). */
+    val pagePosition = {
+        val last = (homeGrid.pages - 1).coerceAtLeast(1)
+        ((pager.currentPage + pager.currentPageOffsetFraction) / last).coerceIn(0f, 1f)
+    }
+    WallpaperFollowsPages(homeGrid.pages, pagePosition, enabled = bgFiles.isEmpty(), smooth = animations, settled = { pager.settledPage })
+
     LauncherTheme(animations) {
         Box(Modifier.fillMaxSize()) {
-            LauncherBackground(bgFiles, settings.slideshow && proUnlocked(vm), settings.slideshowMinutes)
+            LauncherBackground(bgFiles, settings.slideshow && proUnlocked(vm), settings.slideshowMinutes,
+                parallax = if (animations && homeGrid.pages > 1) pagePosition else null)
             // The home screen fades out under the app list so its clock doesn't show through.
             val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
                 if (screen == Screen.HOME) 1f else 0f, Motion.fade(animations), label = "home")
@@ -114,7 +139,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 onSetDefaultHome = host.setDefaultHome,
                 onDismissHomePrompt = vm::dismissHomePrompt,
                 drag = drag,
-                grid = { m -> HomeGridView(homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu, m,
+                grid = { m -> HomeGridView(homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu, pager, m,
                     onOpenFolder = { vm.openFolder.value = it }, onUngroup = vm::ungroup) },
                 onOpenAssistant = if (settings.assistant) ({ vm.openAssistant() }) else null,
                 widgets = { WidgetStack(vm) },

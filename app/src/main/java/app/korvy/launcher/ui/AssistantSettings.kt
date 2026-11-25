@@ -220,7 +220,8 @@ fun DeveloperScreen(vm: LauncherViewModel, onBack: () -> Unit) {
                 }
             }
             item {
-                androidx.compose.material3.TextButton(onClick = { vm.pro.resetTrial() }) { Text(stringResource(R.string.reset_pro_trial)) }
+                // Debug builds only: in a released app anyone who unlocks Developer options could restart the trial forever.
+                if (app.korvy.launcher.BuildConfig.DEBUG) androidx.compose.material3.TextButton(onClick = { vm.pro.resetTrial() }) { Text(stringResource(R.string.reset_pro_trial)) }
                 androidx.compose.material3.TextButton(onClick = {
                     Feature.entries.forEach { vm.setFlag(it, it.default) }
                     vm.setDeveloper(false); onBack()

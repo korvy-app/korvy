@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.korvy.launcher.core.slideshowIndex
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -35,7 +36,7 @@ import java.io.File
  * crossfade every [minutes]; it only runs while the home screen is visible and not in battery saver.
  */
 @Composable
-fun LauncherBackground(files: List<File>, slideshow: Boolean, minutes: Int) {
+fun LauncherBackground(files: List<File>, slideshow: Boolean, minutes: Int, parallax: (() -> Float)? = null) {
     val animations = LocalAnimations.current
     if (files.isNotEmpty()) {
         val context = LocalContext.current
@@ -59,7 +60,15 @@ fun LauncherBackground(files: List<File>, slideshow: Boolean, minutes: Int) {
         Crossfade(targetState = file, animationSpec = Motion.fade(animations, 1500), label = "background") { f ->
             val bmp by produceState<Bitmap?>(null, f) { value = withContext(Dispatchers.IO) { Backgrounds.load(f) } }
             bmp?.let {
-                Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                Image(it.asImageBitmap(), contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().then(
+                        // Parallax: the picture is shown 10% larger and slides a little as the home pages are swiped
+                        // (read in the draw phase, so swiping never recomposes).
+                        if (parallax != null) Modifier.graphicsLayer {
+                            scaleX = PARALLAX_SCALE; scaleY = PARALLAX_SCALE
+                            translationX = (0.5f - parallax()) * size.width * (PARALLAX_SCALE - 1f)
+                        } else Modifier
+                    ))
             }
         }
     }
@@ -72,4 +81,30 @@ fun LauncherBackground(files: List<File>, slideshow: Boolean, minutes: Int) {
             )
         )
     )
+}
+
+private const val PARALLAX_SCALE = 1.1f
+
+/**
+ * With the phone's own wallpaper behind the launcher, tell Android which home page is showing, so wallpapers that
+ * scroll (most do) slide along as the pages are swiped. [position] is 0 for the first page … 1 for the last.
+ */
+@Composable
+fun WallpaperFollowsPages(pages: Int, position: () -> Float, enabled: Boolean, smooth: Boolean, settled: () -> Int) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val context = LocalContext.current
+    LaunchedEffect(pages, enabled, smooth) {
+        val wm = android.app.WallpaperManager.getInstance(context)
+        val step = if (pages > 1) 1f / (pages - 1) else 1f
+        androidx.compose.runtime.snapshotFlow {
+            when {
+                !enabled || pages <= 1 -> 0.5f
+                smooth -> position()
+                else -> settled() / (pages - 1f).coerceAtLeast(1f) // animations off: jump page by page
+            }
+        }.collect { x ->
+            val token = view.windowToken ?: return@collect
+            runCatching { wm.setWallpaperOffsetSteps(step, 1f); wm.setWallpaperOffsets(token, x, 0.5f) }
+        }
+    }
 }
