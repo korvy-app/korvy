@@ -4,3 +4,6 @@
 [submodule "app/src/main/cpp/whisper.cpp"]
 	path = app/src/main/cpp/whisper.cpp
 	url = https://github.com/ggml-org/whisper.cpp
+[submodule "app/src/main/cpp/kleidiai"]
+	path = app/src/main/cpp/kleidiai
+	url = https://github.com/ARM-software/kleidiai.git

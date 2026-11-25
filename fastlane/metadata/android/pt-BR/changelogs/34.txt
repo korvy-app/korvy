@@ -1,0 +1,3 @@
+- A IA no aparelho responde muito mais rápido: cerca de 3 segundos até as primeiras palavras num Pixel 4a.
+- Em português, inglês, espanhol, francês e alemão.
+- Primeira versão no F-Droid.

@@ -1,0 +1,3 @@
+- The on-device AI answers much faster: about 3 seconds to the first words on a Pixel 4a.
+- In English, Spanish, Portuguese, French and German; the assistant understands Spanish commands.
+- First F-Droid release.

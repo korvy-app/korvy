@@ -27,8 +27,8 @@ android {
         // minSdk 26 (Android 8.0), same as Piano Notes: ~97% of active devices, adaptive icons, java.time.
         minSdk = 26
         targetSdk = 37
-        versionCode = 33
-        versionName = "0.14.1"
+        versionCode = 34
+        versionName = "0.14.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // The assistant's llama.cpp engine. Phones only (64-bit ARM); the emulator isn't supported yet.
@@ -47,6 +47,9 @@ android {
                     "-DLLAMA_OPENSSL=OFF",
                     "-DLLAMA_CURL=OFF",
                     "-DGGML_NATIVE=OFF",
+                    // KleidiAI from its git submodule instead of a download during the build (F-Droid builds offline).
+                    "-DFETCHCONTENT_SOURCE_DIR_KLEIDIAI=${file("src/main/cpp/kleidiai").absolutePath}",
+                    "-DFETCHCONTENT_FULLY_DISCONNECTED=ON",
                     "-DGGML_BACKEND_DL=ON",
                     "-DGGML_CPU_ALL_VARIANTS=ON",
                     "-DGGML_LLAMAFILE=OFF",

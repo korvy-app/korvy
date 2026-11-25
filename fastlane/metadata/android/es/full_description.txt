@@ -1,0 +1,23 @@
+Korvy es una pantalla de inicio limpia y rápida que deja en tu teléfono lo que haces en tu teléfono.
+
+PRIVADO DESDE EL DISEÑO
+• Sin cuentas, sin anuncios, sin analíticas, sin rastreo y sin servidores de Korvy.
+• Los extras en línea (clima, noticias, respuestas rápidas) están desactivados hasta que los actives, cada uno con su propio interruptor.
+• Oculta apps, u ocúltalas y bloquéalas con tu huella o PIN.
+• Código abierto (GPLv3): cualquiera puede comprobar lo que hace.
+
+RÁPIDO Y SENCILLO
+• Rápido incluso en teléfonos antiguos; las animaciones se desactivan solas en los más lentos.
+• Busca apps por sus iniciales o con errores de escritura, además de contactos, una calculadora y el buscador web que elijas.
+• Cuadrícula de inicio, carpetas, widgets, tus propios fondos y sugerencias de apps según la hora del día.
+
+KORVY, TU ASISTENTE (OPCIONAL)
+• Entiende comandos en español: “abre la cámara”, “pon una alarma a las 7”, “escríbele a Jen que voy tarde”, “¿qué tiempo hace en Madrid?”.
+• Abre apps, escribe y llama a tus contactos, pone alarmas y temporizadores, da indicaciones, pone música y consulta el clima.
+• Siempre pregunta antes de enviar un mensaje, llamar o pedir un viaje.
+• Enséñale: “recuerda que soy vegetariano”, “cuando diga buenas noches, pon un temporizador de 8 horas y sonido de lluvia”, “cuando diga Jen me refiero a Jennifer”.
+• Mantén pulsado el botón de encendido para hablarle. Reconocimiento de voz sin conexión.
+• Funciona por completo en tu teléfono: elige un modelo de IA pequeño (Gemma, Qwen, Llama y más). Nada de lo que preguntas se envía a una empresa de IA.
+
+TODO INCLUIDO
+Esta versión no tiene compras: la IA en el dispositivo, enseñar al asistente, el editor de personalidad, el reconocimiento de voz Whisper, ocultar y bloquear, las presentaciones de fondos y la superposición de estadísticas están incluidos. (Las voces naturales solo están en la versión de Google Play, porque su motor es una biblioteca precompilada; aquí se usan las voces del teléfono).

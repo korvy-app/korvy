@@ -1,0 +1,3 @@
+- Die KI auf dem Gerät antwortet viel schneller: etwa 3 Sekunden bis zu den ersten Worten auf einem Pixel 4a.
+- Auf Deutsch, Englisch, Spanisch, Portugiesisch und Französisch.
+- Erste Version auf F-Droid.
