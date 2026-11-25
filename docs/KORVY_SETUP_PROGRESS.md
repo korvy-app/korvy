@@ -88,4 +88,7 @@ reinstalled (settings and downloads don't carry over).
   Upload key backed up off this Mac (location in CLAUDE.local.md).
   Build: `./scripts/build-upload.sh`; upload: `./scripts/play-upload.sh upload … --track internal --notes … --draft`.
 - [ ] Play listing / F-Droid metadata
+- 2026-11-24: F-Droid ready to submit (docs/fdroid/README.md): foss flavour without sherpa-onnx, KleidiAI
+  submodule, fastlane text in 5 languages, recipe checked with fdroidserver (scanner: 0 problems), tag v0.14.2.
+  Owner: GitLab account + merge request to fdroiddata.
 - [ ] Release checklist

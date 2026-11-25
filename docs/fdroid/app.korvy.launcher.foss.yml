@@ -1,0 +1,33 @@
+Categories:
+  - Launcher
+  - AI Chat
+License: GPL-3.0-or-later
+AuthorName: Korvy
+WebSite: https://korvy.app
+SourceCode: https://github.com/korvy-app/korvy
+IssueTracker: https://github.com/korvy-app/korvy/issues
+
+AutoName: Korvy
+
+RepoType: git
+Repo: https://github.com/korvy-app/korvy.git
+
+Builds:
+  - versionName: 0.14.2-foss
+    versionCode: 34
+    commit: v0.14.2
+    subdir: app
+    submodules: true
+    gradle:
+      - foss
+    scandelete:
+      - app/src/main/cpp/whisper.cpp/models
+      - app/src/main/cpp/whisper.cpp/examples
+      - app/src/main/cpp/whisper.cpp/bindings
+      - app/src/main/cpp/kleidiai/third_party
+    ndk: 30.0.16248370
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+CurrentVersion: 0.14.2-foss
+CurrentVersionCode: 34
