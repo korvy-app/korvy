@@ -1,0 +1,2 @@
+- New AI models: Gemma 4 E2B is now recommended (more accurate, better at Spanish); Qwen 3.5 4B and SmolLM3 are also new.
+- Newer models start answering much sooner.

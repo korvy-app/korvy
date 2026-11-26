@@ -1,0 +1,2 @@
+- Nouveaux modèles d'IA : Gemma 4 E2B est désormais recommandé (plus précis, meilleur en espagnol) ; Qwen 3.5 4B et SmolLM3 arrivent aussi.
+- Les nouveaux modèles commencent à répondre bien plus tôt.

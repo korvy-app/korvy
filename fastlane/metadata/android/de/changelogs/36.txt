@@ -1,0 +1,2 @@
+- Neue KI-Modelle: Gemma 4 E2B ist jetzt empfohlen (genauer, besser auf Spanisch); neu sind auch Qwen 3.5 4B und SmolLM3.
+- Neuere Modelle beginnen viel früher mit der Antwort.
