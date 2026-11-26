@@ -530,11 +530,11 @@
     <string name="n_channel_overlay">Stats overlay</string>
     <string name="n_overlay_on">Stats overlay is on</string>
     <string name="model_note_qwen2_5_0_5b">Smallest and fastest. Good at picking actions, basic at chat.</string>
-    <string name="model_note_qwen2_5_1_5b">Recommended balance of speed and smarts.</string>
+    <string name="model_note_qwen2_5_1_5b">Fast and light. Good on older phones.</string>
     <string name="model_note_qwen2_5_3b">Smarter; best on newer phones.</string>
     <string name="model_note_llama3_2_1b">Small and quick.</string>
     <string name="model_note_llama3_2_3b">Good conversation; newer phones.</string>
-    <string name="model_note_gemma3_1b">Strong for its size.</string>
+    <string name="model_note_gemma3_1b">Smallest. For older phones; simpler answers.</string>
     <string name="model_note_gemma3_4b">Smartest here; flagship phones.</string>
     <string name="model_note_smollm2_1_7b">Fully open model from an independent lab.</string>
     <string name="model_note_phi3_5_mini">Good at reasoning; flagship phones.</string>
@@ -557,4 +557,7 @@
     <string name="accent_es">Spanish (Spain)</string>
     <string name="voice_note_piper_es_mx">Spanish voice, small and fast. Good for older phones.</string>
     <string name="voice_note_piper_es_es">Spanish voice from Spain, small and fast. Good for older phones.</string>
+    <string name="model_note_gemma4_e2b">Recommended: accurate, good at Spanish, quick to start.</string>
+    <string name="model_note_smollm3_3b">Fully open model from an independent lab. Newer phones.</string>
+    <string name="model_note_qwen3_5_4b">Smartest here; flagship phones.</string>
 </resources>

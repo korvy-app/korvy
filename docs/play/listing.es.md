@@ -27,7 +27,7 @@ KORVY, TU ASISTENTE (OPCIONAL)
 • Siempre pregunta antes de enviar un mensaje, llamar o pedir un viaje.
 • Enséñale: “recuerda que soy vegetariano”, “cuando diga buenas noches, pon un temporizador de 8 horas y sonido de lluvia”, “cuando diga Jen me refiero a Jennifer”.
 • Mantén pulsado el botón de encendido para hablarle. Reconocimiento de voz sin conexión y voces naturales en español.
-• Funciona por completo en tu teléfono: elige un modelo de IA pequeño (Gemma, Qwen, Llama y más). Nada de lo que preguntas se envía a una empresa de IA.
+• Funciona por completo en tu teléfono: elige un modelo de IA pequeño (Gemma, Qwen, SmolLM y más). Nada de lo que preguntas se envía a una empresa de IA.
 
 PRO (PAGO ÚNICO, PRUÉBALO GRATIS 7 DÍAS)
 La IA en el dispositivo que responde con sus propias palabras, enseñarle al asistente tus frases y apodos, el editor de personalidad, voces naturales, reconocimiento de voz Whisper, ocultar y bloquear, presentaciones de fondos y la superposición de estadísticas. El launcher y los comandos rápidos del asistente siguen siendo gratis y sin anuncios.

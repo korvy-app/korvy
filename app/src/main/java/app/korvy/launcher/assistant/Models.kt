@@ -32,6 +32,8 @@ data class ModelInfo(
     val note: String,
     /** CHAT models answer; SPEECH models (whisper.cpp) turn speech into text. */
     val kind: Kind = Kind.CHAT,
+    /** No longer offered: shown only to people who already downloaded it (so they can keep using or delete it). */
+    val retired: Boolean = false,
 ) {
     enum class Kind { CHAT, SPEECH }
     /** Speech models: English-only models are faster and more accurate for English. */
@@ -41,34 +43,48 @@ data class ModelInfo(
 }
 
 object ModelCatalog {
+    /**
+     * Chat models, chosen 2026-11-25 by scripts/model-eval (Korvy's real prompt and grammar, 44 requests in English
+     * and Spanish) and llama-bench on a Pixel 4a; results in docs/models.md. Only licences that allow commercial use.
+     */
     val all = listOf(
-        ModelInfo("qwen2.5-0.5b", "Qwen 2.5 · 0.5B", "Alibaba", "Apache 2.0", "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
-            "qwen2.5-0.5b-instruct-q4_k_m.gguf", 491_400_032, "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
-            2.5, "Smallest and fastest. Good at picking actions, basic at chat."),
-        ModelInfo("qwen2.5-1.5b", "Qwen 2.5 · 1.5B", "Alibaba", "Apache 2.0", "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
-            "qwen2.5-1.5b-instruct-q4_k_m.gguf", 1_117_320_736, "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
-            4.0, "Recommended balance of speed and smarts."),
-        ModelInfo("qwen2.5-3b", "Qwen 2.5 · 3B", "Alibaba", "Qwen Research", "Qwen/Qwen2.5-3B-Instruct-GGUF",
-            "qwen2.5-3b-instruct-q4_k_m.gguf", 2_104_932_768, "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
-            7.0, "Smarter; best on newer phones."),
-        ModelInfo("llama3.2-1b", "Llama 3.2 · 1B", "Meta", "Llama 3.2 Community", "bartowski/Llama-3.2-1B-Instruct-GGUF",
-            "Llama-3.2-1B-Instruct-Q4_K_M.gguf", 807_694_464, "6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83",
-            3.0, "Small and quick."),
-        ModelInfo("llama3.2-3b", "Llama 3.2 · 3B", "Meta", "Llama 3.2 Community", "bartowski/Llama-3.2-3B-Instruct-GGUF",
-            "Llama-3.2-3B-Instruct-Q4_K_M.gguf", 2_019_377_696, "6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff",
-            7.0, "Good conversation; newer phones."),
         ModelInfo("gemma3-1b", "Gemma 3 · 1B", "Google", "Gemma Terms", "ggml-org/gemma-3-1b-it-GGUF",
             "gemma-3-1b-it-Q4_K_M.gguf", 806_058_240, "8ccc5cd1f1b3602548715ae25a66ed73fd5dc68a210412eea643eb20eb75a135",
-            3.0, "Strong for its size."),
+            3.0, "Smallest. For older phones; simpler answers."),
+        ModelInfo("qwen2.5-1.5b", "Qwen 2.5 · 1.5B", "Alibaba", "Apache 2.0", "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
+            "qwen2.5-1.5b-instruct-q4_k_m.gguf", 1_117_320_736, "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+            4.0, "Fast and light. Good on older phones."),
+        ModelInfo("gemma4-e2b", "Gemma 4 · E2B", "Google", "Apache 2.0", "google/gemma-4-E2B-it-qat-q4_0-gguf",
+            "gemma-4-E2B_q4_0-it.gguf", 3_349_516_256, "fa401b55b07ee70a54c6dae3903c783a6e65064312529ea57175cb5f8dec6634",
+            5.0, "Recommended: accurate, good at Spanish, quick to start."),
+        ModelInfo("smollm3-3b", "SmolLM3 · 3B", "Hugging Face (independent)", "Apache 2.0", "ggml-org/SmolLM3-3B-GGUF",
+            "SmolLM3-Q4_K_M.gguf", 1_915_305_312, "8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
+            6.0, "Fully open model from an independent lab. Newer phones."),
+        ModelInfo("qwen3.5-4b", "Qwen 3.5 · 4B", "Alibaba", "Apache 2.0", "bartowski/Qwen_Qwen3.5-4B-GGUF",
+            "Qwen_Qwen3.5-4B-Q4_K_M.gguf", 3_013_027_808, "13c16f426047e2de38cd075bdade4a7bcbc8c774384876f677740cda65f8a983",
+            8.0, "Smartest here; flagship phones."),
+        // Retired 2026-11-25 (less accurate, slower, or a licence that doesn't allow commercial use).
+        ModelInfo("qwen2.5-0.5b", "Qwen 2.5 · 0.5B", "Alibaba", "Apache 2.0", "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+            "qwen2.5-0.5b-instruct-q4_k_m.gguf", 491_400_032, "74a4da8c9fdbcd15bd1f6d01d621410d31c6fc00986f5eb687824e7b93d7a9db",
+            2.5, "Smallest and fastest. Good at picking actions, basic at chat.", retired = true),
+        ModelInfo("qwen2.5-3b", "Qwen 2.5 · 3B", "Alibaba", "Qwen Research", "Qwen/Qwen2.5-3B-Instruct-GGUF",
+            "qwen2.5-3b-instruct-q4_k_m.gguf", 2_104_932_768, "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+            7.0, "Smarter; best on newer phones.", retired = true),
+        ModelInfo("llama3.2-1b", "Llama 3.2 · 1B", "Meta", "Llama 3.2 Community", "bartowski/Llama-3.2-1B-Instruct-GGUF",
+            "Llama-3.2-1B-Instruct-Q4_K_M.gguf", 807_694_464, "6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83",
+            3.0, "Small and quick.", retired = true),
+        ModelInfo("llama3.2-3b", "Llama 3.2 · 3B", "Meta", "Llama 3.2 Community", "bartowski/Llama-3.2-3B-Instruct-GGUF",
+            "Llama-3.2-3B-Instruct-Q4_K_M.gguf", 2_019_377_696, "6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff",
+            7.0, "Good conversation; newer phones.", retired = true),
         ModelInfo("gemma3-4b", "Gemma 3 · 4B", "Google", "Gemma Terms", "ggml-org/gemma-3-4b-it-GGUF",
             "gemma-3-4b-it-Q4_K_M.gguf", 2_489_757_856, "882e8d2db44dc554fb0ea5077cb7e4bc49e7342a1f0da57901c0802ea21a0863",
-            8.0, "Smartest here; flagship phones."),
+            8.0, "Smartest here; flagship phones.", retired = true),
         ModelInfo("smollm2-1.7b", "SmolLM2 · 1.7B", "Hugging Face (independent)", "Apache 2.0", "HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF",
             "smollm2-1.7b-instruct-q4_k_m.gguf", 1_055_609_536, "decd2598bc2c8ed08c19adc3c8fdd461ee19ed5708679d1c54ef54a5a30d4f33",
-            4.0, "Fully open model from an independent lab."),
+            4.0, "Fully open model from an independent lab.", retired = true),
         ModelInfo("phi3.5-mini", "Phi 3.5 mini · 3.8B", "Microsoft", "MIT", "bartowski/Phi-3.5-mini-instruct-GGUF",
             "Phi-3.5-mini-instruct-Q4_K_M.gguf", 2_393_232_672, "e4165e3a71af97f1b4820da61079826d8752a2088e313af0c7d346796c38eff5",
-            8.0, "Good at reasoning; flagship phones."),
+            8.0, "Good at reasoning; flagship phones.", retired = true),
     )
 
     /** Whisper speech-recognition models (ggerganov/whisper.cpp on Hugging Face, MIT). Checked 2026-11-23. */

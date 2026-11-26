@@ -280,7 +280,7 @@ fun ModelsScreen(
                     Text(stringResource(R.string.you_re_on_mobile_data), color = MaterialTheme.colorScheme.error)
                 }
             }
-            items(ModelCatalog.all, key = { it.id }) { m ->
+            items(ModelCatalog.all.filter { !it.retired || it.id in installed }, key = { it.id }) { m ->
                 val has = m.id in installed
                 val selected = s.modelId == m.id && has
                 val tooBig = ramGb < m.minRamGb

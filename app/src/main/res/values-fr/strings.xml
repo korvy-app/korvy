@@ -517,11 +517,11 @@
     <string name="n_channel_overlay">Statistiques en surimpression</string>
     <string name="n_overlay_on">Les statistiques en surimpression sont activées</string>
     <string name="model_note_qwen2_5_0_5b">Le plus petit et le plus rapide. Bon pour choisir des actions, basique pour discuter.</string>
-    <string name="model_note_qwen2_5_1_5b">Équilibre recommandé entre vitesse et intelligence.</string>
+    <string name="model_note_qwen2_5_1_5b">Rapide et léger. Bien sur les anciens téléphones.</string>
     <string name="model_note_qwen2_5_3b">Plus intelligent ; idéal sur les téléphones récents.</string>
     <string name="model_note_llama3_2_1b">Petit et rapide.</string>
     <string name="model_note_llama3_2_3b">Bonne conversation ; téléphones récents.</string>
-    <string name="model_note_gemma3_1b">Puissant pour sa taille.</string>
+    <string name="model_note_gemma3_1b">Le plus petit. Pour les anciens téléphones ; réponses plus simples.</string>
     <string name="model_note_gemma3_4b">Le plus intelligent ici ; téléphones haut de gamme.</string>
     <string name="model_note_smollm2_1_7b">Modèle entièrement ouvert d\'un laboratoire indépendant.</string>
     <string name="model_note_phi3_5_mini">Bon en raisonnement ; téléphones haut de gamme.</string>
@@ -544,4 +544,7 @@
     <string name="accent_es">Espagnol d\'Espagne</string>
     <string name="voice_note_piper_es_mx">Voix espagnole, petite et rapide. Bien pour les anciens téléphones.</string>
     <string name="voice_note_piper_es_es">Voix espagnole d\'Espagne, petite et rapide. Bien pour les anciens téléphones.</string>
+    <string name="model_note_gemma4_e2b">Recommandé : précis, bon en espagnol, rapide à démarrer.</string>
+    <string name="model_note_smollm3_3b">Modèle entièrement ouvert d\'un laboratoire indépendant. Téléphones récents.</string>
+    <string name="model_note_qwen3_5_4b">Le plus intelligent ici ; téléphones haut de gamme.</string>
 </resources>

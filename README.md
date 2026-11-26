@@ -9,7 +9,7 @@ Website: [korvy.app](https://korvy.app)
 - Search apps (initials, typos), contacts and the web with the engine you choose; a calculator in the search bar.
 - Hide apps, or hide them and lock them behind your fingerprint or PIN.
 - Home-screen grid, widgets, your own backgrounds and slideshow, app suggestions for the time of day.
-- **Korvy, the assistant (optional):** pick a local model (Gemma, Qwen, Llama and others, via llama.cpp). It opens
+- **Korvy, the assistant (optional):** pick a local model (Gemma, Qwen, SmolLM and others, via llama.cpp). It opens
   apps, texts and calls (always asking first), sets alarms and timers, gives directions, plays music, and answers.
   Teach it notes, phrases and nicknames in its notebook. Voice input with whisper.cpp or the phone's on-device
   recognizer, natural offline voices (sherpa-onnx), and the power button.
@@ -23,7 +23,7 @@ Bugs and ideas: [Issues](https://github.com/korvy-app/korvy/issues), or support@
 ## Build
 JDK 17+ (see CLAUDE.md for the exact setup), then:
 ```
-git submodule update --init      # llama.cpp and whisper.cpp
+git submodule update --init      # llama.cpp, whisper.cpp and KleidiAI
 ./scripts/fetch-libs.sh          # sherpa-onnx (checksummed)
 ./gradlew assembleFossDebug      # or assemblePlayDebug
 ./gradlew testPlayDebugUnitTest

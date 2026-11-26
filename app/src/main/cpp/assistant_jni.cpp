@@ -26,10 +26,16 @@ static std::atomic<bool> g_stop{false};
 // (system prompt, examples, earlier turns) reuses them instead of reading everything again.
 static std::vector<llama_token> g_cached;
 static int g_n_ctx = 4096;
+// The saved reading of the fixed prompt (see prefill): its file and tokens. Models whose memory can't be rewound
+// part-way (recurrent/hybrid layers, e.g. Qwen 3.5) reload it before each request instead of reading it again.
+static std::string g_state_path;
+static std::vector<llama_token> g_state_tokens;
 constexpr int BATCH = 512;
 
 static void log_cb(ggml_log_level level, const char *text, void *) {
-    if (level >= GGML_LOG_LEVEL_WARN) __android_log_print(ANDROID_LOG_WARN, TAG, "%s", text);
+    // Skip llama.cpp's loading progress dots: they flood the log and push useful lines out.
+    if (level >= GGML_LOG_LEVEL_WARN && text && text[0] != '\0' && !(text[0] == '.' && text[1] == '\0') && !(text[0] == '\n' && text[1] == '\0'))
+        __android_log_print(ANDROID_LOG_WARN, TAG, "%s", text);
 }
 
 static std::string jstr(JNIEnv *env, jstring s) {
@@ -52,7 +58,7 @@ static bool valid_utf8(const std::string &s) {
 }
 
 static void free_all() {
-    g_cached.clear();
+    g_cached.clear(); g_state_path.clear(); g_state_tokens.clear();
     g_tmpls.reset();
     if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
     if (g_model) { llama_model_free(g_model); g_model = nullptr; }
@@ -137,7 +143,25 @@ static int feed(const std::vector<llama_token> &tokens) {
     while (keep < g_cached.size() && keep < tokens.size() && g_cached[keep] == tokens[keep]) keep++;
     if (keep >= tokens.size()) keep = tokens.size() - 1;
     auto *mem = llama_get_memory(g_ctx);
-    if (keep == 0 || !llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1)) { llama_memory_clear(mem, false); keep = 0; }
+    const size_t matched = keep;
+    if (keep == 0 || !llama_memory_seq_rm(mem, 0, (llama_pos) keep, -1)) {
+        LOGI("cache: %d tokens matched but the memory can't be cut there; saved prompt: %d tokens", (int) matched, (int) g_state_tokens.size());
+        llama_memory_clear(mem, false); keep = 0; g_cached.clear();
+        // Can't rewind part-way: start from the saved fixed prompt when this request begins with it.
+        const size_t n = g_state_tokens.size();
+        if (!g_state_path.empty() && n > 0 && n < tokens.size() && std::equal(g_state_tokens.begin(), g_state_tokens.end(), tokens.begin())) {
+            std::vector<llama_token> tmp(n);
+            size_t got = 0;
+            const double tr = now_ms();
+            if (llama_state_seq_load_file(g_ctx, g_state_path.c_str(), 0, tmp.data(), tmp.size(), &got) > 0 && got == n) {
+                keep = n;
+                LOGI("timing: reloaded the fixed prompt (%d tokens) in %.0f ms", (int) n, now_ms() - tr);
+            } else {
+                LOGE("reloading the saved prompt failed");
+                llama_memory_clear(mem, false);
+            }
+        }
+    }
     const double t0 = now_ms();
     g_cached.assign(tokens.begin(), tokens.begin() + keep);
     common_batch batch(g_ctx);
@@ -170,21 +194,42 @@ Java_app_korvy_launcher_assistant_Native_prefill(JNIEnv *env, jobject, jobjectAr
         size_t n = 0;
         const double t0 = now_ms();
         if (llama_state_seq_load_file(g_ctx, state.c_str(), 0, saved.data(), saved.size(), &n) > 0) {
-            saved.resize(n); g_cached = saved;
+            saved.resize(n); g_cached = saved; g_state_path = state; g_state_tokens = saved;
             LOGI("timing: restored %d prompt tokens from disk in %.0f ms", (int) n, now_ms() - t0);
         } else {
             LOGE("saved prompt state unusable; reading again");
             llama_memory_clear(llama_get_memory(g_ctx), false); g_cached.clear(); unlink(state.c_str());
         }
     }
-    auto tokens = render(env, roles, contents, false);
+    // The part every request starts with: render the fixed messages followed by two different questions and keep
+    // what they share. (Rendering the fixed messages alone isn't enough: some chat templates format the last
+    // message differently when nothing follows it, e.g. Qwen 3.5's, so it wouldn't match real requests.)
+    std::vector<llama_token> tokens;
+    {
+        const jsize n = env->GetArrayLength(roles);
+        jclass strCls = env->FindClass("java/lang/String");
+        auto withQuestion = [&](const char *q) {
+            jobjectArray r = env->NewObjectArray(n + 1, strCls, nullptr), c = env->NewObjectArray(n + 1, strCls, nullptr);
+            for (jsize i = 0; i < n; i++) {
+                env->SetObjectArrayElement(r, i, env->GetObjectArrayElement(roles, i));
+                env->SetObjectArrayElement(c, i, env->GetObjectArrayElement(contents, i));
+            }
+            env->SetObjectArrayElement(r, n, env->NewStringUTF("user"));
+            env->SetObjectArrayElement(c, n, env->NewStringUTF(q));
+            return render(env, r, c, true);
+        };
+        auto a = withQuestion("A"), b = withQuestion("Z");
+        size_t k = 0;
+        while (k < a.size() && k < b.size() && a[k] == b[k]) k++;
+        tokens.assign(a.begin(), a.begin() + k);
+    }
     if (tokens.empty()) return -1;
     if (g_cached.size() >= tokens.size() && std::equal(tokens.begin(), tokens.end(), g_cached.begin())) return 0; // already there
     const int read = feed(tokens);
     if (read > 0 && !state.empty()) {
         const double t0 = now_ms();
         if (llama_state_seq_save_file(g_ctx, state.c_str(), 0, tokens.data(), tokens.size()) == 0) LOGE("could not save prompt state");
-        else LOGI("timing: saved %d prompt tokens in %.0f ms", (int) tokens.size(), now_ms() - t0);
+        else { LOGI("timing: saved %d prompt tokens in %.0f ms", (int) tokens.size(), now_ms() - t0); g_state_path = state; g_state_tokens = tokens; }
     }
     return read;
 }

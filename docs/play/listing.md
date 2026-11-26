@@ -21,7 +21,7 @@ FAST AND SIMPLE
 • In English, Spanish, Portuguese, French and German.
 
 KORVY, YOUR ASSISTANT (OPTIONAL)
-• Runs entirely on your phone: pick a small AI model (Gemma, Qwen, Llama and more). Nothing you ask is sent to an AI company.
+• Runs entirely on your phone: pick a small AI model (Gemma, Qwen, SmolLM and more). Nothing you ask is sent to an AI company.
 • Opens apps, texts and calls people, sets alarms and timers, gives directions, plays music, checks the weather.
 • Understands quick commands in English and Spanish.
 • Always asks before texting, calling or booking a ride.

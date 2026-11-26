@@ -517,11 +517,11 @@
     <string name="n_channel_overlay">Statistik-Einblendung</string>
     <string name="n_overlay_on">Die Statistik-Einblendung ist an</string>
     <string name="model_note_qwen2_5_0_5b">Das kleinste und schnellste. Gut im Auswählen von Aktionen, einfach im Gespräch.</string>
-    <string name="model_note_qwen2_5_1_5b">Empfohlene Balance aus Tempo und Intelligenz.</string>
+    <string name="model_note_qwen2_5_1_5b">Schnell und leicht. Gut auf älteren Smartphones.</string>
     <string name="model_note_qwen2_5_3b">Klüger; am besten auf neueren Smartphones.</string>
     <string name="model_note_llama3_2_1b">Klein und schnell.</string>
     <string name="model_note_llama3_2_3b">Gute Gespräche; neuere Smartphones.</string>
-    <string name="model_note_gemma3_1b">Stark für seine Größe.</string>
+    <string name="model_note_gemma3_1b">Das kleinste. Für ältere Smartphones; einfachere Antworten.</string>
     <string name="model_note_gemma3_4b">Das klügste hier; Flaggschiff-Smartphones.</string>
     <string name="model_note_smollm2_1_7b">Vollständig offenes Modell eines unabhängigen Labors.</string>
     <string name="model_note_phi3_5_mini">Gut im logischen Denken; Flaggschiff-Smartphones.</string>
@@ -544,4 +544,7 @@
     <string name="accent_es">Spanisch (Spanien)</string>
     <string name="voice_note_piper_es_mx">Spanische Stimme, klein und schnell. Gut für ältere Smartphones.</string>
     <string name="voice_note_piper_es_es">Spanische Stimme aus Spanien, klein und schnell. Gut für ältere Smartphones.</string>
+    <string name="model_note_gemma4_e2b">Empfohlen: genau, gut auf Spanisch, startet schnell.</string>
+    <string name="model_note_smollm3_3b">Vollständig offenes Modell eines unabhängigen Labors. Neuere Smartphones.</string>
+    <string name="model_note_qwen3_5_4b">Das klügste hier; Flaggschiff-Smartphones.</string>
 </resources>

@@ -12,7 +12,7 @@ SCHNELL UND EINFACH
 • Startbildschirm-Raster, Ordner, Widgets, eigene Hintergründe und App-Vorschläge passend zur Tageszeit.
 
 KORVY, DEIN ASSISTENT (OPTIONAL)
-• Läuft vollständig auf deinem Smartphone: Wähle ein kleines KI-Modell (Gemma, Qwen, Llama und mehr). Nichts, was du fragst, geht an ein KI-Unternehmen.
+• Läuft vollständig auf deinem Smartphone: Wähle ein kleines KI-Modell (Gemma, Qwen, SmolLM und mehr). Nichts, was du fragst, geht an ein KI-Unternehmen.
 • Öffnet Apps, schreibt und ruft deine Kontakte an, stellt Wecker und Timer, zeigt Routen, spielt Musik und ruft das Wetter ab.
 • Fragt immer, bevor er eine Nachricht sendet, anruft oder eine Fahrt bucht.
 • Schnellbefehle funktionieren vorerst auf Englisch und Spanisch; die ganze App ist auf Deutsch.

@@ -10,6 +10,9 @@ import app.korvy.launcher.assistant.NeuralVoicePack
 /** Translated catalog text for the screens; the catalogs keep English (used as the fallback). */
 @Composable
 fun ModelInfo.noteText(): String = when (id) {
+    "gemma4-e2b" -> stringResource(R.string.model_note_gemma4_e2b)
+    "smollm3-3b" -> stringResource(R.string.model_note_smollm3_3b)
+    "qwen3.5-4b" -> stringResource(R.string.model_note_qwen3_5_4b)
     "qwen2.5-0.5b" -> stringResource(R.string.model_note_qwen2_5_0_5b)
     "qwen2.5-1.5b" -> stringResource(R.string.model_note_qwen2_5_1_5b)
     "qwen2.5-3b" -> stringResource(R.string.model_note_qwen2_5_3b)

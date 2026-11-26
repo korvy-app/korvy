@@ -253,6 +253,13 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-25: **Model refresh** (docs/models.md, scripts/model-eval). 15 models scored on Korvy's real prompt and
+  grammar (44 requests, English + Spanish) and timed on the 4a. New list: Gemma 4 E2B QAT (recommended; 40/44,
+  Apache 2.0), Qwen 3.5 4B (42/44, flagships), SmolLM3 3B (fully open), Qwen 2.5 1.5B (fast), Gemma 3 1B (smallest).
+  Retired (still shown if installed): Qwen 2.5 0.5B/3B (3B was non-commercial), Llama 3.2 1B/3B, Gemma 3 4B,
+  SmolLM2, Phi 3.5. Native: the saved fixed prompt is now the part every request shares (render with two dummy
+  questions; Qwen 3.5's template formats a final message differently), and models that can't rewind part-way
+  (hybrid/recurrent) reload it from disk before each request (Qwen 3.5 4B: 45 s → 6.6 s to first words on the 4a).
 - 2026-11-25: Pro trial can only start within 30 days of installing (`PackageInfo.firstInstallTime`, which survives
   clearing app data; uninstall + reinstall still resets it, accepted). Owner: keep the free trial for now; revisit
   removing it much later, after seeing how the user base grows.

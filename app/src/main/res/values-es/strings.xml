@@ -517,11 +517,11 @@
     <string name="n_channel_overlay">Superposición de estadísticas</string>
     <string name="n_overlay_on">La superposición de estadísticas está activada</string>
     <string name="model_note_qwen2_5_0_5b">El más pequeño y rápido. Bueno eligiendo acciones, básico para conversar.</string>
-    <string name="model_note_qwen2_5_1_5b">Equilibrio recomendado entre velocidad e inteligencia.</string>
+    <string name="model_note_qwen2_5_1_5b">Rápido y ligero. Bueno en teléfonos antiguos.</string>
     <string name="model_note_qwen2_5_3b">Más inteligente; mejor en teléfonos recientes.</string>
     <string name="model_note_llama3_2_1b">Pequeño y rápido.</string>
     <string name="model_note_llama3_2_3b">Buena conversación; teléfonos recientes.</string>
-    <string name="model_note_gemma3_1b">Potente para su tamaño.</string>
+    <string name="model_note_gemma3_1b">El más pequeño. Para teléfonos antiguos; respuestas más simples.</string>
     <string name="model_note_gemma3_4b">El más inteligente de la lista; teléfonos de gama alta.</string>
     <string name="model_note_smollm2_1_7b">Modelo totalmente abierto de un laboratorio independiente.</string>
     <string name="model_note_phi3_5_mini">Bueno razonando; teléfonos de gama alta.</string>
@@ -544,4 +544,7 @@
     <string name="accent_es">Español de España</string>
     <string name="voice_note_piper_es_mx">Voz en español, pequeña y rápida. Buena para teléfonos antiguos.</string>
     <string name="voice_note_piper_es_es">Voz en español de España, pequeña y rápida. Buena para teléfonos antiguos.</string>
+    <string name="model_note_gemma4_e2b">Recomendado: preciso, bueno en español y rápido para empezar.</string>
+    <string name="model_note_smollm3_3b">Modelo totalmente abierto de un laboratorio independiente. Teléfonos recientes.</string>
+    <string name="model_note_qwen3_5_4b">El más inteligente de la lista; teléfonos de gama alta.</string>
 </resources>
