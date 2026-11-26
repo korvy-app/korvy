@@ -16,7 +16,7 @@ import kotlin.math.abs
 data class PlacedWidget(val id: Int, val size: Int = 1)
 
 /**
- * Home-screen widgets: a stack between the clock and the app grid. Stored on the phone only (not backed up).
+ * Home-screen widgets: which ones Android hosts for us (their place on the home pages is in HomeGrid). Stored on the phone only (not backed up).
  * Widgets are drawn by their own apps through Android's widget host; this app only places them.
  */
 class Widgets(context: Context) {
@@ -54,6 +54,13 @@ class Widgets(context: Context) {
     }
 
     fun remove(id: Int) { host.deleteAppWidgetId(id); save(_placed.value.filterNot { it.id == id }) }
+
+    /** Widgets used to stack above the grid; since 0.17 they live in it. True once they've been moved in. */
+    val movedIntoGrid get() = prefs.getBoolean("in_grid", false)
+    fun markMovedIntoGrid() = prefs.edit().putBoolean("in_grid", true).apply()
+
+    /** Rows a new widget starts with, from the height it asks for. */
+    fun startRows(w: PlacedWidget) = w.size + 1
     fun resize(id: Int, size: Int) = save(_placed.value.map { if (it.id == id) it.copy(size = size) else it })
     fun move(id: Int, by: Int) {
         val l = _placed.value.toMutableList(); val i = l.indexOfFirst { it.id == id }; val j = i + by
@@ -76,33 +83,58 @@ class Widgets(context: Context) {
     }
 }
 
-/** A widget's view; holding it opens our menu (resize, move, remove) instead of passing the touch on. */
+/**
+ * A widget's view. Holding it opens our menu (resize, remove); holding and then moving drags it, like an app icon
+ * (the drag callbacks get window coordinates). Other touches go to the widget itself.
+ */
 class WidgetView(context: Context) : AppWidgetHostView(context) {
     var onLongPress: (() -> Unit)? = null
+    var onDragStart: ((Float, Float) -> Unit)? = null
+    var onDragMove: ((Float, Float) -> Unit)? = null
+    var onDragEnd: ((dropped: Boolean) -> Unit)? = null
+    /** The finger lifted after a hold without dragging (the menu stays open). */
+    var onRelease: (() -> Unit)? = null
     private var downX = 0f
     private var downY = 0f
     private var longPressed = false
+    private var dragging = false
     private val slop = ViewConfiguration.get(context).scaledTouchSlop
     private val longPress = Runnable {
         longPressed = true
+        // From now on this touch is ours: the home pages (and anything else above) must not take it, even if the
+        // first movement is a big sideways one.
+        parent?.requestDisallowInterceptTouchEvent(true)
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         onLongPress?.invoke()
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { longPressed = false; downX = ev.x; downY = ev.y; postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong()) }
-            MotionEvent.ACTION_MOVE -> if (abs(ev.x - downX) > slop || abs(ev.y - downY) > slop) removeCallbacks(longPress)
+            MotionEvent.ACTION_DOWN -> { longPressed = false; dragging = false; downX = ev.x; downY = ev.y; postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong()) }
+            MotionEvent.ACTION_MOVE -> if (!longPressed && (abs(ev.x - downX) > slop || abs(ev.y - downY) > slop)) removeCallbacks(longPress)
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> removeCallbacks(longPress)
         }
         return longPressed
     }
 
+    /** Window coordinates of a touch (the launcher draws edge to edge, so window = what Compose calls root). */
+    private fun window(ev: MotionEvent): Pair<Float, Float> {
+        val loc = IntArray(2); rootView.getLocationOnScreen(loc)
+        return (ev.rawX - loc[0]) to (ev.rawY - loc[1])
+    }
+
     override fun onTouchEvent(ev: MotionEvent): Boolean {
-        if (longPressed) {
-            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) longPressed = false
-            return true
+        if (!longPressed) return super.onTouchEvent(ev)
+        parent?.requestDisallowInterceptTouchEvent(true) // the pager mustn't take a widget drag
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_MOVE -> {
+                val (x, y) = window(ev)
+                if (!dragging && (abs(ev.x - downX) > slop || abs(ev.y - downY) > slop)) { dragging = true; onDragStart?.invoke(x, y) }
+                if (dragging) onDragMove?.invoke(x, y)
+            }
+            MotionEvent.ACTION_UP -> { if (dragging) onDragEnd?.invoke(true) else onRelease?.invoke(); longPressed = false; dragging = false }
+            MotionEvent.ACTION_CANCEL -> { if (dragging) onDragEnd?.invoke(false) else onRelease?.invoke(); longPressed = false; dragging = false }
         }
-        return super.onTouchEvent(ev)
+        return true
     }
 }

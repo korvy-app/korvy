@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import kotlinx.coroutines.flow.first
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
@@ -121,7 +122,41 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     private fun updateGrid(f: (HomeGrid) -> HomeGrid) {
         viewModelScope.launch { la.settings.setHomeGrid(f(homeGridStored.value).compact()) } // empty pages close
     }
-    fun placeOnHome(app: AppEntry, target: Int, from: Int?, combine: Boolean = false) = updateGrid { it.place(app.key, target, from, combine) }
+    fun placeOnHome(app: AppEntry, target: Int, from: Int?, combine: Boolean = false) {
+        widgetId(app)?.let { moveWidget(it, target); return }
+        updateGrid { it.place(app.key, target, from, combine) }
+    }
+
+    // ---- Widgets on the home grid --------------------------------------------------------------------------
+
+    /** A dragged widget travels as a stand-in AppEntry with key "widget:<id>". */
+    fun widgetId(app: AppEntry): Int? = app.key.takeIf { it.startsWith(WIDGET) }?.removePrefix(WIDGET)?.toIntOrNull()
+
+    /** Dropped with the finger on [cell]: the widget's middle row goes there. */
+    fun moveWidget(id: Int, cell: Int) = updateGrid { g ->
+        val rows = g.widgets[id]?.rows ?: return@updateGrid g
+        val local = cell % g.pageSize
+        g.placeWidget(id, cell / g.pageSize, local / g.cols - (rows - 1) / 2, rows)
+    }
+    fun resizeWidget(id: Int, rows: Int) = updateGrid { it.resizeWidget(id, rows) }
+
+    /** Keeps the grid's widgets in step with the widgets Android hosts for us (added, removed, uninstalled). */
+    private fun syncWidgets(placed: List<app.korvy.launcher.data.PlacedWidget>) = viewModelScope.launch {
+        val store = la.widgets
+        val g0 = la.settings.homeGrid.first() // the saved layout, never the empty default before it loads
+        var g = g0
+        val ids = placed.mapTo(HashSet()) { it.id }
+        g.widgets.keys.filter { it !in ids }.forEach { g = g.removeWidget(it) }
+        val moving = !store.movedIntoGrid // first run since widgets moved into the grid: keep them on top of page 1
+        var nextRow = 0
+        for (w in placed.filter { it.id !in g.widgets }) {
+            val rows = store.startRows(w)
+            g = if (moving && nextRow + rows <= g.rows) g.placeWidget(w.id, 0, nextRow, rows).also { nextRow += rows }
+                else g.addWidget(w.id, rows)
+        }
+        if (moving) store.markMovedIntoGrid()
+        if (g != g0) la.settings.setHomeGrid(g.compact())
+    }
 
     /** The folder open on the home screen (its id), or null. */
     val openFolder = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -137,7 +172,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (!g.add(app.key).contains(app.key)) return false // every page full and no room for another
         updateGrid { it.add(app.key) }; return true
     }
-    fun removeFromHome(app: AppEntry) = updateGrid { it.remove(app.key) }
+    fun removeFromHome(app: AppEntry) {
+        widgetId(app)?.let { la.widgets.remove(it); return } // the grid follows through syncWidgets
+        updateGrid { it.remove(app.key) }
+    }
     fun isOnHome(app: AppEntry) = homeGridStored.value.contains(app.key)
 
     /** A drag that started in the app list: show the home screen underneath, keep the list (and the
@@ -372,4 +410,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         pendingCrops.value = pendingCrops.value.drop(1)
         if (pendingCrops.value.isEmpty()) _screen.value = Screen.SETTINGS
     }
+
+    init { viewModelScope.launch { la.widgets.placed.collect { syncWidgets(it) } } }
+
+    companion object { const val WIDGET = "widget:" }
 }

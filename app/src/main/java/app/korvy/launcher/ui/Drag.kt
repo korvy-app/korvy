@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.Arrangement
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
@@ -83,6 +84,8 @@ class DragController(
     var removeBounds: Rect? = null
     /** The home page on screen (set by the home pager), so a drop lands on that page. */
     var page: Int = 0
+    /** A widget is being held (before any drag): the pages mustn't swipe, or a sideways drag never reaches it. */
+    var holding by mutableStateOf(false)
 
     fun start(app: AppEntry, fromCell: Int?, pos: Offset) {
         drag = DragInfo(app, fromCell, pos).also(onStart)
@@ -103,7 +106,7 @@ class DragController(
      */
     fun hoverCombine(): Boolean {
         val d = drag ?: return false
-        if (HomeGrid.isFolder(d.app.key)) return false
+        if (HomeGrid.isFolder(d.app.key) || d.app.key.startsWith(LauncherViewModel.WIDGET)) return false
         val b = gridBounds ?: return false
         val g = grid()
         val cell = hoverCell() ?: return false
@@ -234,6 +237,7 @@ fun HomeGridView(
     modifier: Modifier = Modifier,
     onOpenFolder: (String) -> Unit = {},
     onUngroup: (String) -> Unit = {},
+    widget: @Composable (id: Int, cell: Int, rows: Int, width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) -> Unit = { _, _, _, _, _ -> },
 ) {
     val dragging = drag.drag != null
     val animations = LocalAnimations.current
@@ -242,11 +246,13 @@ fun HomeGridView(
     Column(modifier) {
         androidx.compose.foundation.pager.HorizontalPager(
             state = pager,
-            userScrollEnabled = !dragging, // while dragging, the page turns at the screen edge instead
-            beyondViewportPageCount = 1,
+            userScrollEnabled = !dragging && !drag.holding, // while dragging, the page turns at the screen edge instead
+            // While dragging, keep every page alive: the dragged icon or widget belongs to its page, and if that page
+            // left composition (two or more pages away) its touch would be cancelled mid-drag.
+            beyondViewportPageCount = if (dragging || drag.holding) grid.pages else 1,
             modifier = Modifier.weight(1f).fillMaxWidth().onGloballyPositioned { drag.gridBounds = it.boundsInRoot() }.testTag("home_grid"),
             key = { it },
-        ) { page -> GridPage(grid, page, apps, repo, drag, onLaunch, menu, onOpenFolder, onUngroup) }
+        ) { page -> GridPage(grid, page, apps, repo, drag, onLaunch, menu, onOpenFolder, onUngroup, widget) }
         if (pager.pageCount > 1) PageDots(pager, grid.pages)
     }
 }
@@ -302,17 +308,26 @@ private fun GridPage(
     grid: HomeGrid, page: Int, apps: Map<String, AppEntry>, repo: AppRepository, drag: DragController,
     onLaunch: (AppEntry) -> Unit, menu: @Composable (AppEntry, Boolean, () -> Unit) -> Unit,
     onOpenFolder: (String) -> Unit, onUngroup: (String) -> Unit,
+    widget: @Composable (id: Int, cell: Int, rows: Int, width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp) -> Unit,
 ) {
     val dragging = drag.drag != null
+    // A widget being dragged lights up the band of rows it would land on (its middle row under the finger).
+    val draggedWidget = drag.drag?.app?.key?.takeIf { it.startsWith(LauncherViewModel.WIDGET) }?.removePrefix(LauncherViewModel.WIDGET)?.toIntOrNull()
+    val widgetRows = draggedWidget?.let { grid.widgets[it]?.rows } ?: 0
     val hover by remember(drag) { derivedStateOf { drag.hoverCell() } }
     val combine by remember(drag) { derivedStateOf { drag.hoverCombine() } }
     val animations = LocalAnimations.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val cw = maxWidth / grid.cols
         val ch = maxHeight / grid.rows
+        val fullWidth = maxWidth
+        for ((id, w) in grid.widgets) if (w.page == page) key("widget$id") {
+            Box(Modifier.offset(y = ch * w.row)) { widget(id, page * grid.pageSize + w.row * grid.cols, w.rows, fullWidth, ch * w.rows) }
+        }
         for (local in 0 until grid.pageSize) {
             val cell = page * grid.pageSize + local
             val app = grid.cells[cell]?.let(apps::get)
+            val underWidget = grid.widgetAt(cell) != null
             val isSource = dragging && drag.drag?.fromCell == cell
             Box(
                 Modifier
@@ -321,8 +336,14 @@ private fun GridPage(
                     .padding(3.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (dragging) {
-                    val target = hover == cell
+                if (dragging && (draggedWidget != null || !underWidget)) {
+                    val target = if (draggedWidget != null) {
+                        val h = hover
+                        h != null && h / grid.pageSize == page && run {
+                            val top = (h % grid.pageSize / grid.cols - (widgetRows - 1) / 2).coerceIn(0, grid.rows - widgetRows)
+                            local / grid.cols in top until top + widgetRows
+                        }
+                    } else hover == cell
                     val folding = target && combine
                     Box(
                         Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp))
@@ -399,7 +420,15 @@ fun DragOverlay(drag: DragController, repo: AppRepository, grid: HomeGrid? = nul
                 .graphicsLayer { scaleX = 1.12f; scaleY = 1.12f; shadowElevation = 16f }
         ) {
             val f = grid?.folder(d.app.key)
-            if (f != null) FolderIcon(f, apps, repo, size) else AppIcon(d.app, repo, size)
+            when {
+                d.app.key.startsWith(LauncherViewModel.WIDGET) -> Box(
+                    Modifier.offset(x = -50.dp).size(160.dp, 60.dp).clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.6f))
+                        .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center,
+                ) { Text(d.app.label, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp)) }
+                f != null -> FolderIcon(f, apps, repo, size)
+                else -> AppIcon(d.app, repo, size)
+            }
         }
     }
 }

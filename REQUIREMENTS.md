@@ -26,6 +26,12 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Drag from the app list, search results or suggestions onto the grid (the list fades but keeps the gesture);
   drag within the grid to move (an occupied target swaps; from the list, the occupant moves to the nearest
   free cell); drag to "Remove from home" at the top. Menu: Add to home / Remove from home.
+- **Widgets live in the grid (owner request 2026-11-26).** A widget is full width and 1–3 rows high
+  (`HomeGrid.widgets`, saved as "#id=page.row.rows"). Hold it for the menu (Small / Medium / Large, Add another
+  widget, Remove); hold and move to drag it to any row or page (edge turns the page, "Remove from home" target).
+  Apps and folders under it move to the nearest free cells (a new page if needed); another widget in the way swaps
+  when it fits. New widgets take the first free rows; widgets from the old stack above the grid move into the top
+  rows of page 1 once. The clock and search bar stay fixed. Tests: HomeWidgetsTest.
 - **Home pages (owner request 2026-11-24, built 2026-11-25).** The icon grid swipes left/right between pages
   (`core/HomeGrid.pages`; cells number on across pages; "4x5x3" when saved, old layouts load as one page). The
   clock, widgets, suggestions and search bar stay fixed; page dots under the grid. While dragging an icon an extra
@@ -253,6 +259,11 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-26: **Widgets can be moved** (see Home-screen grid). Verified on the 4a with the Clock widget: added
+  (incl. its own style screen), dragged to the top row (icons moved out), dragged across two pages to a new page,
+  resized to Large, removed (empty page closed). Found and fixed: the page swiper stole a sideways widget drag
+  (the widget now claims the touch at the long press), and a drag across 2+ pages was cancelled because the
+  source page left composition (all pages stay alive while dragging; this also affected icons).
 - 2026-11-26: **The assistant can read the screen** (step 1 of 3 agreed with the owner; notifications and
   in-app control are not planned now). Korvy is now a full digital assistant (`assistant/AssistService`:
   VoiceInteractionService + session; the old ACTION_ASSIST panel still works for people who chose Korvy before).

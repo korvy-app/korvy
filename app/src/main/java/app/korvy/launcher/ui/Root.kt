@@ -140,9 +140,9 @@ fun Root(vm: LauncherViewModel, host: Host) {
                 onDismissHomePrompt = vm::dismissHomePrompt,
                 drag = drag,
                 grid = { m -> HomeGridView(homeGrid, visibleByKey, vm.repo, drag, vm::launch, menu, pager, m,
-                    onOpenFolder = { vm.openFolder.value = it }, onUngroup = vm::ungroup) },
+                    onOpenFolder = { vm.openFolder.value = it }, onUngroup = vm::ungroup,
+                    widget = { id, cell, rows, w, h -> HomeWidget(vm, id, cell, rows, w, h, drag) }) },
                 onOpenAssistant = if (settings.assistant) ({ vm.openAssistant() }) else null,
-                widgets = { WidgetStack(vm) },
             ) }
             // During a drag that started in the list, the list stays composed (it owns the gesture) but invisible.
             val listDrag = drag.drag?.let { it.fromCell == null } == true

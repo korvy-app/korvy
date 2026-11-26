@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import app.korvy.launcher.R
 import androidx.compose.ui.res.stringResource
 import android.app.Activity
@@ -64,43 +65,49 @@ import app.korvy.launcher.data.Widgets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** The home screen's widgets, stacked full width. Hold one to resize, move or remove it. */
+/**
+ * One widget on a home page, [width] × [height] (its rows). Hold it for the menu (size, add another, remove);
+ * hold and move to drag it to another row or page (see HomeGrid.placeWidget).
+ */
 @Composable
-fun WidgetStack(vm: LauncherViewModel) {
-    val placed by vm.widgets.placed.collectAsStateWithLifecycle()
-    if (placed.isEmpty()) return
-    Column(Modifier.fillMaxWidth().testTag("widgets")) {
-        placed.forEachIndexed { i, w -> key(w.id) { WidgetCell(vm, w, first = i == 0, last = i == placed.lastIndex) } }
-    }
-}
-
-@Composable
-private fun WidgetCell(vm: LauncherViewModel, w: PlacedWidget, first: Boolean, last: Boolean) {
+fun HomeWidget(vm: LauncherViewModel, id: Int, cell: Int, rows: Int, width: androidx.compose.ui.unit.Dp, height: androidx.compose.ui.unit.Dp,
+               drag: DragController, modifier: Modifier = Modifier) {
     val store = vm.widgets
-    val info = remember(w.id) { store.info(w.id) } ?: return
+    val info = remember(id) { store.info(id) } ?: return
+    val context = LocalContext.current
+    val label = remember(id) { info.loadLabel(context.packageManager) }
     var menu by remember { mutableStateOf(false) }
-    val widthDp = LocalConfiguration.current.screenWidthDp - 40
-    val heightDp = Widgets.HEIGHTS_DP[w.size.coerceIn(0, 2)]
-    Box(Modifier.fillMaxWidth().height(heightDp.dp).padding(vertical = 4.dp)) {
+    val entry = remember(id, label) {
+        app.korvy.launcher.data.AppEntry(LauncherViewModel.WIDGET + id, label, info.provider.packageName, info.provider,
+            android.os.Process.myUserHandle(), false)
+    }
+    val dragging = drag.drag?.app?.key == entry.key
+    val currentCell by androidx.compose.runtime.rememberUpdatedState(cell)
+    Box(modifier.size(width, height).padding(4.dp).graphicsLayer { alpha = if (dragging) 0.25f else 1f }.testTag("home_widget")) {
         AndroidView(
             factory = { ctx ->
-                (store.host.createView(ctx, w.id, info) as WidgetView).apply { onLongPress = { menu = true } }
+                (store.host.createView(ctx, id, info) as WidgetView).apply {
+                    onLongPress = { menu = true; drag.holding = true }
+                    onDragStart = { x, y -> menu = false; drag.start(entry, currentCell, androidx.compose.ui.geometry.Offset(x, y)) }
+                    onDragMove = { x, y -> drag.move(androidx.compose.ui.geometry.Offset(x, y)) }
+                    onDragEnd = { dropped -> drag.holding = false; if (dropped) drag.drop() else drag.cancel() }
+                    onRelease = { drag.holding = false }
+                }
             },
             update = { v ->
                 // Tell the widget how much room it has so it lays itself out to fit.
-                if (Build.VERSION.SDK_INT >= 31) v.updateAppWidgetSize(Bundle(), listOf(SizeF(widthDp.toFloat(), heightDp.toFloat() - 8)))
-                else @Suppress("DEPRECATION") v.updateAppWidgetSize(null, widthDp, heightDp - 8, widthDp, heightDp - 8)
+                val w = width.value - 8; val h = height.value - 8
+                if (Build.VERSION.SDK_INT >= 31) v.updateAppWidgetSize(Bundle(), listOf(SizeF(w, h)))
+                else @Suppress("DEPRECATION") v.updateAppWidgetSize(null, w.toInt(), h.toInt(), w.toInt(), h.toInt())
             },
             modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
         )
         DropdownMenu(menu, { menu = false }) {
-            listOf(stringResource(R.string.widget_small), stringResource(R.string.widget_medium), stringResource(R.string.widget_large)).forEachIndexed { i, label ->
-                if (i != w.size) DropdownMenuItem(text = { Text(label) }, onClick = { menu = false; store.resize(w.id, i) })
+            listOf(stringResource(R.string.widget_small), stringResource(R.string.widget_medium), stringResource(R.string.widget_large)).forEachIndexed { i, text ->
+                if (i + 1 != rows) DropdownMenuItem(text = { Text(text) }, onClick = { menu = false; vm.resizeWidget(id, i + 1) })
             }
-            if (!first) DropdownMenuItem(text = { Text(stringResource(R.string.move_up)) }, onClick = { menu = false; store.move(w.id, -1) })
-            if (!last) DropdownMenuItem(text = { Text(stringResource(R.string.move_down)) }, onClick = { menu = false; store.move(w.id, 1) })
             DropdownMenuItem(text = { Text(stringResource(R.string.add_another_widget)) }, onClick = { menu = false; vm.open(Screen.WIDGETS) })
-            DropdownMenuItem(text = { Text(stringResource(R.string.remove)) }, onClick = { menu = false; store.remove(w.id) }, modifier = Modifier.testTag("widget_remove"))
+            DropdownMenuItem(text = { Text(stringResource(R.string.remove)) }, onClick = { menu = false; store.remove(id) }, modifier = Modifier.testTag("widget_remove"))
         }
     }
 }
