@@ -1,0 +1,2 @@
+- Pergunte sobre sua tela: segure o botão liga/desliga sobre qualquer app e peça um resumo. Tudo fica no seu celular.
+- Os widgets podem ser movidos: segure e arraste para qualquer linha ou página, ou mude o tamanho.

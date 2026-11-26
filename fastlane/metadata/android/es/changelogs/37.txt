@@ -1,0 +1,2 @@
+- Pregunta sobre tu pantalla: mantén pulsado el botón de encendido sobre cualquier app y di “resume esto” o “envíale esto a Jen”. Todo se queda en tu teléfono.
+- Los widgets se pueden mover: mantenlos pulsados y arrástralos a cualquier fila o página, o cambia su tamaño.

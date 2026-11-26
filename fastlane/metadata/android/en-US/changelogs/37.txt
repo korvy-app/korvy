@@ -1,0 +1,2 @@
+- Ask about your screen: hold the power button over any app and say “summarise this” or “text this to Jen”. It stays on your phone.
+- Widgets can be moved: hold and drag them to any row or page, or resize them.

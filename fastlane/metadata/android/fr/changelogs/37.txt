@@ -1,0 +1,2 @@
+- Posez des questions sur votre écran : maintenez le bouton Marche/Arrêt sur une appli et demandez un résumé. Tout reste sur votre téléphone.
+- Les widgets se déplacent : maintenez-les et faites-les glisser vers une autre ligne ou page, ou changez leur taille.
