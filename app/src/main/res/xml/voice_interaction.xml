@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Korvy as the phone's digital assistant: the session can receive the screen's text when the user summons it. -->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="app.korvy.launcher.assistant.AssistSessionService"
+    android:recognitionService="app.korvy.launcher.assistant.NoRecognitionService"
+    android:supportsAssist="true"
+    android:supportsLocalInteraction="false"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

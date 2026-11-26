@@ -547,4 +547,13 @@
     <string name="model_note_gemma4_e2b">Recommandé : précis, bon en espagnol, rapide à démarrer.</string>
     <string name="model_note_smollm3_3b">Modèle entièrement ouvert d\'un laboratoire indépendant. Téléphones récents.</string>
     <string name="model_note_qwen3_5_4b">Le plus intelligent ici ; téléphones haut de gamme.</string>
+    <string name="read_screen">Lire l\'écran quand j\'appelle Korvy</string>
+    <string name="read_screen_detail">En maintenant le bouton Marche/Arrêt sur une appli, l\'assistant peut lire le texte de cet écran, pour dire « text this to Jen » ou « summarise this ». Seulement quand vous l\'appelez, uniquement sur ce téléphone, et jamais pour les applis masquées ni les champs de mot de passe ou de carte. Le réglage d\'Android : Assistant numérique → Utiliser le texte de l\'écran.</string>
+    <string name="read_screen_reselect">Pour que Korvy puisse lire l\'écran, choisissez à nouveau Korvy comme appli d\'assistant numérique (nécessaire une fois après cette mise à jour).</string>
+    <string name="screen_chip">Lecture : %1$s</string>
+    <string name="screen_chip_selected">Votre sélection dans %1$s</string>
+    <string name="screen_clear">Ne pas utiliser l\'écran</string>
+    <string name="screen_summarise">Résumer ceci</string>
+    <string name="screen_summarise_q">Résume ce qui est à l\'écran</string>
+    <string name="screen_key_points">Qu\'est-ce qui est important ici ?</string>
 </resources>

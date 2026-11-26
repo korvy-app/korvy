@@ -56,6 +56,7 @@ object AgentCore {
         ActionType.entries.forEach { appendLine("- ${it.id}: ${it.help}") }
         appendLine("Rules: pick the action that does what the user asked. Use answer for chat, facts you are sure of, and maths.")
         appendLine("For news, weather, prices or anything recent, use the matching action instead of guessing.")
+        appendLine("When the question comes with the user's screen, \"this\", \"that\" and \"here\" mean that screen: use its details (an address, a name, a time) in the action, or answer about it.")
         appendLine("Keep answers short (1-3 sentences). Never claim to have done something you didn't.")
     }
 

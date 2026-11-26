@@ -148,6 +148,9 @@ class AssistantController(
         return s.speak == SpeakMode.ALWAYS || (s.speak == SpeakMode.AFTER_VOICE && byVoice)
     }
 
+    /** The screen the user called the assistant over (power button), for requests about "this"; null otherwise. */
+    val screen = MutableStateFlow<app.korvy.launcher.core.ScreenContext?>(null)
+
     fun ask(text: String, byVoice: Boolean = false) {
         val q = text.trim()
         if (q.isEmpty() || busy.value) return
@@ -160,6 +163,12 @@ class AssistantController(
         busy.value = true
         job = scope.launch {
             try {
+                // 0. About the screen the user called the assistant over ("text this to Jen", "summarise this"):
+                //    the model reads the screen's text with the question.
+                screen.value?.takeIf { app.korvy.launcher.core.ScreenText.refersToScreen(q) }?.let { sc ->
+                    runOne(q, replyId, speak, sc)
+                    return@launch
+                }
                 // 1. Teaching ("remember …", "when I say …", "forget …"): plain code, no model.
                 val lessonFor = parseLesson(q)
                 lessonFor?.takeIf { !pro.unlocked.value }?.let {
@@ -194,12 +203,11 @@ class AssistantController(
     }
 
     /** One request: maths, a quick command, or the model; then the tool it picked. */
-    private suspend fun runOne(q: String, replyId: Long, speak: Boolean) {
+    private suspend fun runOne(q: String, replyId: Long, speak: Boolean, onScreen: app.korvy.launcher.core.ScreenContext? = null) {
             var streamed = false
             try {
-                val action = calc(q)?.let { Action(ActionType.ANSWER, it) }
-                    ?: parseCommand(q)
-                    ?: modelAction(q, replyId, speak).also { streamed = it?.type == ActionType.ANSWER }
+                val action = (if (onScreen != null) null else calc(q)?.let { Action(ActionType.ANSWER, it) } ?: parseCommand(q))
+                    ?: modelAction(q, replyId, speak, onScreen).also { streamed = it?.type == ActionType.ANSWER }
                         ?.let { a -> if (AgentCore.grounded(a, q)) a else Action(ActionType.ANSWER, t(R.string.c_not_sure)) }
                 if (action == null) { if (speak) speaker.say(chat.value.last { it.id == replyId }.text); return }
                 update(replyId) { it.copy(actionJson = AgentCore.toJson(action)) }
@@ -267,7 +275,7 @@ class AssistantController(
             ToolResult(t(R.string.c_alias_note, word, target)) else ToolResult(full)
     }
 
-    private suspend fun modelAction(q: String, replyId: Long, speak: Boolean): Action? {
+    private suspend fun modelAction(q: String, replyId: Long, speak: Boolean, onScreen: app.korvy.launcher.core.ScreenContext? = null): Action? {
         val s = settings.value
         if (!pro.unlocked.value) {
             update(replyId) { it.copy(pending = false, text = context.getString(R.string.assistant_needs_pro_ai),
@@ -286,7 +294,8 @@ class AssistantController(
         // Only the notes that matter for this question, sent with it (not in the system prompt, so the model can
         // keep reusing its cached work for the unchanged start of the prompt).
         val notes = notebook.book.value.notesFor(q)
-        val prefix = if (notes.isEmpty()) "(It's $now.)" else "(It's $now. Keep in mind: ${notes.joinToString(" ")})"
+        val prefix = (if (notes.isEmpty()) "(It's $now.)" else "(It's $now. Keep in mind: ${notes.joinToString(" ")})") +
+            (onScreen?.let { "\n" + app.korvy.launcher.core.ScreenText.forPrompt(it) } ?: "")
         sentAs[replyId - 1] = "$prefix $q"
         AgentCore.historyMessages(history(excludeFrom = replyId - 1), "$prefix $q").forEach { (r, c) -> roles += r; contents += c }
         val sb = StringBuilder()

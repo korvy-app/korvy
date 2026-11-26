@@ -560,4 +560,13 @@
     <string name="model_note_gemma4_e2b">Recommended: accurate, good at Spanish, quick to start.</string>
     <string name="model_note_smollm3_3b">Fully open model from an independent lab. Newer phones.</string>
     <string name="model_note_qwen3_5_4b">Smartest here; flagship phones.</string>
+    <string name="read_screen">Read the screen when I call Korvy</string>
+    <string name="read_screen_detail">Holding the power button over an app lets the assistant read that screen\'s text, so you can say “text this to Jen” or “summarise this”. Only when you call it, on this phone only, and never hidden apps or password and card fields. Android\'s own switch: Digital assistant → Use text from screen.</string>
+    <string name="read_screen_reselect">To let Korvy read the screen, choose Korvy again as the digital assistant app (needed once after this update).</string>
+    <string name="screen_chip">Reading: %1$s</string>
+    <string name="screen_chip_selected">Your selection in %1$s</string>
+    <string name="screen_clear">Don\'t use the screen</string>
+    <string name="screen_summarise">Summarise this</string>
+    <string name="screen_summarise_q">Summarise what\'s on my screen</string>
+    <string name="screen_key_points">What\'s important here?</string>
 </resources>

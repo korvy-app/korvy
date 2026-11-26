@@ -20,6 +20,11 @@ secure hardware. Korvy excludes its data from Android backups. Uninstalling Korv
   text or call people when you ask. Contacts are never sent anywhere.
 - **Location (optional):** if you allow it, Korvy reads your approximate location only to get the weather
   "where you are" (see Online features).
+- **Screen text (optional):** when you hold the power button over an app (with Korvy as your digital assistant),
+  Korvy can read the visible text of that screen so you can ask about it ("summarise this", "text this to Jen").
+  It is read only when you call the assistant, processed on your phone, kept only for that conversation and
+  never stored or sent anywhere. Korvy never reads hidden or locked apps, or password and card fields. Turn it off
+  in Settings ("Read the screen when I call Korvy") or in Android (Digital assistant → Use text from screen).
 - **The assistant's AI model** runs entirely on your phone. Your questions are never sent to us or to an AI company.
 
 ## Online features (off by default)

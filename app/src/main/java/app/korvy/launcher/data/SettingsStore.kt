@@ -67,6 +67,8 @@ data class Settings(
     val ttsPitch: Float = 1f,
     /** Start listening right away when the assistant is opened with the power button. */
     val listenOnAssist: Boolean = true,
+    /** Let the assistant read the screen text when summoned with the power button. */
+    val readScreen: Boolean = true,
     /** Show matching contacts in search (only when the contacts permission is granted). */
     val contactsInSearch: Boolean = true,
     /** Weather for where you are (when no place is named and location is allowed). */
@@ -113,6 +115,7 @@ class SettingsStore(private val context: Context) {
         val ttsRate = androidx.datastore.preferences.core.floatPreferencesKey("tts_rate")
         val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
         val listenOnAssist = booleanPreferencesKey("listen_on_assist")
+        val readScreen = booleanPreferencesKey("read_screen")
         val contactsInSearch = booleanPreferencesKey("contacts_in_search")
         val useLocation = booleanPreferencesKey("use_location")
         val appChoices = androidx.datastore.preferences.core.stringSetPreferencesKey("app_choices")
@@ -151,6 +154,7 @@ class SettingsStore(private val context: Context) {
             ttsRate = p[K.ttsRate] ?: 1f,
             ttsPitch = p[K.ttsPitch] ?: 1f,
             listenOnAssist = p[K.listenOnAssist] ?: true,
+            readScreen = p[K.readScreen] ?: true,
             contactsInSearch = p[K.contactsInSearch] ?: true,
             useLocation = p[K.useLocation] ?: true,
             appChoices = (p[K.appChoices] ?: emptySet()).mapNotNull { e -> e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap(),
@@ -201,6 +205,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setTtsRate(v: Float) = set { it[K.ttsRate] = v }
     suspend fun setTtsPitch(v: Float) = set { it[K.ttsPitch] = v }
     suspend fun setListenOnAssist(v: Boolean) = set { it[K.listenOnAssist] = v }
+    suspend fun setReadScreen(v: Boolean) = set { it[K.readScreen] = v }
     suspend fun setContactsInSearch(v: Boolean) = set { it[K.contactsInSearch] = v }
     suspend fun setUseLocation(v: Boolean) = set { it[K.useLocation] = v }
     suspend fun setAppChoice(task: String, pkg: String?) = set {

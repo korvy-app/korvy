@@ -332,6 +332,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setTtsRate(v: Float) = save { la.settings.setTtsRate(v) }
     fun setTtsPitch(v: Float) = save { la.settings.setTtsPitch(v) }
     fun setListenOnAssist(v: Boolean) = save { la.settings.setListenOnAssist(v) }
+    fun setReadScreen(v: Boolean) = save { la.settings.setReadScreen(v) }
     fun savePersonality(text: String) = viewModelScope.launch(Dispatchers.IO) { personality.save(text) }
 
     // Settings

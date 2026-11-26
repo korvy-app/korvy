@@ -82,6 +82,28 @@
             </intent-filter>
         </activity>
 
+        <!-- Full digital assistant (power button): reads the screen's text when summoned (Settings → Assistant). -->
+        <service
+            android:name=".assistant.AssistService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+            <meta-data android:name="android.voice_interaction" android:resource="@xml/voice_interaction" />
+        </service>
+        <service
+            android:name=".assistant.AssistSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION" />
+        <service
+            android:name=".assistant.NoRecognitionService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".assistant.ModelDownloadService"
             android:exported="false"

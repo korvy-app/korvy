@@ -191,6 +191,24 @@ fun SettingsScreen(
                         Text(stringResource(R.string.hold_the_power_button_for))
                         Text(if (isAssistant) stringResource(R.string.assistant_role_yes) else stringResource(R.string.assistant_role_no),
                             style = MaterialTheme.typography.bodySmall)
+                        // Korvy holds the assistant role but Android still uses the older panel (chosen before 0.17):
+                        // choosing it again switches to the full assistant service, which can read the screen.
+                        val fullService = remember { android.service.voice.VoiceInteractionService.isActiveService(ctx,
+                            android.content.ComponentName(ctx, app.korvy.launcher.assistant.AssistService::class.java)) }
+                        if (isAssistant && !fullService && s.readScreen) {
+                            Text(stringResource(R.string.read_screen_reselect), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
+                            OutlinedButton(onClick = { Device.openAssistantSettings(ctx) }, modifier = Modifier.padding(top = 4.dp)) {
+                                Text(stringResource(R.string.choose_digital_assistant_app))
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(stringResource(R.string.read_screen))
+                                Text(stringResource(R.string.read_screen_detail), style = MaterialTheme.typography.bodySmall)
+                            }
+                            androidx.compose.material3.Switch(s.readScreen, { vm.setReadScreen(it) }, modifier = Modifier.testTag("toggle_read_screen"))
+                        }
                         if (!isAssistant) OutlinedButton(onClick = { Device.openAssistantSettings(ctx) }, modifier = Modifier.padding(top = 6.dp)) {
                             Text(stringResource(R.string.choose_digital_assistant_app))
                         }

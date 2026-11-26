@@ -547,4 +547,13 @@
     <string name="model_note_gemma4_e2b">Empfohlen: genau, gut auf Spanisch, startet schnell.</string>
     <string name="model_note_smollm3_3b">Vollständig offenes Modell eines unabhängigen Labors. Neuere Smartphones.</string>
     <string name="model_note_qwen3_5_4b">Das klügste hier; Flaggschiff-Smartphones.</string>
+    <string name="read_screen">Bildschirm lesen, wenn ich Korvy aufrufe</string>
+    <string name="read_screen_detail">Hältst du die Ein/Aus-Taste über einer App gedrückt, kann der Assistent den Text dieses Bildschirms lesen, damit du „text this to Jen“ oder „summarise this“ sagen kannst. Nur wenn du ihn aufrufst, nur auf diesem Smartphone, nie bei ausgeblendeten Apps oder Passwort- und Kartenfeldern. Der Android-Schalter: Digitaler Assistent → Text auf dem Bildschirm verwenden.</string>
+    <string name="read_screen_reselect">Damit Korvy den Bildschirm lesen kann, wähle Korvy noch einmal als App für den digitalen Assistenten (einmal nach diesem Update nötig).</string>
+    <string name="screen_chip">Liest: %1$s</string>
+    <string name="screen_chip_selected">Deine Auswahl in %1$s</string>
+    <string name="screen_clear">Bildschirm nicht verwenden</string>
+    <string name="screen_summarise">Zusammenfassen</string>
+    <string name="screen_summarise_q">Fasse zusammen, was auf meinem Bildschirm steht</string>
+    <string name="screen_key_points">Was ist hier wichtig?</string>
 </resources>

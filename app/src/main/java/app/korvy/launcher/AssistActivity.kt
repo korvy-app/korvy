@@ -1,5 +1,7 @@
 package app.korvy.launcher
 
+import app.korvy.launcher.R
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.stringResource
 import android.content.Intent
 import android.graphics.Color as AColor
@@ -71,6 +73,7 @@ class AssistActivity : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.dark(AColor.TRANSPARENT), SystemBarStyle.dark(AColor.TRANSPARENT))
         super.onCreate(savedInstanceState)
         val app = application as LauncherApp
+        takeScreen(intent)
         if (android.os.Build.VERSION.SDK_INT >= 26) window.decorView.importantForAutofill = android.view.View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         Orientation.follow(this)
         setContent {
@@ -82,6 +85,7 @@ class AssistActivity : ComponentActivity() {
             val cardActions = rememberCardActions(app.assistant)
             val readingAloud by app.assistant.readingAloud.collectAsStateWithLifecycle()
             val speechState by app.assistant.speech.collectAsStateWithLifecycle()
+            val screen by app.assistant.screen.collectAsStateWithLifecycle()
             // Opening an app or a web page from here: get out of the way.
             LaunchedEffect(Unit) { app.assistant.leftForApp.drop(1).collect { finish() } }
             LauncherTheme(animations = settings.animations ?: true) {
@@ -102,6 +106,7 @@ class AssistActivity : ComponentActivity() {
                             SpeakToggle(settings.speak,
                                 { m -> app.scope.launch { app.settings.setSpeak(m) } }, { app.assistant.sayHello() })
                             IconButton(onClick = {
+                                keepScreen = true // the conversation (and the screen it's about) continues full screen
                                 context.startActivity(Intent(context, MainActivity::class.java).setAction(MainActivity.ACTION_OPEN_ASSISTANT).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                 finish()
                             }) { Icon(Icons.Outlined.OpenInFull, "Open full screen") }
@@ -112,6 +117,24 @@ class AssistActivity : ComponentActivity() {
                         LaunchedEffect(recent.size, recent.lastOrNull()?.text) { if (recent.isNotEmpty()) list.animateScrollToItem(recent.lastIndex) }
                         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp), state = list, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(recent, key = { it.id }) { m -> Bubble(m, actions = cardActions, onSpeak = app.assistant::readAloud, speech = if (readingAloud == m.id) speechState else null, openLink = { url -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }) }
+                        }
+                        // The screen the assistant was called over: shown so the user knows, removable with ✕.
+                        screen?.let { sc ->
+                            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                androidx.compose.material3.InputChip(
+                                    selected = true, onClick = { app.assistant.screen.value = null },
+                                    label = { Text(if (sc.selected) stringResource(R.string.screen_chip_selected, sc.appLabel) else stringResource(R.string.screen_chip, sc.appLabel), maxLines = 1) },
+                                    trailingIcon = { Icon(Icons.Outlined.Close, stringResource(R.string.screen_clear), Modifier.size(16.dp)) },
+                                    modifier = Modifier.testTag("screen_chip"),
+                                )
+                                if (chat.isEmpty() || chat.last().pending.not() && !busy) {
+                                    val sumQ = stringResource(R.string.screen_summarise_q); val keyQ = stringResource(R.string.screen_key_points)
+                                    androidx.compose.material3.SuggestionChip(onClick = { app.assistant.ask(sumQ) }, label = { Text(stringResource(R.string.screen_summarise)) },
+                                        modifier = Modifier.testTag("screen_summarise"))
+                                    androidx.compose.material3.SuggestionChip(onClick = { app.assistant.ask(keyQ) }, label = { Text(keyQ) })
+                                }
+                            }
                         }
                         val status = mic.error ?: if (mic.listening) (mic.partial.ifBlank { "Listening…" }) else null
                         status?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = if (mic.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp)) }
@@ -146,14 +169,27 @@ class AssistActivity : ComponentActivity() {
         }
     }
 
-    /** Holding the power button again while the panel is open: listen again. */
+    /** Holding the power button again while the panel is open: listen again (over a possibly new screen). */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        takeScreen(intent)
         mic.requestStart()
+    }
+
+    /** Set when going full screen: the screen stays attached to the conversation there. */
+    private var keepScreen = false
+
+    /** The screen text the assistant session read (see AssistSession), or none: replaces the previous one. */
+    private fun takeScreen(i: Intent?) {
+        val text = i?.getStringExtra(EXTRA_SCREEN_TEXT)
+        (application as LauncherApp).assistant.screen.value = text?.let {
+            app.korvy.launcher.core.ScreenContext(i.getStringExtra(EXTRA_SCREEN_APP).orEmpty(), it, i.getBooleanExtra(EXTRA_SCREEN_SELECTED, false))
+        }
     }
 
     override fun onStop() {
         super.onStop()
+        if (!keepScreen) (application as LauncherApp).assistant.screen.value = null // only for this panel
         (application as LauncherApp).assistant.speaker.stop()
         if (!isChangingConfigurations) finish() // a fresh panel each time
     }
@@ -161,5 +197,8 @@ class AssistActivity : ComponentActivity() {
     companion object {
         /** Start listening right away (the wake word opened the panel). */
         const val EXTRA_LISTEN = "listen"
+        const val EXTRA_SCREEN_TEXT = "screen_text"
+        const val EXTRA_SCREEN_APP = "screen_app"
+        const val EXTRA_SCREEN_SELECTED = "screen_selected"
     }
 }

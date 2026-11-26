@@ -253,6 +253,18 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-26: **The assistant can read the screen** (step 1 of 3 agreed with the owner; notifications and
+  in-app control are not planned now). Korvy is now a full digital assistant (`assistant/AssistService`:
+  VoiceInteractionService + session; the old ACTION_ASSIST panel still works for people who chose Korvy before).
+  Holding the power button over an app hands its visible text to the panel ("Reading: Chrome" chip with ✕,
+  "Summarise this" / "What's important here?"). Never hidden or locked apps, Korvy itself, password/card/OTP fields;
+  selected text wins; capped at 1,500 characters (`core/ScreenText`, tested). Only requests about the screen
+  ("this", "here", "summarise", in EN/ES/PT/FR/DE) use it, and they go to the on-device model (Pro). Settings
+  switch "Read the screen when I call Korvy" (on) plus Android's own "Use text from screen". Verified on the 4a
+  with Gemma 4 E2B: summarised korvy.app (first words 7.7 s), "directions to this place" on Wikipedia → Maps
+  query "Golden Gate Bridge", hidden Clock not read. Found on device: Android's ICU regex rejects (?U) (the JVM
+  tests didn't), which crashed the launcher process; fixed and screen reading is now crash-proof.
+  Privacy policy updated (docs/privacy.md; site update goes out with the release).
 - 2026-11-25: **Model refresh** (docs/models.md, scripts/model-eval). 15 models scored on Korvy's real prompt and
   grammar (44 requests, English + Spanish) and timed on the 4a. New list: Gemma 4 E2B QAT (recommended; 40/44,
   Apache 2.0), Qwen 3.5 4B (42/44, flagships), SmolLM3 3B (fully open), Qwen 2.5 1.5B (fast), Gemma 3 1B (smallest).
