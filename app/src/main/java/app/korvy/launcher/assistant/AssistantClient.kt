@@ -54,7 +54,7 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
      */
     suspend fun complete(
         modelPath: String, roles: List<String>, contents: List<String>, grammar: String,
-        maxTokens: Int, temp: Float, onStatus: (String) -> Unit, onToken: (String) -> Unit,
+        maxTokens: Int, temp: Float, onStatus: (String) -> Unit, onToken: (String) -> Unit, ctx: Int = AssistantService.CTX,
     ): String = mutex.withLock {
         idleJob?.cancel()
         val svc = bind()
@@ -78,6 +78,7 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
                 putString(AssistantService.K_GRAMMAR, grammar)
                 putInt(AssistantService.K_MAX, maxTokens)
                 putFloat(AssistantService.K_TEMP, temp)
+                putInt(AssistantService.K_CTX, ctx)
             }
         })
         try { result.await() } finally { pending -= result; scheduleIdle() }
@@ -108,13 +109,15 @@ class AssistantClient(private val context: Context, private val scope: Coroutine
 
     /** Loads the model in the background (e.g. when the assistant opens) so the first answer starts sooner. */
     /** Loads the model and reads the fixed start of the prompt ([roles]/[contents]) before the first question. */
-    fun preload(modelPath: String, roles: List<String> = emptyList(), contents: List<String> = emptyList(), statePath: String? = null) {
+    fun preload(modelPath: String, roles: List<String> = emptyList(), contents: List<String> = emptyList(), statePath: String? = null,
+                ctx: Int = AssistantService.CTX) {
         scope.launch {
             idleJob?.cancel()
             runCatching {
                 bind().send(Message.obtain(null, AssistantService.MSG_PRELOAD).apply {
                     data = Bundle().apply {
                         putString(AssistantService.K_PATH, modelPath)
+                        putInt(AssistantService.K_CTX, ctx)
                         if (roles.isNotEmpty()) {
                             putStringArray(AssistantService.K_ROLES, roles.toTypedArray())
                             putStringArray(AssistantService.K_CONTENTS, contents.toTypedArray())

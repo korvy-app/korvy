@@ -263,6 +263,8 @@ fun SettingsScreen(
                     s.revealHiddenByName, "toggle_reveal") { vm.setRevealHiddenByName(it) }
                 Toggle(stringResource(R.string.suggested_apps), stringResource(R.string.learns_which_apps_you_open),
                     s.suggestions, "toggle_suggestions") { vm.setSuggestions(it) }
+                Toggle(stringResource(R.string.smart_search), stringResource(R.string.smart_search_detail),
+                    s.smartSearch, "toggle_smart_search") { vm.setSmartSearch(it) }
                 ContactsSetting(s, vm)
                 Row(Modifier.padding(horizontal = 20.dp)) {
                     TextButton(onClick = { vm.forgetHistory() }, modifier = Modifier.testTag("forget_history")) { Text(stringResource(R.string.forget_app_history)) }

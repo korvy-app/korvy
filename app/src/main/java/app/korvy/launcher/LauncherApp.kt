@@ -32,7 +32,9 @@ class LauncherApp : Application() {
     val settingsState by lazy {
         settings.settings.stateIn(scope, kotlinx.coroutines.flow.SharingStarted.Eagerly, Settings(tutorialDone = true))
     }
-    val models by lazy { ModelStore(this) }
+    /** Custom models must be known before the model store scans what's downloaded. */
+    val customModels by lazy { app.korvy.launcher.data.CustomModels(this) }
+    val models by lazy { customModels; ModelStore(this) }
     /** One-time Pro unlock (Play Billing in the play build; always unlocked in foss). Not touched at startup. */
     val pro by lazy {
         val testLocked = settingsState.map { app.korvy.launcher.core.Feature.PRO_LOCK_TEST.on(it.flagsOn, it.flagsOff) }

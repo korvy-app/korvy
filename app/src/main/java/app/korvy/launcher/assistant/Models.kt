@@ -34,11 +34,16 @@ data class ModelInfo(
     val kind: Kind = Kind.CHAT,
     /** No longer offered: shown only to people who already downloaded it (so they can keep using or delete it). */
     val retired: Boolean = false,
+    /** The file's path in the repo and the revision, when they differ from [file] and "main" (custom models). */
+    val path: String = file,
+    val rev: String = "main",
+    /** Added by the user from a Hugging Face link (see CustomModels). */
+    val custom: Boolean = false,
 ) {
     enum class Kind { CHAT, SPEECH }
     /** Speech models: English-only models are faster and more accurate for English. */
     val englishOnly get() = file.contains(".en")
-    val url get() = "https://huggingface.co/$repo/resolve/main/$file"
+    val url get() = "https://huggingface.co/$repo/resolve/${android.net.Uri.encode(rev)}/" + path.split('/').joinToString("/") { android.net.Uri.encode(it) }
     val sizeText get() = if (bytes >= 1_000_000_000) "%.1f GB".format(bytes / 1e9) else "${bytes / 1_000_000} MB"
 }
 
@@ -60,6 +65,9 @@ object ModelCatalog {
         ModelInfo("smollm3-3b", "SmolLM3 · 3B", "Hugging Face (independent)", "Apache 2.0", "ggml-org/SmolLM3-3B-GGUF",
             "SmolLM3-Q4_K_M.gguf", 1_915_305_312, "8334b850b7bd46238c16b0c550df2138f0889bf433809008cc17a8b05761863e",
             6.0, "Fully open model from an independent lab. Newer phones."),
+        ModelInfo("gemma4-e4b", "Gemma 4 · E4B", "Google", "Apache 2.0", "google/gemma-4-E4B-it-qat-q4_0-gguf",
+            "gemma-4-E4B_q4_0-it.gguf", 5_154_941_280, "676c35070db6dbe52f93e9c864ee0fba4eddea94b9c875d9cb10daff453fbaee",
+            12.0, "Bigger Gemma 4 for flagship phones (12 GB+ memory)."),
         ModelInfo("qwen3.5-4b", "Qwen 3.5 · 4B", "Alibaba", "Apache 2.0", "bartowski/Qwen_Qwen3.5-4B-GGUF",
             "Qwen_Qwen3.5-4B-Q4_K_M.gguf", 3_013_027_808, "13c16f426047e2de38cd075bdade4a7bcbc8c774384876f677740cda65f8a983",
             8.0, "Smartest here; flagship phones."),
@@ -105,10 +113,14 @@ object ModelCatalog {
             "ggml-small-q5_1.bin", 190_085_487, "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", 6.0,
             "Many languages, more accurate, slower.", ModelInfo.Kind.SPEECH),
     )
-    val everything get() = all + speech
+    /** Models the user added from Hugging Face links (kept by CustomModels; set at start and when they change). */
+    @Volatile var custom: List<ModelInfo> = emptyList()
+    /** Every chat model: the catalog and the custom ones. */
+    val chats get() = all + custom
+    val everything get() = chats + speech
     fun byId(id: String?) = everything.firstOrNull { it.id == id }
     /** Only chat models (a speech model id must never be used to answer). */
-    fun chatById(id: String?) = all.firstOrNull { it.id == id }
+    fun chatById(id: String?) = chats.firstOrNull { it.id == id }
 }
 
 sealed interface DownloadState {
@@ -171,6 +183,10 @@ class ModelStore(private val context: Context) {
             }
             val hex = digest.digest().joinToString("") { "%02x".format(it) }
             if (hex != m.sha256) { part.delete(); throw IOException("The download was damaged (checksum mismatch). Try again.") }
+            // Custom models: make sure it really is a model file llama.cpp can read (it starts with "GGUF").
+            if (m.custom && part.inputStream().use { input -> ByteArray(4).also { b -> input.read(b) }.toString(Charsets.US_ASCII) } != "GGUF") {
+                part.delete(); throw IOException("That file isn't a GGUF model.")
+            }
             part.renameTo(fileFor(m))
             _installed.value = scan()
             _download.value = DownloadState.Idle
@@ -211,7 +227,10 @@ class ModelStore(private val context: Context) {
     companion object { const val MAX_TRIES = 6 }
 
     /** The model's saved reading of the fixed prompt (see Native.prefill); rebuilt when missing or stale. */
-    fun stateFor(m: ModelInfo) = File(dir, m.id + ".prompt-state")
+    fun stateFor(m: ModelInfo) = File(dir, m.id.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".prompt-state")
+
+    /** Re-reads which models are downloaded (after custom models are added or removed). */
+    fun rescan() { _installed.value = scan() }
 
     fun delete(m: ModelInfo) {
         fileFor(m).delete(); File(dir, m.file + ".part").delete(); stateFor(m).delete()

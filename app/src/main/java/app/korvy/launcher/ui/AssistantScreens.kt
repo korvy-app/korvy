@@ -1,5 +1,9 @@
 package app.korvy.launcher.ui
 
+import kotlin.math.roundToInt
+import androidx.compose.material3.Slider
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.ExpandLess
 import app.korvy.launcher.platform.detailRes
 import app.korvy.launcher.platform.titleRes
 import app.korvy.launcher.R
@@ -254,6 +258,9 @@ fun ModelsScreen(
     onDelete: (ModelInfo) -> Unit,
     onOpenOnline: () -> Unit,
     onBack: () -> Unit,
+    custom: List<ModelInfo> = emptyList(),
+    onAddCustom: suspend (String) -> app.korvy.launcher.data.CustomModels.AddResult = { app.korvy.launcher.data.CustomModels.Problem(null) },
+    onTuning: (temp: Float, maxTokens: Int, ctx: Int) -> Unit = { _, _, _ -> },
 ) {
     val ramGb = Device.specs(LocalContext.current).totalRamMb / 1024.0
     // Ask (once) to show the download's progress notification. The download runs either way.
@@ -280,7 +287,7 @@ fun ModelsScreen(
                     Text(stringResource(R.string.you_re_on_mobile_data), color = MaterialTheme.colorScheme.error)
                 }
             }
-            items(ModelCatalog.all.filter { !it.retired || it.id in installed }, key = { it.id }) { m ->
+            items(ModelCatalog.all.filter { !it.retired || it.id in installed } + custom, key = { it.id }) { m ->
                 val has = m.id in installed
                 val selected = s.modelId == m.id && has
                 val tooBig = ramGb < m.minRamGb
@@ -292,10 +299,11 @@ fun ModelsScreen(
                         if (has) RadioButton(selected = selected, onClick = { onUse(m) })
                         Column(Modifier.weight(1f)) {
                             Text(m.name, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.text_2, m.maker, m.license, m.sizeText), style = MaterialTheme.typography.bodySmall)
+                            Text(if (m.custom) stringResource(R.string.custom_model_info, m.maker, m.sizeText)
+                                else stringResource(R.string.text_2, m.maker, m.license, m.sizeText), style = MaterialTheme.typography.bodySmall)
                         }
                     }
-                    Text(m.noteText(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
+                    Text(if (m.custom) stringResource(R.string.custom_model_note) else m.noteText(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp))
                     if (tooBig) Text(stringResource(R.string.may_be_too_big_for).format(m.minRamGb),
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     when {
@@ -330,6 +338,8 @@ fun ModelsScreen(
                     }
                 }
             }
+            item(key = "custom_add") { CustomModelCard(onAddCustom) }
+            item(key = "advanced") { AdvancedModelSettings(s, onTuning) }
         }
     }
 }
@@ -389,5 +399,81 @@ fun OnlineSection(s: Settings, onMaster: (Boolean) -> Unit, onSource: (OnlineSou
         toggle(stringResource(R.string.fahrenheit), stringResource(R.string.fahrenheit_detail), s.fahrenheit, "toggle_fahrenheit", true, onFahrenheit)
         onUseLocation?.let { toggle(stringResource(R.string.use_location), stringResource(R.string.use_location_detail), s.useLocation, "toggle_location", true, it) }
         toggle(stringResource(R.string.mobile_data), stringResource(R.string.mobile_data_detail), s.modelsOnMobileData, "toggle_mobile_data", true, onMobileData)
+    }
+}
+
+
+/** Paste a Hugging Face link to a .gguf file; it joins the list with a Download button. */
+@Composable
+private fun CustomModelCard(onAdd: suspend (String) -> app.korvy.launcher.data.CustomModels.AddResult) {
+    var link by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<Pair<String, Boolean>?>(null) } // text, isError
+    val scope = rememberCoroutineScope()
+    val added = stringResource(R.string.custom_added)
+    val errHost = stringResource(R.string.custom_err_host); val errFile = stringResource(R.string.custom_err_file)
+    val errGguf = stringResource(R.string.custom_err_gguf); val errFetch = stringResource(R.string.custom_err_fetch)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp).testTag("custom_model")) {
+        Text(stringResource(R.string.custom_title), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.custom_detail), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        OutlinedTextField(value = link, onValueChange = { link = it; message = null }, singleLine = true,
+            label = { Text(stringResource(R.string.custom_link_hint)) },
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).testTag("custom_link"))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Button(enabled = link.isNotBlank() && !busy, onClick = {
+                busy = true
+                scope.launch {
+                    message = when (val r = onAdd(link)) {
+                        is app.korvy.launcher.data.CustomModels.Added -> { link = ""; added to false }
+                        is app.korvy.launcher.data.CustomModels.Problem -> when (r.error) {
+                            app.korvy.launcher.core.HfLink.Error.NOT_HUGGING_FACE -> errHost to true
+                            app.korvy.launcher.core.HfLink.Error.NOT_A_FILE -> errFile to true
+                            app.korvy.launcher.core.HfLink.Error.NOT_GGUF -> errGguf to true
+                            null -> errFetch to true
+                        }
+                    }
+                    busy = false
+                }
+            }, modifier = Modifier.testTag("custom_add")) { Text(stringResource(R.string.custom_add)) }
+            if (busy) androidx.compose.material3.CircularProgressIndicator(Modifier.padding(start = 12.dp).size(20.dp), strokeWidth = 2.dp)
+        }
+        message?.let { (text, error) ->
+            Text(text, color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
+}
+
+/** Temperature, reply length and context size for the curious; closed by default, with a reset. */
+@Composable
+private fun AdvancedModelSettings(s: Settings, onTuning: (Float, Int, Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    var temp by remember(s.modelTemp) { mutableStateOf(s.modelTemp) }
+    var maxTokens by remember(s.modelMaxTokens) { mutableStateOf(s.modelMaxTokens.toFloat()) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).testTag("model_advanced")) {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.advanced), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
+        }
+        if (!open) return@Column
+        Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) {
+            Text(stringResource(R.string.advanced_detail), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.temp_label, temp), modifier = Modifier.padding(top = 10.dp))
+            Slider(temp, { temp = (it * 10).roundToInt() / 10f }, valueRange = 0f..1.5f, steps = 14,
+                onValueChangeFinished = { onTuning(temp, s.modelMaxTokens, s.modelCtx) }, modifier = Modifier.testTag("temp_slider"))
+            Text(stringResource(R.string.temp_detail), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.max_tokens_label, maxTokens.roundToInt()), modifier = Modifier.padding(top = 10.dp))
+            Slider(maxTokens, { maxTokens = ((it / 20).roundToInt() * 20).toFloat() }, valueRange = 100f..1000f,
+                onValueChangeFinished = { onTuning(s.modelTemp, maxTokens.roundToInt(), s.modelCtx) }, modifier = Modifier.testTag("max_tokens_slider"))
+            Text(stringResource(R.string.max_tokens_detail), style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.ctx_label), modifier = Modifier.padding(top = 10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = s.modelCtx != 8192, onClick = { onTuning(s.modelTemp, s.modelMaxTokens, 4096) }, label = { Text(stringResource(R.string.ctx_4k)) })
+                FilterChip(selected = s.modelCtx == 8192, onClick = { onTuning(s.modelTemp, s.modelMaxTokens, 8192) }, label = { Text(stringResource(R.string.ctx_8k)) })
+            }
+            Text(stringResource(R.string.ctx_detail), style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { onTuning(Settings.DEFAULT_TEMP, Settings.DEFAULT_MAX_TOKENS, Settings.DEFAULT_CTX) },
+                modifier = Modifier.padding(top = 6.dp).testTag("tuning_reset")) { Text(stringResource(R.string.reset_defaults)) }
+        }
     }
 }

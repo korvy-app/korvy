@@ -310,7 +310,7 @@ class AssistantController(
         }
         val out = try {
             client.complete(
-                models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = 220, temp = 0.2f,
+                models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = s.modelMaxTokens, temp = s.modelTemp, ctx = s.modelCtx,
                 onStatus = { st -> lastProgress = System.currentTimeMillis(); update(replyId) { it.copy(text = st) } },
                 onToken = { piece ->
                     lastProgress = System.currentTimeMillis()
@@ -325,7 +325,10 @@ class AssistantController(
         if (System.currentTimeMillis() - lastProgress > STALL_MS && AgentCore.parse(out) == null) {
             return Action(ActionType.ANSWER, t(R.string.c_too_long))
         }
-        return AgentCore.parse(out) ?: Action(ActionType.ANSWER, t(R.string.c_confused))
+        // A reply cut off by the length limit isn't valid JSON: show the answer as far as it got.
+        return AgentCore.parse(out)
+            ?: AgentCore.partialAnswer(out)?.takeIf { it.isNotBlank() }?.let { Action(ActionType.ANSWER, it.trimEnd() + "…") }
+            ?: Action(ActionType.ANSWER, t(R.string.c_confused))
     }
 
     /** Earlier finished exchanges (user question + assistant action), oldest first, before item [excludeFrom]. */
@@ -380,7 +383,7 @@ class AssistantController(
         if (m.id !in models.installed.value || !pro.unlocked.value) return
         scope.launch {
             val (roles, contents) = fixedMessages()
-            client.preload(models.fileFor(m).path, roles, contents, models.stateFor(m).path)
+            client.preload(models.fileFor(m).path, roles, contents, models.stateFor(m).path, settings.value.modelCtx)
         }
     }
 

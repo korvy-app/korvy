@@ -103,13 +103,13 @@ class AssistantService : Service() {
 
     /** Loads [path] unless it's already loaded. Runs on the worker thread. */
     private fun ensureLoaded(path: String, ctx: Int, reply: Messenger?): Boolean {
-        if (path == loadedPath) return true
+        if ("$path#$ctx" == loadedPath) return true // a new context size (Advanced settings) means loading again
         send(reply, MSG_STATUS, getString(R.string.s_loading_model))
         val (threads, batch) = app.korvy.launcher.platform.CpuCores.inferenceThreads()
         Log.i("AssistantService", "threads: $threads to write, $batch to read")
         val rc = Native.load(path, ctx, threads, batch)
         if (rc != 0) { loadedPath = null; send(reply, MSG_ERROR, getString(R.string.s_load_model_failed, rc)); return false }
-        loadedPath = path
+        loadedPath = "$path#$ctx"
         return true
     }
 

@@ -35,6 +35,8 @@ data class Settings(
     val animations: Boolean? = null,
     val engine: SearchEngine = SearchEngine.DUCKDUCKGO,
     val suggestions: Boolean = true,
+    /** Search lists likely apps first (SmartOrder). */
+    val smartSearch: Boolean = true,
     val revealHiddenByName: Boolean = true,
     val slideshow: Boolean = false,
     val slideshowMinutes: Int = 15,
@@ -74,6 +76,10 @@ data class Settings(
     val ttsPitch: Float = 1f,
     /** Start listening right away when the assistant is opened with the power button. */
     val listenOnAssist: Boolean = true,
+    /** Advanced model settings (Models → Advanced): sampling temperature, reply length limit, context size. */
+    val modelTemp: Float = DEFAULT_TEMP,
+    val modelMaxTokens: Int = DEFAULT_MAX_TOKENS,
+    val modelCtx: Int = DEFAULT_CTX,
     /** Let the assistant read the screen text when summoned with the power button. */
     val readScreen: Boolean = true,
     /** Show matching contacts in search (only when the contacts permission is granted). */
@@ -85,6 +91,11 @@ data class Settings(
 ) {
     fun allows(source: OnlineSource) =
         online && if (source.optIn) source.name in sourcesOn else source.name !in sourcesOff
+    companion object {
+        const val DEFAULT_TEMP = 0.2f
+        const val DEFAULT_MAX_TOKENS = 220
+        const val DEFAULT_CTX = 4096
+    }
 }
 
 
@@ -94,6 +105,7 @@ class SettingsStore(private val context: Context) {
         val animations = stringPreferencesKey("animations") // "on" / "off" / absent = default
         val engine = stringPreferencesKey("engine")
         val suggestions = booleanPreferencesKey("suggestions")
+        val smartSearch = booleanPreferencesKey("smart_search")
         val reveal = booleanPreferencesKey("reveal_hidden_by_name")
         val slideshow = booleanPreferencesKey("slideshow")
         val slideshowMinutes = intPreferencesKey("slideshow_minutes")
@@ -124,6 +136,9 @@ class SettingsStore(private val context: Context) {
         val ttsPitch = androidx.datastore.preferences.core.floatPreferencesKey("tts_pitch")
         val listenOnAssist = booleanPreferencesKey("listen_on_assist")
         val readScreen = booleanPreferencesKey("read_screen")
+        val modelTemp = androidx.datastore.preferences.core.floatPreferencesKey("model_temp")
+        val modelMaxTokens = androidx.datastore.preferences.core.intPreferencesKey("model_max_tokens")
+        val modelCtx = androidx.datastore.preferences.core.intPreferencesKey("model_ctx")
         val contactsInSearch = booleanPreferencesKey("contacts_in_search")
         val useLocation = booleanPreferencesKey("use_location")
         val appChoices = androidx.datastore.preferences.core.stringSetPreferencesKey("app_choices")
@@ -135,6 +150,7 @@ class SettingsStore(private val context: Context) {
             animations = when (p[K.animations]) { "on" -> true; "off" -> false; else -> null },
             engine = p[K.engine]?.let { runCatching { SearchEngine.valueOf(it) }.getOrNull() } ?: SearchEngine.DUCKDUCKGO,
             suggestions = p[K.suggestions] ?: true,
+            smartSearch = p[K.smartSearch] ?: true,
             revealHiddenByName = p[K.reveal] ?: true,
             slideshow = p[K.slideshow] ?: false,
             slideshowMinutes = p[K.slideshowMinutes] ?: 15,
@@ -164,6 +180,9 @@ class SettingsStore(private val context: Context) {
             ttsPitch = p[K.ttsPitch] ?: 1f,
             listenOnAssist = p[K.listenOnAssist] ?: true,
             readScreen = p[K.readScreen] ?: true,
+            modelTemp = (p[K.modelTemp] ?: Settings.DEFAULT_TEMP).coerceIn(0f, 1.5f),
+            modelMaxTokens = (p[K.modelMaxTokens] ?: Settings.DEFAULT_MAX_TOKENS).coerceIn(100, 1000),
+            modelCtx = (p[K.modelCtx] ?: Settings.DEFAULT_CTX).let { if (it == 8192) 8192 else Settings.DEFAULT_CTX },
             contactsInSearch = p[K.contactsInSearch] ?: true,
             useLocation = p[K.useLocation] ?: true,
             appChoices = (p[K.appChoices] ?: emptySet()).mapNotNull { e -> e.split('=', limit = 2).takeIf { it.size == 2 }?.let { it[0] to it[1] } }.toMap(),
@@ -182,6 +201,7 @@ class SettingsStore(private val context: Context) {
     suspend fun setAnimations(v: Boolean) = set { it[K.animations] = if (v) "on" else "off" }
     suspend fun setEngine(v: SearchEngine) = set { it[K.engine] = v.name }
     suspend fun setSuggestions(v: Boolean) = set { it[K.suggestions] = v }
+    suspend fun setSmartSearch(v: Boolean) = set { it[K.smartSearch] = v }
     suspend fun setRevealHiddenByName(v: Boolean) = set { it[K.reveal] = v }
     suspend fun setSlideshow(v: Boolean) = set { it[K.slideshow] = v }
     suspend fun setSlideshowMinutes(v: Int) = set { it[K.slideshowMinutes] = v }
@@ -228,6 +248,9 @@ class SettingsStore(private val context: Context) {
     suspend fun setTtsPitch(v: Float) = set { it[K.ttsPitch] = v }
     suspend fun setListenOnAssist(v: Boolean) = set { it[K.listenOnAssist] = v }
     suspend fun setReadScreen(v: Boolean) = set { it[K.readScreen] = v }
+    suspend fun setModelTuning(temp: Float, maxTokens: Int, ctx: Int) = set {
+        it[K.modelTemp] = temp; it[K.modelMaxTokens] = maxTokens; it[K.modelCtx] = ctx
+    }
     suspend fun setContactsInSearch(v: Boolean) = set { it[K.contactsInSearch] = v }
     suspend fun setUseLocation(v: Boolean) = set { it[K.useLocation] = v }
     suspend fun setAppChoice(task: String, pkg: String?) = set {

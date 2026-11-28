@@ -39,6 +39,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val screen by vm.screen.collectAsStateWithLifecycle()
     val apps by vm.apps.collectAsStateWithLifecycle()
     val visible by vm.visibleApps.collectAsStateWithLifecycle()
+    val drawerApps by vm.drawerApps.collectAsStateWithLifecycle()
     val visibleByKey = remember(visible) { visible.associateBy { it.key } }
     val privacy by vm.privacy.collectAsStateWithLifecycle()
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
@@ -50,6 +51,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
     val isDefaultHome by vm.isDefaultHome.collectAsStateWithLifecycle()
     val closeInstantly by vm.closeInstantly.collectAsStateWithLifecycle()
     val homeGrid by vm.homeGrid.collectAsStateWithLifecycle()
+    val customModels by vm.customModels.collectAsStateWithLifecycle()
     val openFolder by vm.openFolder.collectAsStateWithLifecycle()
     val pro = proUnlocked(vm)
     val chat by vm.chat.collectAsStateWithLifecycle()
@@ -155,7 +157,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     else slideOutVertically(Motion.spring<IntOffset>(animations)) { it / 3 } + fadeOut(Motion.fade(animations)),
             ) {
                 AppDrawer(
-                    visible, results, query, settings.engine, focus, vm.repo,
+                    drawerApps, results, query, settings.engine, focus, vm.repo,
                     onQuery = { vm.query.value = it },
                     onLaunch = vm::launch,
                     onLaunchHidden = ::launchHidden,
@@ -211,6 +213,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     settings, installedModels, download, vm.models.freeBytes(), vm.models.isMetered(),
                     onDownload = vm::downloadModel, onCancel = vm::cancelDownload, onUse = vm::useModel, onDelete = vm::deleteModel,
                     onOpenOnline = { vm.open(Screen.SETTINGS) }, onBack = { vm.open(Screen.SETTINGS) },
+                    custom = customModels, onAddCustom = vm::addCustomModel, onTuning = vm::setModelTuning,
                 )
             }
             AnimatedVisibility(screen == Screen.PERSONALITY, enter = fadeIn(Motion.fade(animations)), exit = fadeOut(Motion.fade(animations))) {

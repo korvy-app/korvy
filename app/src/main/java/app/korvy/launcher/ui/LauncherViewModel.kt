@@ -1,5 +1,6 @@
 package app.korvy.launcher.ui
 
+import app.korvy.launcher.core.SmartOrder
 import kotlinx.coroutines.flow.first
 import android.app.Application
 import android.content.Intent
@@ -78,6 +79,21 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     /** Bumped when the drawer should take keyboard focus (opened from the search bar). */
     val focusSearch = MutableStateFlow(0)
     private val _suggested = MutableStateFlow<List<String>>(emptyList())
+
+    /**
+     * Every app with launch history, most likely to be opened now first (Suggest), for smart search order.
+     * Worked out in the background with the suggestions and kept in a small file, so search opens instantly
+     * with it, even right after a restart and on slow phones. Hidden apps are never in it.
+     */
+    private val likelyFile = java.io.File(app.filesDir, "likely_order.txt")
+    private val _likely = MutableStateFlow(runCatching { likelyFile.readLines().filter { it.isNotBlank() } }.getOrDefault(emptyList()))
+
+    /** The app list search shows before anything is typed: likely apps first when Smart app order is on. */
+    val drawerApps: StateFlow<List<AppEntry>> by lazy {
+        combine(visibleApps, _likely, settings) { v, likely, s ->
+            if (s.smartSearch) SmartOrder.all(v, likely, { it.key }, { it.label }) else v
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, visibleApps.value)
+    }
     /** Whether this is the phone's default home app; refreshed every time the launcher comes into view. */
     val isDefaultHome = MutableStateFlow(Device.isDefaultHome(app))
     fun refreshDefaultHome() { isDefaultHome.value = Device.isDefaultHome(getApplication()) }
@@ -219,22 +235,30 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
 
     data class Results(val apps: List<AppEntry>, val revealed: List<Pair<AppEntry, HideLevel>>)
 
-    val results: StateFlow<Results> = combine(query, apps, privacy, settings) { q, a, p, s ->
+    val results: StateFlow<Results> = combine(query, apps, privacy, settings, _likely) { q, a, p, s, likely ->
         if (q.isBlank()) Results(emptyList(), emptyList())
         else {
             val visible = a.filter { it.key !in p.hidden }
             // A hidden app appears only when its whole name is typed (and the user allows it).
             val revealed = if (s.revealHiddenByName) a.filter { it.key in p.hidden && AppSearch.isExact(q, it.label) }
                 .map { it to p.hidden.getValue(it.key) } else emptyList()
-            Results(AppSearch.rank(q, visible) { it.label }, revealed)
+            val ranked = AppSearch.rank(q, visible) { it.label }
+            Results(if (s.smartSearch) SmartOrder.search(q, ranked, likely, { it.key }, { it.label }) else ranked, revealed)
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Results(emptyList(), emptyList()))
 
     fun refreshSuggestions() {
         viewModelScope.launch {
             val p = _privacy.value
-            _suggested.value = withContext(Dispatchers.IO) {
-                Suggest.rank(la.usage.recent(), ZonedDateTime.now(), exclude = p.hidden.keys + p.neverSuggest, limit = 5)
+            // One pass over the history ranks every app: the top 5 are the suggestions, the whole list is the
+            // smart search order (saved so the next start has it straight away).
+            val all = withContext(Dispatchers.IO) {
+                Suggest.rank(la.usage.recent(), ZonedDateTime.now(), exclude = p.hidden.keys + p.neverSuggest, limit = Int.MAX_VALUE)
+            }
+            _suggested.value = all.take(5)
+            if (all != _likely.value) {
+                _likely.value = all
+                withContext(Dispatchers.IO) { runCatching { likelyFile.writeText(all.joinToString("\n")) } }
             }
         }
     }
@@ -298,7 +322,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun forgetHistory() {
-        viewModelScope.launch(Dispatchers.IO) { la.usage.forgetAll(); _suggested.value = emptyList() }
+        viewModelScope.launch(Dispatchers.IO) { la.usage.forgetAll(); _suggested.value = emptyList(); _likely.value = emptyList(); likelyFile.delete() }
     }
 
     fun uninstall(app: AppEntry) {
@@ -340,10 +364,17 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelDownload() { ModelDownloadService.cancel(getApplication()) }
     fun deleteModel(m: ModelInfo) {
         models.delete(m)
+        if (m.custom) { la.customModels.remove(m.id); models.rescan() }
         if (settings.value.sttModel == m.id) setSttModel(null)
         if (settings.value.modelId == m.id) save { la.settings.setModelId(null) }
     }
     fun useModel(m: ModelInfo) = save { la.settings.setModelId(m.id) }
+    fun setModelTuning(temp: Float, maxTokens: Int, ctx: Int) = save { la.settings.setModelTuning(temp, maxTokens, ctx) }
+    val customModels get() = la.customModels.list
+
+    /** Adds a model from a Hugging Face link; the result says what happened (for the Models screen). */
+    suspend fun addCustomModel(link: String): app.korvy.launcher.data.CustomModels.AddResult =
+        la.customModels.add(link) { settings.value.allows(it) }.also { models.rescan() }
     fun setAssistant(v: Boolean) = save { la.settings.setAssistant(v) }
     fun setOnline(v: Boolean) = save { la.settings.setOnline(v) }
     fun enableSuggestions() = save { la.settings.enableSuggestionsOnly() }
@@ -380,6 +411,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setAnimations(v: Boolean) = save { la.settings.setAnimations(v) }
     fun setEngine(v: SearchEngine) = save { la.settings.setEngine(v) }
     fun setSuggestions(v: Boolean) = save { la.settings.setSuggestions(v) }
+    fun setSmartSearch(v: Boolean) = save { la.settings.setSmartSearch(v) }
     fun setRevealHiddenByName(v: Boolean) = save { la.settings.setRevealHiddenByName(v) }
     fun setSlideshow(v: Boolean) = save { la.settings.setSlideshow(v) }
     fun setSlideshowMinutes(v: Int) = save { la.settings.setSlideshowMinutes(v) }

@@ -259,6 +259,17 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-28: **0.18.0 – tester requests + smart search.** (1) Gemma 4 E4B (Google QAT, 5.2 GB, Apache 2.0) in the
+  catalog for flagships (12 GB+); on the 4a it loads and answers (first words ~6 s, ~3 tok/s). (2) Models →
+  Advanced (closed by default, Reset to defaults): temperature 0–1.5 (0.2), longest reply 100–1000 tokens (220),
+  conversation memory 4K/8K (the model reloads for a new size). Replies cut off by the limit now show as far as they
+  got instead of "I got confused". (3) Custom models from a Hugging Face link to a .gguf (huggingface.co/hf.co only,
+  `core/HfLink`, tested): size and SHA-256 from Hugging Face's own record (its lfs oid = the file's SHA-256, checked
+  against the E2B file), downloads verified, must start with "GGUF"; licence and "sources you trust" warnings; kept
+  in `data/CustomModels`. Verified on the 4a with Qwen3 0.6B (added, downloaded, answered). (4) Smart app order in
+  search (Settings → Search, on): likely apps first when search opens, and among equally good name matches while
+  typing (`core/SmartOrder`, tested); the order comes from the suggestion pass and is saved to likely_order.txt, so
+  search opens instantly on any phone. Verified: Calculator, Camera first (A–Z with it off); "c" → Calculator, Camera.
 - 2026-11-28: **Search fixes (owner).** (1) With many results the best app scrolled out of view: the results list
   kept its top row (e.g. "Search the web") anchored while new matches appeared above it; it now jumps to the top
   whenever the text or the best match changes. (2) Suggestions come from the chosen engine (DuckDuckGo, Brave,

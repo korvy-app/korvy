@@ -41,6 +41,8 @@ Chosen 2026-11-25. Re-run when new small models appear (`scripts/model-eval/`).
 - Qwen 2.5 1.5B: 2.5–2.7 s; writes ~8.5 tok/s.
 
 ## Notes
+- 2026-11-28: Gemma 4 E4B (QAT) added for flagship phones at a tester's request (39/44 in the test; on the 4a first
+  words ~6 s and ~3 tok/s writing). People can also add their own GGUF from a Hugging Face link (Models screen).
 - Qwen 3.5 small models answer best but are slow on mid-range phones; the 0.8B/2B are too unreliable for Korvy.
 - Gemma 4's "QAT" file (Google's quantization-aware 4-bit) is as accurate as the regular 4-bit file and reads prompts
   ~30% faster.

@@ -1,0 +1,3 @@
+- Smart app order: search lists the apps you're most likely to open first (Settings → Search).
+- Gemma 4 E4B for flagship phones, and add your own GGUF model from a Hugging Face link.
+- Models → Advanced: creativity (temperature), longest reply and conversation memory.

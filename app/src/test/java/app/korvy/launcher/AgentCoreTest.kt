@@ -187,4 +187,10 @@ class AgentCoreTest {
         assertEquals(Action(ActionType.TEXT, "Alex: dinner is ready"), q("message Alex that dinner is ready"))
         assertEquals(Action(ActionType.TEXT, "Jen: running late"), q("send Jen a message: running late").let { it ?: Action(ActionType.TEXT, "Jen: running late") })
     }
+
+    @Test fun aReplyCutOffByTheLengthLimitStillShowsItsAnswer() {
+        val cut = """{"action": "answer", "arg": "The sky looks blue because air scatters short blue wavelengths more"""
+        assertEquals(null, AgentCore.parse(cut))
+        assertEquals("The sky looks blue because air scatters short blue wavelengths more", AgentCore.partialAnswer(cut))
+    }
 }

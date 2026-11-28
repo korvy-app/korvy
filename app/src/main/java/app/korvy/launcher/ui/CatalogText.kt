@@ -11,6 +11,7 @@ import app.korvy.launcher.assistant.NeuralVoicePack
 @Composable
 fun ModelInfo.noteText(): String = when (id) {
     "gemma4-e2b" -> stringResource(R.string.model_note_gemma4_e2b)
+    "gemma4-e4b" -> stringResource(R.string.model_note_gemma4_e4b)
     "smollm3-3b" -> stringResource(R.string.model_note_smollm3_3b)
     "qwen3.5-4b" -> stringResource(R.string.model_note_qwen3_5_4b)
     "qwen2.5-0.5b" -> stringResource(R.string.model_note_qwen2_5_0_5b)
