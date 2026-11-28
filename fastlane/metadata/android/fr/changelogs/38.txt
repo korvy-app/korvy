@@ -1,0 +1,2 @@
+- Recherche : la meilleure appli reste en haut, même avec beaucoup de résultats.
+- Les suggestions viennent de votre moteur de recherche et s'activent depuis la recherche.

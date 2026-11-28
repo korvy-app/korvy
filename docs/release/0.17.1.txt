@@ -1,0 +1,2 @@
+- Search: the best app match stays at the top, even with many results.
+- Search suggestions now come from your chosen search engine (DuckDuckGo, Brave or Startpage), and you can turn them on right from search.

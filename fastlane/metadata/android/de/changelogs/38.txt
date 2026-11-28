@@ -1,0 +1,2 @@
+- Suche: Die beste App bleibt oben, auch bei vielen Ergebnissen.
+- Suchvorschläge kommen von deiner Suchmaschine und lassen sich direkt in der Suche einschalten.

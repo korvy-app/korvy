@@ -1,0 +1,2 @@
+- Búsqueda: la mejor app coincidente se queda arriba, aunque haya muchos resultados.
+- Las sugerencias de búsqueda vienen de tu buscador y puedes activarlas desde la propia búsqueda.

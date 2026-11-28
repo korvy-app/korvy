@@ -1,0 +1,2 @@
+- Search: the best app match stays at the top, even with many results.
+- Search suggestions come from your chosen search engine, and you can turn them on right from search.

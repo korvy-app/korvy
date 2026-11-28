@@ -1,0 +1,2 @@
+- Pesquisa: o app mais relevante fica no topo, mesmo com muitos resultados.
+- As sugestões de pesquisa vêm do seu buscador e podem ser ativadas na própria pesquisa.
