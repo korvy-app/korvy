@@ -39,7 +39,7 @@ Korvy works without the internet. Online features are off until you turn them on
 | News headlines | NPR, BBC public feeds | Nothing about you (Korvy just fetches the feed) |
 | Stock prices | Yahoo Finance (query1.finance.yahoo.com) | The company or ticker you asked about |
 | Quick answers | DuckDuckGo (api.duckduckgo.com) | Your question |
-| Search suggestions | DuckDuckGo (duckduckgo.com) | What you type in the search bar |
+| Search suggestions (opt-in) | Your search engine: DuckDuckGo (duckduckgo.com), Brave (search.brave.com) or Startpage (startpage.com); DuckDuckGo when you use Mojeek | What you type in the search bar |
 
 Like any internet request, these services see your IP address. Their own privacy policies apply. Korvy sends no
 identifiers, account details or tracking information with these requests.

@@ -17,11 +17,16 @@ private val Context.dataStore by preferencesDataStore("settings")
 enum class SpeakMode(val title: String) { ALWAYS("Always"), AFTER_VOICE("When I speak to it"), OFF("Never") }
 
 /** Web search engines. All open the results in the user's browser; nothing passes through this app. */
-enum class SearchEngine(val title: String, val url: String) {
-    DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q="),
-    BRAVE("Brave Search", "https://search.brave.com/search?q="),
-    STARTPAGE("Startpage", "https://www.startpage.com/do/search?q="),
-    MOJEEK("Mojeek", "https://www.mojeek.com/search?q="),
+enum class SearchEngine(val title: String, val url: String, private val suggestUrl: String?) {
+    DUCKDUCKGO("DuckDuckGo", "https://duckduckgo.com/?q=", "https://duckduckgo.com/ac/?type=list&q="),
+    BRAVE("Brave Search", "https://search.brave.com/search?q=", "https://search.brave.com/api/suggest?q="),
+    STARTPAGE("Startpage", "https://www.startpage.com/do/search?q=", "https://www.startpage.com/osuggestions?q="),
+    MOJEEK("Mojeek", "https://www.mojeek.com/search?q=", null), // no suggestion service: DuckDuckGo's are used
+    ;
+    /** Where search-box suggestions come from (OpenSearch format: ["query", ["suggestion", …]]). */
+    val suggestions get() = suggestUrl ?: DUCKDUCKGO.suggestUrl!!
+    /** Who sees the letters typed when suggestions are on. */
+    val suggestionsBy get() = if (suggestUrl != null) title else DUCKDUCKGO.title
 }
 
 data class Settings(
@@ -43,6 +48,8 @@ data class Settings(
     val sourcesOff: Set<String> = emptySet(),
     /** Opt-in sources (OnlineSource.optIn) the user turned on. */
     val sourcesOn: Set<String> = emptySet(),
+    /** "No thanks" to the offer in search to turn on suggestions. */
+    val suggestOfferDismissed: Boolean = false,
     val homePlace: String = "",
     val fahrenheit: Boolean = java.util.Locale.getDefault().country in setOf("US", "LR", "MM"),
     val modelsOnMobileData: Boolean = false,
@@ -97,6 +104,7 @@ class SettingsStore(private val context: Context) {
         val online = booleanPreferencesKey("online")
         val sourcesOff = androidx.datastore.preferences.core.stringSetPreferencesKey("sources_off")
         val sourcesOn = androidx.datastore.preferences.core.stringSetPreferencesKey("sources_on")
+        val suggestOfferDismissed = booleanPreferencesKey("suggest_offer_dismissed")
         val homePlace = stringPreferencesKey("home_place")
         val fahrenheit = booleanPreferencesKey("fahrenheit")
         val modelsOnMobileData = booleanPreferencesKey("models_on_mobile_data")
@@ -136,6 +144,7 @@ class SettingsStore(private val context: Context) {
             online = p[K.online] ?: false,
             sourcesOff = p[K.sourcesOff] ?: emptySet(),
             sourcesOn = p[K.sourcesOn] ?: emptySet(),
+            suggestOfferDismissed = p[K.suggestOfferDismissed] ?: false,
             homePlace = p[K.homePlace] ?: "",
             fahrenheit = p[K.fahrenheit] ?: Settings().fahrenheit,
             modelsOnMobileData = p[K.modelsOnMobileData] ?: false,
@@ -180,6 +189,19 @@ class SettingsStore(private val context: Context) {
     suspend fun setAssistant(v: Boolean) = set { it[K.assistant] = v }
     suspend fun setModelId(v: String?) = set { if (v == null) it.remove(K.modelId) else it[K.modelId] = v }
     suspend fun setOnline(v: Boolean) = set { it[K.online] = v }
+
+    /**
+     * Turns on search suggestions and nothing else: if Online features were off, they go on with every other
+     * source switched off, so only the suggestions connect.
+     */
+    suspend fun enableSuggestionsOnly() = set {
+        if (it[K.online] != true) {
+            it[K.online] = true
+            it[K.sourcesOff] = OnlineSource.entries.filter { s -> !s.optIn }.map { s -> s.name }.toSet()
+        }
+        it[K.sourcesOn] = (it[K.sourcesOn] ?: emptySet()) + OnlineSource.SUGGESTIONS.name
+    }
+    suspend fun dismissSuggestOffer() = set { it[K.suggestOfferDismissed] = true }
     suspend fun setSource(source: OnlineSource, on: Boolean) = set {
         if (source.optIn) it[K.sourcesOn] = (it[K.sourcesOn] ?: emptySet()).let { s -> if (on) s + source.name else s - source.name }
         else it[K.sourcesOff] = (it[K.sourcesOff] ?: emptySet()).let { s -> if (on) s - source.name else s + source.name }

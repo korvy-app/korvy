@@ -167,6 +167,11 @@ fun Root(vm: LauncherViewModel, host: Host) {
                         .swallowTouches(screen != Screen.DRAWER && !listDrag),
                     onAsk = if (settings.assistant) ({ q -> vm.openAssistant(q) }) else null,
                     webSuggestions = webSuggestions,
+                    suggestOffer = settings.engine.suggestionsBy.takeIf {
+                        !settings.allows(app.korvy.launcher.platform.OnlineSource.SUGGESTIONS) && !settings.suggestOfferDismissed
+                    },
+                    onEnableSuggestions = vm::enableSuggestions,
+                    onDismissSuggestOffer = vm::dismissSuggestOffer,
                     contacts = contactResults, onCall = vm::dial, onText = vm::textTo,
                 )
             }

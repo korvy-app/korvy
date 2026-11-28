@@ -95,6 +95,10 @@ fun AppDrawer(
     contacts: List<app.korvy.launcher.assistant.Person> = emptyList(),
     onCall: (app.korvy.launcher.assistant.Person) -> Unit = {},
     onText: (app.korvy.launcher.assistant.Person) -> Unit = {},
+    /** Offer to turn on suggestions from this engine (its name), or null not to ask. */
+    suggestOffer: String? = null,
+    onEnableSuggestions: () -> Unit = {},
+    onDismissSuggestOffer: () -> Unit = {},
 ) {
     // Inline autocomplete: the rest of the top app's name, drawn greyed after the cursor; → accepts it.
     val completion = Completion.suffix(query, results.apps.map { it.label })
@@ -163,7 +167,11 @@ fun AppDrawer(
                 items(apps, key = { it.key }) { app -> GridApp(app, repo, launch, menu, drag, dragStarted) }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize().testTag("results")) {
+            // The best match must stay in view: without this the list keeps whatever row was on top (e.g. "Search the
+            // web") in place while new matches appear above it, pushing the top app off screen.
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            androidx.compose.runtime.LaunchedEffect(query, results.apps.firstOrNull()?.key) { listState.scrollToItem(0) }
+            LazyColumn(Modifier.fillMaxSize().testTag("results"), state = listState) {
                 if (calc != null) item(key = "calc") {
                     Text(calc, color = Color.White, style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp).testTag("calc_result"))
@@ -205,6 +213,16 @@ fun AppDrawer(
                         Spacer(Modifier.width(14.dp))
                         Text(s, color = Color.White, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         IconButton(onClick = { onQuery(s) }) { Icon(Icons.Outlined.NorthWest, stringResource(R.string.put_in_search, s), tint = Color.White.copy(alpha = 0.7f)) }
+                    }
+                }
+                if (suggestOffer != null && query.length >= 2) item(key = "suggest_offer") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).testTag("suggest_offer")) {
+                        Text(stringResource(R.string.suggest_offer, suggestOffer), color = Color.White, style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.suggest_offer_detail, suggestOffer), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                            androidx.compose.material3.FilledTonalButton(onClick = onEnableSuggestions, modifier = Modifier.testTag("suggest_on")) { Text(stringResource(R.string.suggest_turn_on)) }
+                            androidx.compose.material3.TextButton(onClick = onDismissSuggestOffer) { Text(stringResource(R.string.suggest_no_thanks), color = Color.White) }
+                        }
                     }
                 }
                 item(key = "web") {

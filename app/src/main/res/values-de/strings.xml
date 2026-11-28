@@ -328,7 +328,7 @@
     <string name="src_news_detail">Liest die öffentlichen Nachrichten-Feeds von NPR und BBC (auf Englisch).</string>
     <string name="src_stocks_detail">Der öffentliche Kursdienst von Yahoo Finance (inoffiziell). Yahoo sieht, nach welchen Tickern du fragst.</string>
     <string name="src_answers_detail">Sofortantworten von DuckDuckGo für Websuchen des Assistenten. Kein Konto, kein Tracking.</string>
-    <string name="src_suggestions_detail">Vorschläge von DuckDuckGo, während du in der Suche tippst. Sendet jeden getippten Buchstaben, deshalb bleibt es aus, bis du es einschaltest.</string>
+    <string name="src_suggestions_detail">Vorschläge deiner Suchmaschine beim Tippen in der Suche (DuckDuckGo, Brave oder Startpage; DuckDuckGo bei Mojeek, das keine hat). Sendet jeden getippten Buchstaben, deshalb bleibt es aus, bis du es einschaltest.</string>
     <string name="task_messages">Nachrichten</string>
     <string name="task_phone">Anrufe</string>
     <string name="task_maps">Karten und Routen</string>
@@ -556,4 +556,8 @@
     <string name="screen_summarise">Zusammenfassen</string>
     <string name="screen_summarise_q">Fasse zusammen, was auf meinem Bildschirm steht</string>
     <string name="screen_key_points">Was ist hier wichtig?</string>
+    <string name="suggest_offer">Vorschläge von %1$s beim Tippen anzeigen?</string>
+    <string name="suggest_offer_detail">Jeder getippte Buchstabe wird an %1$s gesendet. Sonst geht nichts online.</string>
+    <string name="suggest_turn_on">Einschalten</string>
+    <string name="suggest_no_thanks">Nein danke</string>
 </resources>

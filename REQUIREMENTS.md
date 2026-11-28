@@ -259,6 +259,13 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-28: **Search fixes (owner).** (1) With many results the best app scrolled out of view: the results list
+  kept its top row (e.g. "Search the web") anchored while new matches appeared above it; it now jumps to the top
+  whenever the text or the best match changes. (2) Suggestions come from the chosen engine (DuckDuckGo, Brave,
+  Startpage; DuckDuckGo for Mojeek, which has none) and search offers to turn them on in one tap ("Turn on" /
+  "No thanks"); turning them on enables only suggestions (if Online features were off, every other source stays
+  off). Still opt-in: each letter typed is sent. Verified on the 4a (Clock on top after a no-match query; offer;
+  DuckDuckGo then Brave suggestions). Privacy policy updated.
 - 2026-11-26: **Widgets can be moved** (see Home-screen grid). Verified on the 4a with the Clock widget: added
   (incl. its own style screen), dragged to the top row (icons moved out), dragged across two pages to a new page,
   resized to Large, removed (empty page closed). Found and fixed: the page swiper stole a sideways widget drag

@@ -341,7 +341,7 @@
     <string name="src_news_detail">Reads the public NPR and BBC news feeds.</string>
     <string name="src_stocks_detail">Yahoo Finance\'s public quote service (unofficial). Yahoo sees which tickers you ask about.</string>
     <string name="src_answers_detail">DuckDuckGo instant answers for web searches the assistant runs. No account, no tracking.</string>
-    <string name="src_suggestions_detail">Suggestions from DuckDuckGo while you type in search. Sends each letter you type, so it stays off unless you turn it on.</string>
+    <string name="src_suggestions_detail">Suggestions from your search engine while you type in search (DuckDuckGo, Brave or Startpage; DuckDuckGo when you use Mojeek, which has none). Sends each letter you type, so it stays off unless you turn it on.</string>
     <string name="task_messages">Texting</string>
     <string name="task_phone">Calls</string>
     <string name="task_maps">Maps and directions</string>
@@ -569,4 +569,8 @@
     <string name="screen_summarise">Summarise this</string>
     <string name="screen_summarise_q">Summarise what\'s on my screen</string>
     <string name="screen_key_points">What\'s important here?</string>
+    <string name="suggest_offer">Get suggestions from %1$s as you type?</string>
+    <string name="suggest_offer_detail">Each letter you type is sent to %1$s. Nothing else goes online.</string>
+    <string name="suggest_turn_on">Turn on</string>
+    <string name="suggest_no_thanks">No thanks</string>
 </resources>

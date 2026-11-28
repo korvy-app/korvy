@@ -24,7 +24,7 @@ enum class OnlineSource(val title: String, val hosts: Set<String>, val detail: S
     ANSWERS("Quick answers", setOf("api.duckduckgo.com"),
         "DuckDuckGo instant answers for web searches the assistant runs. No account, no tracking."),
     /** Opt-in even when Online features is on: it sends what you type, letter by letter. */
-    SUGGESTIONS("Web search suggestions", setOf("duckduckgo.com"),
+    SUGGESTIONS("Web search suggestions", setOf("duckduckgo.com", "search.brave.com", "startpage.com"),
         "Suggestions from DuckDuckGo while you type in search. Sends each letter you type, so it stays off unless you turn it on.",
         optIn = true),
 }

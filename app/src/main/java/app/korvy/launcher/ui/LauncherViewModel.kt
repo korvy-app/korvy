@@ -183,7 +183,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun startDragFromList() { _screen.value = Screen.HOME }
     fun endDrag() { query.value = "" }
 
-    /** DuckDuckGo suggestions for the search box (opt-in source; nothing is fetched unless it's on). */
+    /** Suggestions from the user's search engine for the search box (opt-in source; nothing is fetched unless it's on). */
     @OptIn(kotlinx.coroutines.FlowPreview::class)
     val webSuggestions: StateFlow<List<String>> = combine(query, settings) { q, s -> q to s }
         .debounce(250)
@@ -191,7 +191,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
             if (q.isBlank() || q.length > 100 || !s.allows(OnlineSource.SUGGESTIONS)) emptyList()
             else runCatching {
                 val body = Net.getText(OnlineSource.SUGGESTIONS,
-                    "https://duckduckgo.com/ac/?type=list&q=" + Uri.encode(q)) { settings.value.allows(it) }
+                    s.engine.suggestions + Uri.encode(q)) { settings.value.allows(it) }
                 val arr = org.json.JSONArray(body).getJSONArray(1)
                 (0 until arr.length()).map { arr.getString(it) }.filter { !it.equals(q, ignoreCase = true) }.take(5)
             }.getOrElse { emptyList() }
@@ -346,6 +346,8 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun useModel(m: ModelInfo) = save { la.settings.setModelId(m.id) }
     fun setAssistant(v: Boolean) = save { la.settings.setAssistant(v) }
     fun setOnline(v: Boolean) = save { la.settings.setOnline(v) }
+    fun enableSuggestions() = save { la.settings.enableSuggestionsOnly() }
+    fun dismissSuggestOffer() = save { la.settings.dismissSuggestOffer() }
     fun setSource(src: OnlineSource, on: Boolean) = save { la.settings.setSource(src, on) }
     fun setHomePlace(v: String) = save { la.settings.setHomePlace(v) }
     fun setFahrenheit(v: Boolean) = save { la.settings.setFahrenheit(v) }

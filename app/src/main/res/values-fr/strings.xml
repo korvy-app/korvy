@@ -328,7 +328,7 @@
     <string name="src_news_detail">Lit les flux d\'actualité publics de NPR et de la BBC (en anglais).</string>
     <string name="src_stocks_detail">Le service public de cotations de Yahoo Finance (non officiel). Yahoo voit quels titres vous demandez.</string>
     <string name="src_answers_detail">Réponses instantanées de DuckDuckGo pour les recherches Web de l\'assistant. Sans compte, sans pistage.</string>
-    <string name="src_suggestions_detail">Suggestions de DuckDuckGo pendant que vous tapez dans la recherche. Envoie chaque lettre tapée, donc reste désactivé sauf si vous l\'activez.</string>
+    <string name="src_suggestions_detail">Suggestions de votre moteur de recherche pendant la saisie (DuckDuckGo, Brave ou Startpage ; DuckDuckGo si vous utilisez Mojeek, qui n\'en a pas). Envoie chaque lettre tapée, donc reste désactivé sauf si vous l\'activez.</string>
     <string name="task_messages">Messages</string>
     <string name="task_phone">Appels</string>
     <string name="task_maps">Plans et itinéraires</string>
@@ -556,4 +556,8 @@
     <string name="screen_summarise">Résumer ceci</string>
     <string name="screen_summarise_q">Résume ce qui est à l\'écran</string>
     <string name="screen_key_points">Qu\'est-ce qui est important ici ?</string>
+    <string name="suggest_offer">Recevoir des suggestions de %1$s pendant la saisie ?</string>
+    <string name="suggest_offer_detail">Chaque lettre tapée est envoyée à %1$s. Rien d\'autre ne se connecte.</string>
+    <string name="suggest_turn_on">Activer</string>
+    <string name="suggest_no_thanks">Non merci</string>
 </resources>

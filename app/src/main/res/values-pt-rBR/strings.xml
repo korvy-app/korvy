@@ -328,7 +328,7 @@
     <string name="src_news_detail">Lê os feeds públicos de notícias da NPR e da BBC (em inglês).</string>
     <string name="src_stocks_detail">O serviço público de cotações do Yahoo Finance (não oficial). O Yahoo vê quais ativos você consulta.</string>
     <string name="src_answers_detail">Respostas instantâneas do DuckDuckGo para as pesquisas na web que o assistente faz. Sem conta, sem rastreamento.</string>
-    <string name="src_suggestions_detail">Sugestões do DuckDuckGo enquanto você digita na pesquisa. Envia cada letra que você digita, então fica desativado a menos que você ative.</string>
+    <string name="src_suggestions_detail">Sugestões do seu buscador enquanto você digita na pesquisa (DuckDuckGo, Brave ou Startpage; DuckDuckGo se você usa o Mojeek, que não tem). Envia cada letra digitada, então fica desativado a menos que você ative.</string>
     <string name="task_messages">Mensagens</string>
     <string name="task_phone">Ligações</string>
     <string name="task_maps">Mapas e rotas</string>
@@ -556,4 +556,8 @@
     <string name="screen_summarise">Resumir isto</string>
     <string name="screen_summarise_q">Resuma o que está na minha tela</string>
     <string name="screen_key_points">O que é importante aqui?</string>
+    <string name="suggest_offer">Receber sugestões do %1$s enquanto você digita?</string>
+    <string name="suggest_offer_detail">Cada letra que você digita é enviada ao %1$s. Nada mais se conecta à internet.</string>
+    <string name="suggest_turn_on">Ativar</string>
+    <string name="suggest_no_thanks">Não, obrigado</string>
 </resources>
