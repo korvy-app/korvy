@@ -174,6 +174,7 @@ fun Root(vm: LauncherViewModel, host: Host) {
                     },
                     onEnableSuggestions = vm::enableSuggestions,
                     onDismissSuggestOffer = vm::dismissSuggestOffer,
+                    columns = if (settings.drawerMatchesHome) homeGrid.cols else null,
                     contacts = contactResults, onCall = vm::dial, onText = vm::textTo,
                 )
             }

@@ -259,6 +259,16 @@ Domain korvy.app; GitHub org `korvy-app`. Trademark and launch steps: `docs/KORV
 - Measured on the Pixel 4a (time to first frame, cold, 8 runs): 348 ms median without, **312 ms with** the profile.
 
 ## Status / log
+- 2026-11-28: **0.19.0 – per-model settings, grid size.** (1) Models → Advanced is per model (`core/ModelTuning`,
+  tested; "id|temp|max|ctx" lines, defaults not stored); 0.18.0's global values move to the model chosen then.
+  Verified: 1.0 on Gemma 4 E2B, Qwen 2.5 1.5B kept 0.2, back to Gemma still 1.0. (2) Home grid size (Settings →
+  Home screen grid): Auto fits the screen from its portrait size (`core/GridSize`, tested: 3 columns on small phones,
+  4 on most, 5 on XL, up to 8 on tablets; rows 4–8), or 3–8 columns / 4–8 rows; resizing keeps apps where they
+  still fit and moves the rest to the nearest free cell or a new page; widgets shrink to fit (`HomeGrid.resized`,
+  tested). "Same columns in the app list" makes the list use the home columns. Found on the 4a: displayMetrics
+  leaves out the system bars, so Auto first chose 4 × 4 and shrank the layout; now the full display size is used
+  (WindowMetrics). Verified: 4a Auto 4 × 5, 5 × 6, app list 4 → 5 columns, simulated tablet (800 × 1280 dp) 8 columns,
+  3 columns moved the 4th-column apps without losing any.
 - 2026-11-28: **0.18.0 – tester requests + smart search.** (1) Gemma 4 E4B (Google QAT, 5.2 GB, Apache 2.0) in the
   catalog for flagships (12 GB+); on the 4a it loads and answers (first words ~6 s, ~3 tok/s). (2) Models →
   Advanced (closed by default, Reset to defaults): temperature 0–1.5 (0.2), longest reply 100–1000 tokens (220),

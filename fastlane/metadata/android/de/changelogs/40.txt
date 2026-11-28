@@ -1,0 +1,2 @@
+- Das Startbildschirm-Raster passt sich deinem Bildschirm an (3 Spalten auf kleinen Smartphones, 5 auf XL, bis zu 8 auf Tablets) oder wähle selbst; die App-Liste kann folgen.
+- Jedes KI-Modell behält seine eigenen erweiterten Einstellungen.

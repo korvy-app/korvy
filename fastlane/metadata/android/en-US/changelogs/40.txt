@@ -1,0 +1,2 @@
+- The home screen grid fits your screen (3 columns on small phones, 5 on XL phones, up to 8 on tablets), or pick your own; the app list can match it.
+- Each AI model keeps its own Advanced settings.

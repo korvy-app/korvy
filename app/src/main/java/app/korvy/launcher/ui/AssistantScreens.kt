@@ -260,7 +260,7 @@ fun ModelsScreen(
     onBack: () -> Unit,
     custom: List<ModelInfo> = emptyList(),
     onAddCustom: suspend (String) -> app.korvy.launcher.data.CustomModels.AddResult = { app.korvy.launcher.data.CustomModels.Problem(null) },
-    onTuning: (temp: Float, maxTokens: Int, ctx: Int) -> Unit = { _, _, _ -> },
+    onTuning: (modelId: String, app.korvy.launcher.core.ModelTuning) -> Unit = { _, _ -> },
 ) {
     val ramGb = Device.specs(LocalContext.current).totalRamMb / 1024.0
     // Ask (once) to show the download's progress notification. The download runs either way.
@@ -339,7 +339,11 @@ fun ModelsScreen(
                 }
             }
             item(key = "custom_add") { CustomModelCard(onAddCustom) }
-            item(key = "advanced") { AdvancedModelSettings(s, onTuning) }
+            item(key = "advanced") {
+                // The model the settings are for: the one in use (each model keeps its own).
+                val chosen = (ModelCatalog.all + custom).firstOrNull { it.id == s.modelId && it.id in installed }
+                AdvancedModelSettings(chosen, s.tuningFor(chosen?.id)) { t -> chosen?.let { onTuning(it.id, t) } }
+            }
         }
     }
 }
@@ -444,35 +448,39 @@ private fun CustomModelCard(onAdd: suspend (String) -> app.korvy.launcher.data.C
     }
 }
 
-/** Temperature, reply length and context size for the curious; closed by default, with a reset. */
+/** Temperature, reply length and context size for the model in use (each model keeps its own); closed by default. */
 @Composable
-private fun AdvancedModelSettings(s: Settings, onTuning: (Float, Int, Int) -> Unit) {
+private fun AdvancedModelSettings(model: ModelInfo?, t: app.korvy.launcher.core.ModelTuning, onTuning: (app.korvy.launcher.core.ModelTuning) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    var temp by remember(s.modelTemp) { mutableStateOf(s.modelTemp) }
-    var maxTokens by remember(s.modelMaxTokens) { mutableStateOf(s.modelMaxTokens.toFloat()) }
+    var temp by remember(model?.id, t.temp) { mutableStateOf(t.temp) }
+    var maxTokens by remember(model?.id, t.maxTokens) { mutableStateOf(t.maxTokens.toFloat()) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainer).testTag("model_advanced")) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.advanced), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.advanced), style = MaterialTheme.typography.titleMedium)
+                Text(model?.let { stringResource(R.string.advanced_for, it.name) } ?: stringResource(R.string.advanced_no_model),
+                    style = MaterialTheme.typography.bodySmall)
+            }
             Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null)
         }
-        if (!open) return@Column
+        if (!open || model == null) return@Column
         Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) {
             Text(stringResource(R.string.advanced_detail), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.temp_label, temp), modifier = Modifier.padding(top = 10.dp))
             Slider(temp, { temp = (it * 10).roundToInt() / 10f }, valueRange = 0f..1.5f, steps = 14,
-                onValueChangeFinished = { onTuning(temp, s.modelMaxTokens, s.modelCtx) }, modifier = Modifier.testTag("temp_slider"))
+                onValueChangeFinished = { onTuning(t.copy(temp = temp)) }, modifier = Modifier.testTag("temp_slider"))
             Text(stringResource(R.string.temp_detail), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.max_tokens_label, maxTokens.roundToInt()), modifier = Modifier.padding(top = 10.dp))
             Slider(maxTokens, { maxTokens = ((it / 20).roundToInt() * 20).toFloat() }, valueRange = 100f..1000f,
-                onValueChangeFinished = { onTuning(s.modelTemp, maxTokens.roundToInt(), s.modelCtx) }, modifier = Modifier.testTag("max_tokens_slider"))
+                onValueChangeFinished = { onTuning(t.copy(maxTokens = maxTokens.roundToInt())) }, modifier = Modifier.testTag("max_tokens_slider"))
             Text(stringResource(R.string.max_tokens_detail), style = MaterialTheme.typography.bodySmall)
             Text(stringResource(R.string.ctx_label), modifier = Modifier.padding(top = 10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = s.modelCtx != 8192, onClick = { onTuning(s.modelTemp, s.modelMaxTokens, 4096) }, label = { Text(stringResource(R.string.ctx_4k)) })
-                FilterChip(selected = s.modelCtx == 8192, onClick = { onTuning(s.modelTemp, s.modelMaxTokens, 8192) }, label = { Text(stringResource(R.string.ctx_8k)) })
+                FilterChip(selected = t.ctx != 8192, onClick = { onTuning(t.copy(ctx = 4096)) }, label = { Text(stringResource(R.string.ctx_4k)) })
+                FilterChip(selected = t.ctx == 8192, onClick = { onTuning(t.copy(ctx = 8192)) }, label = { Text(stringResource(R.string.ctx_8k)) })
             }
             Text(stringResource(R.string.ctx_detail), style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { onTuning(Settings.DEFAULT_TEMP, Settings.DEFAULT_MAX_TOKENS, Settings.DEFAULT_CTX) },
+            TextButton(onClick = { onTuning(app.korvy.launcher.core.ModelTuning()) },
                 modifier = Modifier.padding(top = 6.dp).testTag("tuning_reset")) { Text(stringResource(R.string.reset_defaults)) }
         }
     }

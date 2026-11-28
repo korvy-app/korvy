@@ -1,0 +1,2 @@
+- A grade da tela inicial se ajusta à sua tela (3 colunas em celulares pequenos, 5 nos XL, até 8 em tablets) ou escolha a sua; a lista de apps pode acompanhar.
+- Cada modelo de IA guarda suas próprias configurações avançadas.

@@ -585,4 +585,13 @@
     <string name="smart_search">Ordre intelligent dans la recherche</string>
     <string name="smart_search_detail">La recherche affiche d\'abord les applis que vous ouvrirez le plus probablement maintenant (appris sur ce téléphone, comme les suggestions). En tapant, le nom le plus proche reste en premier.</string>
     <string name="model_note_gemma4_e4b">Gemma 4 plus grand, pour les téléphones haut de gamme (12 Go de mémoire ou plus).</string>
+    <string name="grid_size">Grille de l\'écran d\'accueil</string>
+    <string name="grid_auto">Auto</string>
+    <string name="grid_cols">Colonnes</string>
+    <string name="grid_rows">Lignes</string>
+    <string name="grid_auto_now">Auto s\'adapte à cet écran : %1$d × %2$d.</string>
+    <string name="grid_match_drawer">Mêmes colonnes dans la liste des applis</string>
+    <string name="grid_match_drawer_detail">La liste des applis utilise les colonnes de l\'écran d\'accueil, pour qu\'elles s\'alignent.</string>
+    <string name="advanced_for">Pour %1$s (chaque modèle garde les siens)</string>
+    <string name="advanced_no_model">Choisissez d\'abord un modèle téléchargé</string>
 </resources>

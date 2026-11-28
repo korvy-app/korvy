@@ -585,4 +585,13 @@
     <string name="smart_search">Intelligente App-Reihenfolge in der Suche</string>
     <string name="smart_search_detail">Die Suche zeigt zuerst die Apps, die du jetzt am wahrscheinlichsten öffnest (auf diesem Smartphone gelernt, wie die Vorschläge). Beim Tippen steht weiterhin der passendste Name oben.</string>
     <string name="model_note_gemma4_e4b">Größeres Gemma 4 für Flaggschiff-Smartphones (12 GB Speicher oder mehr).</string>
+    <string name="grid_size">Startbildschirm-Raster</string>
+    <string name="grid_auto">Auto</string>
+    <string name="grid_cols">Spalten</string>
+    <string name="grid_rows">Zeilen</string>
+    <string name="grid_auto_now">Auto passt zu diesem Bildschirm: %1$d × %2$d.</string>
+    <string name="grid_match_drawer">Gleiche Spalten in der App-Liste</string>
+    <string name="grid_match_drawer_detail">Die App-Liste verwendet die Spalten des Startbildschirms, damit beide übereinstimmen.</string>
+    <string name="advanced_for">Für %1$s (jedes Modell behält seine eigenen)</string>
+    <string name="advanced_no_model">Wähle zuerst ein heruntergeladenes Modell</string>
 </resources>

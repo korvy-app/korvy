@@ -1,5 +1,7 @@
 package app.korvy.launcher.ui
 
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import app.korvy.launcher.core.SmartOrder
 import kotlinx.coroutines.flow.first
 import android.app.Application
@@ -369,7 +371,7 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (settings.value.modelId == m.id) save { la.settings.setModelId(null) }
     }
     fun useModel(m: ModelInfo) = save { la.settings.setModelId(m.id) }
-    fun setModelTuning(temp: Float, maxTokens: Int, ctx: Int) = save { la.settings.setModelTuning(temp, maxTokens, ctx) }
+    fun setModelTuning(id: String, t: app.korvy.launcher.core.ModelTuning) = save { la.settings.setModelTuning(id, t) }
     val customModels get() = la.customModels.list
 
     /** Adds a model from a Hugging Face link; the result says what happened (for the Models screen). */
@@ -412,6 +414,31 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
     fun setEngine(v: SearchEngine) = save { la.settings.setEngine(v) }
     fun setSuggestions(v: Boolean) = save { la.settings.setSuggestions(v) }
     fun setSmartSearch(v: Boolean) = save { la.settings.setSmartSearch(v) }
+    fun setGridSize(cols: Int, rows: Int) = save { la.settings.setGridSize(cols, rows) }
+    fun setDrawerMatchesHome(v: Boolean) = save { la.settings.setDrawerMatchesHome(v) }
+
+    /** This screen's portrait size in dp (short side, long side): the base for an automatic grid size. */
+    fun screenDp(): Pair<Int, Int> {
+        // The whole display, including the status and navigation bars (displayMetrics leaves those out, which made
+        // a Pixel 4a look like it only had room for 4 rows).
+        val ctx = getApplication<Application>()
+        val density = ctx.resources.displayMetrics.density
+        val wm = ctx.getSystemService(android.view.WindowManager::class.java)
+        val (wPx, hPx) = if (android.os.Build.VERSION.SDK_INT >= 30) wm.maximumWindowMetrics.bounds.let { it.width() to it.height() }
+            else android.util.DisplayMetrics().also { @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(it) }.let { it.widthPixels to it.heightPixels }
+        val w = (wPx / density).toInt(); val h = (hPx / density).toInt()
+        return minOf(w, h) to maxOf(w, h)
+    }
+
+    /** Keeps the home grid at the chosen (or automatic) size; the saved layout is reflowed when it changes. */
+    private fun applyGridSize() = viewModelScope.launch {
+        settings.map { it.gridCols to it.gridRows }.distinctUntilChanged().collect { (c, r) ->
+            val (short, long) = screenDp()
+            val (cols, rows) = app.korvy.launcher.core.GridSize.choose(c, r, short, long)
+            val g = la.settings.homeGrid.first() // the saved layout, never the default before it loads
+            if (g.cols != cols || g.rows != rows) la.settings.setHomeGrid(g.resized(cols, rows).compact())
+        }
+    }
     fun setRevealHiddenByName(v: Boolean) = save { la.settings.setRevealHiddenByName(v) }
     fun setSlideshow(v: Boolean) = save { la.settings.setSlideshow(v) }
     fun setSlideshowMinutes(v: Int) = save { la.settings.setSlideshowMinutes(v) }
@@ -445,7 +472,10 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (pendingCrops.value.isEmpty()) _screen.value = Screen.SETTINGS
     }
 
-    init { viewModelScope.launch { la.widgets.placed.collect { syncWidgets(it) } } }
+    init {
+        viewModelScope.launch { la.widgets.placed.collect { syncWidgets(it) } }
+        applyGridSize()
+    }
 
     companion object { const val WIDGET = "widget:" }
 }

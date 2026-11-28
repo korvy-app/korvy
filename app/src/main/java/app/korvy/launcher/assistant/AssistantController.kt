@@ -310,7 +310,7 @@ class AssistantController(
         }
         val out = try {
             client.complete(
-                models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = s.modelMaxTokens, temp = s.modelTemp, ctx = s.modelCtx,
+                models.fileFor(m).path, roles, contents, AgentCore.GRAMMAR, maxTokens = s.tuningFor(m.id).maxTokens, temp = s.tuningFor(m.id).temp, ctx = s.tuningFor(m.id).ctx,
                 onStatus = { st -> lastProgress = System.currentTimeMillis(); update(replyId) { it.copy(text = st) } },
                 onToken = { piece ->
                     lastProgress = System.currentTimeMillis()
@@ -383,7 +383,7 @@ class AssistantController(
         if (m.id !in models.installed.value || !pro.unlocked.value) return
         scope.launch {
             val (roles, contents) = fixedMessages()
-            client.preload(models.fileFor(m).path, roles, contents, models.stateFor(m).path, settings.value.modelCtx)
+            client.preload(models.fileFor(m).path, roles, contents, models.stateFor(m).path, settings.value.tuningFor(m.id).ctx)
         }
     }
 

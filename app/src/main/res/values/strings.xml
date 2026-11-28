@@ -598,4 +598,13 @@
     <string name="smart_search">Smart app order in search</string>
     <string name="smart_search_detail">Search lists the apps you\'re most likely to open now first (learned on this phone, like suggestions). Typing still finds the best name match first.</string>
     <string name="model_note_gemma4_e4b">Bigger Gemma 4 for flagship phones (12 GB+ memory).</string>
+    <string name="advanced_for">For %1$s (each model keeps its own)</string>
+    <string name="advanced_no_model">Choose a downloaded model first</string>
+    <string name="grid_size">Home screen grid</string>
+    <string name="grid_auto">Auto</string>
+    <string name="grid_cols">Columns</string>
+    <string name="grid_rows">Rows</string>
+    <string name="grid_auto_now">Auto fits this screen: %1$d × %2$d.</string>
+    <string name="grid_match_drawer">Same columns in the app list</string>
+    <string name="grid_match_drawer_detail">The app list uses the home screen\'s columns, so both line up.</string>
 </resources>

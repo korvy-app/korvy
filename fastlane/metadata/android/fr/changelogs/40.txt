@@ -1,0 +1,2 @@
+- La grille d'accueil s'adapte à votre écran (3 colonnes sur les petits téléphones, 5 sur les XL, jusqu'à 8 sur les tablettes), ou choisissez la vôtre ; la liste des applis peut suivre.
+- Chaque modèle d'IA garde ses propres réglages avancés.

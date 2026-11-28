@@ -585,4 +585,13 @@
     <string name="smart_search">Ordem inteligente na pesquisa</string>
     <string name="smart_search_detail">A pesquisa mostra primeiro os apps que você mais provavelmente vai abrir agora (aprendido neste celular, como as sugestões). Ao digitar, o nome mais parecido continua primeiro.</string>
     <string name="model_note_gemma4_e4b">Gemma 4 maior, para celulares topo de linha (12 GB de memória ou mais).</string>
+    <string name="grid_size">Grade da tela inicial</string>
+    <string name="grid_auto">Auto</string>
+    <string name="grid_cols">Colunas</string>
+    <string name="grid_rows">Linhas</string>
+    <string name="grid_auto_now">O automático se ajusta a esta tela: %1$d × %2$d.</string>
+    <string name="grid_match_drawer">Mesmas colunas na lista de apps</string>
+    <string name="grid_match_drawer_detail">A lista de apps usa as colunas da tela inicial, para as duas ficarem alinhadas.</string>
+    <string name="advanced_for">Para %1$s (cada modelo guarda os seus)</string>
+    <string name="advanced_no_model">Escolha primeiro um modelo baixado</string>
 </resources>

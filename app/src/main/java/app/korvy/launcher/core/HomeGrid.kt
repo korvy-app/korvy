@@ -177,6 +177,35 @@ data class HomeGrid(
         return g.copy(cells = m)
     }
 
+    /**
+     * The same layout on a [newCols] × [newRows] grid (screen size or the user's choice changed). Apps and folders
+     * keep their page, row and column when those still exist; the others move to the nearest free cell on their
+     * page, else a later or new page. Widgets keep their place, shrunk to fit if needed.
+     */
+    fun resized(newCols: Int, newRows: Int): HomeGrid {
+        if (newCols == cols && newRows == rows) return this
+        var g = HomeGrid(newCols, newRows, emptyMap(), folders, pages)
+        for ((id, w) in widgets.entries.sortedBy { it.value.page * 100 + it.value.row }) {
+            val placed = g.placeWidget(id, w.page, w.row.coerceAtMost(newRows - 1), w.rows.coerceAtMost(newRows))
+            g = if (placed.widgets.containsKey(id)) placed else g.addWidget(id, w.rows.coerceAtMost(newRows))
+        }
+        val ordered = cells.entries.sortedBy { it.key }.map { (c, key) -> Triple(c / pageSize, c % pageSize / cols, c % cols) to key }
+        val later = ArrayList<Pair<Int, String>>() // (preferred cell, key)
+        val m = HashMap<Int, String>()
+        for ((pos, key) in ordered) {
+            val (p, r, c) = pos
+            val cell = p * g.pageSize + r * newCols + c
+            if (r < newRows && c < newCols && g.widgetAt(cell) == null) m[cell] = key
+            else later += (p * g.pageSize + r.coerceAtMost(newRows - 1) * newCols + c.coerceAtMost(newCols - 1)) to key
+        }
+        g = g.copy(cells = m)
+        for ((want, key) in later) {
+            val spot = g.nearestEmpty(want, g.cells) ?: g.withNewPage().let { if (it.pages == g.pages) null else { g = it; g.firstEmpty() } }
+            if (spot != null) g = g.copy(cells = g.cells + (spot to key))
+        }
+        return g
+    }
+
     /** Adds widget [id] in the first [rows] free rows (no apps, no widget) on any page, or on a new page. */
     fun addWidget(id: Int, rows: Int): HomeGrid {
         val h = rows.coerceIn(1, this.rows)

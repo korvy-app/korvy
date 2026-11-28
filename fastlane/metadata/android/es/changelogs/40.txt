@@ -1,0 +1,2 @@
+- La cuadrícula de inicio se ajusta a tu pantalla (3 columnas en teléfonos pequeños, 5 en los XL, hasta 8 en tabletas) o elige la tuya; la lista de apps puede coincidir.
+- Cada modelo de IA guarda sus propios ajustes avanzados.

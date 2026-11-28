@@ -98,6 +98,7 @@ fun SettingsScreen(
                     OutlinedButton(onClick = { vm.open(Screen.WIDGETS) }, modifier = Modifier.testTag("add_widget")) { Text(stringResource(R.string.add_a_widget)) }
                 }
                 Note(stringResource(R.string.hold_a_widget_on_the))
+                GridSizeSetting(s, vm)
             }
             item {
                 Section(stringResource(R.string.look_and_feel))
@@ -367,4 +368,29 @@ private fun ContactsSetting(s: Settings, vm: LauncherViewModel) {
         }
     } else Toggle(stringResource(R.string.contacts_in_search), stringResource(R.string.show_matching_people_when_you),
         s.contactsInSearch, "toggle_contacts_search") { vm.setContactsInSearch(it) }
+}
+
+
+/** Home grid columns and rows: Auto (fits the screen) or a fixed number; and whether the app list matches. */
+@Composable
+private fun GridSizeSetting(s: app.korvy.launcher.data.Settings, vm: LauncherViewModel) {
+    val (short, long) = remember { vm.screenDp() }
+    val (autoCols, autoRows) = remember(short, long) { app.korvy.launcher.core.GridSize.auto(short, long) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).testTag("grid_size")) {
+        Text(stringResource(R.string.grid_size), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.grid_auto_now, autoCols, autoRows), style = MaterialTheme.typography.bodySmall)
+        @Composable fun choices(label: String, current: Int, options: IntRange, testTag: String, pick: (Int) -> Unit) {
+            Text(label, modifier = Modifier.padding(top = 8.dp))
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                androidx.compose.material3.FilterChip(selected = current == 0, onClick = { pick(0) }, label = { Text(stringResource(R.string.grid_auto)) },
+                    modifier = Modifier.testTag("${testTag}_auto"))
+                for (n in options) androidx.compose.material3.FilterChip(selected = current == n, onClick = { pick(n) }, label = { Text("$n") },
+                    modifier = Modifier.testTag("${testTag}_$n"))
+            }
+        }
+        choices(stringResource(R.string.grid_cols), s.gridCols, 3..8, "grid_cols") { vm.setGridSize(it, s.gridRows) }
+        choices(stringResource(R.string.grid_rows), s.gridRows, 4..8, "grid_rows") { vm.setGridSize(s.gridCols, it) }
+    }
+    Toggle(stringResource(R.string.grid_match_drawer), stringResource(R.string.grid_match_drawer_detail),
+        s.drawerMatchesHome, "toggle_match_drawer") { vm.setDrawerMatchesHome(it) }
 }

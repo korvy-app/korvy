@@ -99,6 +99,8 @@ fun AppDrawer(
     suggestOffer: String? = null,
     onEnableSuggestions: () -> Unit = {},
     onDismissSuggestOffer: () -> Unit = {},
+    /** Columns of the app list when it should match the home grid; null = as many as fit. */
+    columns: Int? = null,
 ) {
     // Inline autocomplete: the rest of the top app's name, drawn greyed after the cursor; → accepts it.
     val completion = Completion.suffix(query, results.apps.map { it.label })
@@ -160,7 +162,7 @@ fun AppDrawer(
 
         if (query.isBlank()) {
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(84.dp),
+                columns = columns?.let { GridCells.Fixed(it) } ?: GridCells.Adaptive(84.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 modifier = Modifier.fillMaxSize().testTag("app_grid"),
             ) {
